@@ -1,173 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow – Voice to Order</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow — Voice to Order</title>
+<link rel="preload" as="image" href="Freeflow-logo.png">
+
 <style>
   :root{
-    --bg:#0b0f14; --bg2:#111720; --text:#e9e9e9; --muted:#b8c0cc;
-    --brand:#ff7a1a; --brand2:#ff9a3c; --chip:#1a2230;
+    --bg:#0b0d10;
+    --ink:#f97316;      /* soczysty pomarańcz */
+    --ink-2:#ffb45c;
+    --text:#e7e2db;
+    --muted:#b8b3ad;
   }
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{
-    margin:0; background:linear-gradient(180deg,#0b0f14 0%, #0d141e 100%);
-    color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
-    min-height:100vh; display:flex; flex-direction:column;
+    margin:0;
+    font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    background: radial-gradient(1200px 800px at 20% 0%, #10141b 0%, var(--bg) 60%) fixed;
+    color:var(--text);
+    display:flex; flex-direction:column; align-items:center;
   }
-  header{padding:28px 22px 6px}
-  .logoTitle{
-    font-weight:800; font-size:36px; letter-spacing:.5px; color:var(--brand);
+  .wrap{width:min(920px, 92vw); padding:28px 16px 32px}
+  header{margin-top:8px}
+  .brand{
+    font-size: clamp(42px, 9vw, 96px);
+    line-height:.9;
+    font-weight:900;
+    color:var(--ink);
+    letter-spacing:.5px;
+    text-shadow: 0 6px 24px rgba(249,115,22,.25);
   }
-  .subtitle{color:var(--text); opacity:.9; font-size:22px; margin-top:6px}
-  .card{
-    margin:18px; padding:16px; background:var(--bg2);
-    border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px #1b2430;
+  h1{
+    margin: 14px 0 6px;
+    font-size: clamp(26px, 6.2vw, 56px);
+    line-height:1.05;
+    letter-spacing:.2px;
   }
-  .chips{display:flex; flex-wrap:wrap; gap:10px; margin:2px 0 8px}
-  .chip{
-    font-size:14px; padding:10px 12px; border-radius:14px; color:#d8dee9;
-    background:var(--chip); border:1px solid #1f2a3a;
+  .sub{
+    margin: 0 0 28px;
+    color:var(--muted);
+    font-size: clamp(16px, 3.6vw, 22px);
   }
-  .pane{margin-top:8px; padding:14px; border-radius:14px; background:#0f1622; border:1px solid #1d2736}
-  .pane.muted{color:var(--muted)}
-  .pane.good{background:rgba(255,122,26,.08); border-color:rgba(255,122,26,.35)}
-  .hint{color:#8fa3bf; font-size:14px; margin:12px 18px 110px}
-  /* FAB with logo */
-  .fabWrap{
-    position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
-    width:min(86vw,360px); display:flex; justify-content:center;
+
+  /* duże koło z mikrofonem */
+  .hero{
+    margin: 22px auto 24px;
+    width:min(440px, 80vw);
+    aspect-ratio:1/1;
+    border-radius:50%;
+    background:#0f1116;
+    position:relative;
+    box-shadow:
+      0 12px 60px rgba(0,0,0,.45),
+      0 0 0 1px rgba(255,255,255,.03) inset;
+    overflow:hidden;
   }
-  .fab{
-    position:relative; width:200px; height:200px; border-radius:50%;
-    border:none; background:#0e1520; cursor:pointer; outline:none;
-    box-shadow:0 20px 40px rgba(0,0,0,.55), inset 0 0 0 1px #1b2430;
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background: url("Freeflow-logo.png") center/cover no-repeat;
+    filter:saturate(1.05) contrast(1.05);
+    transform:scale(1.02);
+  }
+
+  /* przycisk VOICE */
+  .dock{
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
+    transform: translateX(-50%);
+    width:min(520px, 92vw);
+    display:flex; justify-content:center;
+  }
+  button.mic{
+    --size: 84px;
+    background: linear-gradient(180deg, var(--ink), #f05a00);
+    color:#111;
+    border:none; border-radius:20px;
+    padding: 18px 20px 18px calc(var(--size) + 24px);
+    width:100%;
+    font-size: clamp(17px, 3.9vw, 22px);
+    font-weight:700;
+    letter-spacing:.2px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:
+      0 18px 60px rgba(249,115,22,.35),
+      0 2px 0 rgba(255,255,255,.16) inset,
+      0 -2px 0 rgba(0,0,0,.25) inset;
+    position:relative;
+    cursor:pointer;
+    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  button.mic:active{ transform: translateY(1px) scale(.995) }
+  .mic .badge{
+    position:absolute; left: 10px; top:50%; transform:translateY(-50%);
+    width: var(--size); height: var(--size); border-radius:50%;
+    background:#121419;
     display:grid; place-items:center;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,.08) inset,
+      0 10px 22px rgba(0,0,0,.45);
+    overflow:hidden;
   }
-  .fab.glow{box-shadow:0 0 0 0 rgba(255,122,26,.55), 0 16px 40px rgba(0,0,0,.55);
-            animation:glow 1.6s ease-in-out infinite}
-  @keyframes glow{
-    0%{box-shadow:0 0 0 0 rgba(255,122,26,.55), 0 16px 40px rgba(0,0,0,.55)}
-    60%{box-shadow:0 0 60px 26px rgba(255,122,26,.18), 0 16px 40px rgba(0,0,0,.55)}
-    100%{box-shadow:0 0 0 0 rgba(255,122,26,.0), 0 16px 40px rgba(0,0,0,.55)}
+  .mic .badge::before{
+    content:""; position:absolute; inset:0;
+    background: url("Freeflow-logo.png") center/130% no-repeat;
+    filter:saturate(1.1);
   }
-  .fab img{width:88%; height:88%; object-fit:contain; border-radius:50%}
-  .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+  .mic .txt{
+    color:#111; text-shadow:0 1px 0 rgba(255,255,255,.3);
+  }
+  .hint{ margin-top:14px; color:var(--muted); font-size:14px; opacity:.9 }
+
+  /* puls przy nagrywaniu */
+  .pulse{
+    position:absolute; inset:0; border-radius:20px; pointer-events:none;
+    box-shadow: 0 0 0 0 rgba(249,115,22,.0);
+    transition: box-shadow .25s ease;
+  }
+  .listening .pulse{
+    animation: ring 1.6s ease-out infinite;
+  }
+  @keyframes ring{
+    0%{ box-shadow:0 0 0 0 rgba(249,115,22,.45) }
+    100%{ box-shadow:0 0 0 36px rgba(249,115,22,0) }
+  }
+
+  /* status + podpowiedzi */
+  .panel{
+    width:min(920px, 92vw);
+    margin: 10px auto 86px;
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:16px;
+    padding:16px;
+    backdrop-filter: blur(6px);
+  }
+  .chips{
+    display:flex; flex-wrap:wrap; gap:10px;
+    margin: 6px 0 12px;
+  }
+  .chip{
+    background:#171a20; color:#d8d2ca;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:999px; padding:10px 14px;
+    font-size:14px;
+  }
+  .status{
+    font-size:16px; color:var(--muted);
+    margin-top:6px;
+  }
+  .status.strong{ color:var(--text) }
+  .sr-only{ position:absolute; left:-9999px; }
 </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <header>
+      <div class="brand">FreeFlow</div>
+      <h1>Złóż zamówienie</h1>
+      <p class="sub">Taxi, posiłek, a może nocleg?</p>
+    </header>
 
-<header>
-  <div class="logoTitle">FreeFlow</div>
-  <div class="subtitle">Złóż zamówienie</div>
-</header>
+    <div class="hero" aria-hidden="true"></div>
 
-<section class="card">
-  <div class="chips">
-    <div class="chip">„dwie pizze pepperoni”</div>
-    <div class="chip">„zamów taxi na Dworzec”</div>
-    <div class="chip">„hotel w Krakowie na 2 noce”</div>
+    <section class="panel" aria-live="polite">
+      <div class="chips">
+        <div class="chip">„dwie pizze pepperoni”</div>
+        <div class="chip">„zamów taxi na Dworzec”</div>
+        <div class="chip">„hotel w Krakowie od piątku na 2 noce”</div>
+      </div>
+      <div id="status" class="status">Kliknij przycisk na dole i powiedz, czego potrzebujesz.</div>
+    </section>
   </div>
 
-  <div id="heard" class="pane muted">🎙️ Jeszcze nic nie nagrano.</div>
-  <div id="reply" class="pane good">🔊 Witaj! Kliknij mikrofon na dole i powiedz, czego potrzebujesz.</div>
-</section>
-
-<p class="hint">Podpowiedź: mów wyraźnie. W hałasie też zadziała, ale może potrzebować powtórki.</p>
-
-<div class="fabWrap">
-  <button id="micBtn" class="fab" aria-pressed="false">
-    <span class="sr">Przycisk mikrofonu</span>
-    <!-- Użyj własnego pliku logo.png w repo -->
-    <img src="./logo.png" alt="FreeFlow – mikrofon" />
-  </button>
-</div>
+  <div class="dock">
+    <button id="micBtn" class="mic" type="button">
+      <span class="badge" aria-hidden="true"></span>
+      <span class="txt">Mów teraz</span>
+      <span class="pulse"></span>
+    </button>
+  </div>
 
 <script>
-  // --- Web Speech – rozpoznawanie mowy ---
+(() => {
+  const btn = document.getElementById('micBtn');
+  const statusEl = document.getElementById('status');
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const synth = window.speechSynthesis;
 
-  const micBtn = document.getElementById('micBtn');
-  const heard  = document.getElementById('heard');
-  const reply  = document.getElementById('reply');
+  let recognition = null;
+  let listening = false;
 
-  let rec = null, listening = false;
-
-  function speak(text){
+  function say(text){
     try{
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'pl-PL';
-      u.rate = 1.0; u.pitch = 1.0;
+      u.lang = "pl-PL";
+      u.rate = 1; u.pitch = 1;
       synth.cancel(); synth.speak(u);
     }catch(e){}
   }
 
+  function setStatus(text, strong=false){
+    statusEl.textContent = text;
+    statusEl.classList.toggle('strong', strong);
+  }
+
+  function notSupported(){
+    setStatus("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Chrome/Edge.", true);
+    btn.disabled = true;
+    btn.querySelector('.txt').textContent = "Brak wsparcia";
+  }
+
+  if(!SpeechRecognition){ notSupported(); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "pl-PL";
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  function startListen(){
+    if(listening) return;
+    listening = true;
+    document.body.classList.add('listening');
+    btn.querySelector('.txt').textContent = "Nasłuchuję…";
+    setStatus("Słucham… powiedz, co zamawiasz.");
+    try{ recognition.start(); }catch(e){}
+  }
+
+  function stopListen(){
+    if(!listening) return;
+    listening = false;
+    document.body.classList.remove('listening');
+    btn.querySelector('.txt').textContent = "Mów teraz";
+    try{ recognition.stop(); }catch(e){}
+  }
+
+  btn.addEventListener('click', () => {
+    if(!listening) startListen(); else stopListen();
+  });
+
+  // prosta „intencja” na potrzeby demo
   function handleIntent(text){
     const t = text.toLowerCase();
 
-    // proste reguły demo (fallback)
-    if(/cześć|hej|dzień dobry/.test(t)) return "Cześć! Co dla Ciebie zrobić?";
-    if(/anuluj|stop/.test(t)) return "Jasne, anulowałem.";
-    if(/pepperoni|peperoni/.test(t) && /pizza|pizz[e|y]?/.test(t)){
-      const qty = /dwie|2/.test(t) ? 2 : /trzy|3/.test(t) ? 3 : 1;
-      return `Zapisuję: ${qty}× pizza pepperoni. Potwierdzasz?`;
+    if(t.includes("pizza") || t.includes("pizzę") || t.includes("pizze")){
+      const ile = t.match(/\b(\d+)\b/);
+      const liczba = ile ? ile[1] : "1";
+      say(`Zapisuję: ${liczba} pizza pepperoni. Podaj adres dostawy.`);
+      setStatus(`OK! Zamówienie wstępne: ${liczba}× pepperoni. Podaj adres dostawy.`, true);
+      return;
     }
-    if(/taxi/.test(t)) return "OK, taxi. Skąd dokąd jedziemy?";
-    if(/hotel|nocleg/.test(t)) return "Jasne – który kierunek i na ile nocy?";
-    return "Zrozumiałem. Chcesz zamówić jedzenie, taxi czy nocleg?";
+
+    if(t.includes("taxi")){
+      say("Zamawiam taxi. Podaj punkt startu i cel podróży.");
+      setStatus("Taxi: powiedz skąd i dokąd jedziesz.", true);
+      return;
+    }
+
+    if(t.includes("hotel") || t.includes("nocleg")){
+      say("Wybierzmy hotel. Powiedz miasto oraz daty przyjazdu i wyjazdu.");
+      setStatus("Hotel: podaj miasto + daty przyjazdu/wyjazdu.", true);
+      return;
+    }
+
+    // małe powitanie
+    if(t.includes("dzień dobry") || t.includes("cześć")){
+      say("Cześć! W czym mogę pomóc?");
+      setStatus("Cześć! Słucham Cię.", true);
+      return;
+    }
+
+    say("Dopytam: chcesz jedzenie, taxi, czy hotel?");
+    setStatus("Nie zrozumiałem. Jedzenie / taxi / hotel?", true);
   }
 
-  function startRec(){
-    if(!SpeechRecognition){ reply.textContent="Twoja przeglądarka nie obsługuje rozpoznawania mowy."; return; }
-    if(rec){ try{ rec.stop(); }catch(e){} }
-    rec = new SpeechRecognition();
-    rec.lang = 'pl-PL';
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
+  recognition.onresult = (e) => {
+    let finalText = "";
+    for (const res of e.results) {
+      if(res.isFinal) finalText = res[0].transcript;
+    }
+    if(finalText){
+      setStatus("Usłyszałem: „" + finalText + "”. Przetwarzam…");
+      stopListen();
+      setTimeout(() => handleIntent(finalText), 120);
+    }else{
+      // podgląd mowy w trakcie
+      const interim = Array.from(e.results).map(r => r[0].transcript).join(" ");
+      if(interim) setStatus("… " + interim);
+    }
+  };
+  recognition.onerror = (e) => {
+    stopListen();
+    setStatus("Błąd rozpoznawania: " + e.error, true);
+  };
+  recognition.onend = () => {
+    if(listening) try{ recognition.start(); }catch(e){}
+  };
 
-    rec.onstart = ()=>{
-      listening = true;
-      micBtn.classList.add('glow');
-      micBtn.setAttribute('aria-pressed','true');
-      reply.textContent = "🔊 Słucham… powiedz swoje zamówienie.";
-    };
-    rec.onerror = (e)=>{
-      listening = false;
-      micBtn.classList.remove('glow');
-      micBtn.setAttribute('aria-pressed','false');
-      reply.textContent = "Ups. Błąd mikrofonu: " + (e.error||'');
-    };
-    rec.onend = ()=>{
-      listening = false;
-      micBtn.classList.remove('glow');
-      micBtn.setAttribute('aria-pressed','false');
-    };
-    rec.onresult = (ev)=>{
-      let finalText='';
-      for(let i=ev.resultIndex;i<ev.results.length;i++){
-        const r = ev.results[i], tx = r[0].transcript;
-        if(r.isFinal) finalText += tx + ' ';
-        else heard.textContent = '🎙️ ' + tx;
-      }
-      finalText = finalText.trim();
-      if(finalText){
-        heard.textContent = '🗣️ ' + finalText;
-        const ans = handleIntent(finalText);
-        reply.textContent = '🔊 ' + ans;
-        speak(ans);
-      }
-    };
-    rec.start();
-  }
-
-  micBtn.addEventListener('click', ()=>{
-    if(listening){ try{ rec.stop(); }catch(e){} return; }
-    startRec();
-  });
-
-  // iOS/Android: pierwszy klik włącza TTS
-  document.body.addEventListener('touchstart', ()=>{}, {passive:true});
+  // podpowiedź: automatycznie TTS na starcie (nie zawsze ruszy na mobile)
+  const hello = () => say("Witaj! Kliknij mikrofon na dole i powiedz, czego potrzebujesz.");
+  setTimeout(hello, 500);
+})();
 </script>
 </body>
 </html>

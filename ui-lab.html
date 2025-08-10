@@ -1,319 +1,268 @@
-<!DOCTYPE html>
-<html lang="pl">
+<!DOCTYPE html><html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow – UI Lab (4 warianty)</title>
-<style>
-  :root{
-    --bg:#0c0f13;
-    --panel:#13171d;
-    --panel-2:#101419;
-    --text:#e7ecf1;
-    --muted:#9aa6b2;
-    --accent:#ff6a00;        /* neon pomarańcz */
-    --accent-2:#00e0ff;      /* turkusowy blik */
-    --card:#0e1217;
-    --ok:#27d07d;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;background:radial-gradient(1200px 700px at 50% -200px,#1a222c 0%,#0b0e13 55%,#07090c 100%);
-    color:var(--text);font:16px/1.45 system-ui,Segoe UI,Inter,Arial,sans-serif;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FreeFlow – UI Lab (10 wariantów)</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#11161d; --muted:#7a8797; --text:#e7edf5; --accent:#ff7a18; --accent-2:#ffb86b;
+      --ring: 0 0 0 3px rgba(255,122,24,.25);
+      --max-w: 560px; /* mobile default */
+    }
+    html,body{height:100%;}
+    body{margin:0;background:radial-gradient(1200px 500px at 50% -200px, #1a2430 0%, #0b0f14 60% , #0b0f14 100%);color:var(--text);font:16px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, SF Pro Display, SF Pro Text;
+      display:flex;min-height:100%;}
+    .wrap{max-width:var(--max-w); width:100%; margin:0 auto; padding:18px 16px 96px; position:relative;}/* top bar */
+.top {
+  display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;
+}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .logo{font-weight:800; font-size:34px; letter-spacing:.2px; color:var(--accent); font-family:"Poppins", system-ui;}
+.brand small{color:var(--muted)}
+.cart{display:inline-flex; gap:8px; align-items:center; padding:10px 12px; border-radius:999px; background:linear-gradient(180deg,#151c24, #0f141a); border:1px solid #1a2430; box-shadow: inset 0 -6px 18px rgba(255,255,255,.03);} 
+.cart .badge{background:var(--accent); color:#000; font-weight:700; font-size:12px; line-height:1; padding:4px 6px; border-radius:10px;}
+.cart svg{width:18px;height:18px; fill:#9fb0c5}
 
-  /* Główny przełącznik wariantów */
-  .topbar{
-    position:sticky;top:0;z-index:30;
-    display:flex;align-items:center;gap:.8rem;
-    padding:.8rem .9rem;
-    background:linear-gradient(180deg,#0d1218 0,#0d1218cc 65%,transparent 100%);
-    backdrop-filter:blur(6px);
-    border-bottom:1px solid #0f151c;
-  }
-  .brand{
-    font-weight:800;letter-spacing:.4px;
-    background:linear-gradient(90deg,var(--accent),#ff9a2b);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    font-size:1.55rem;
-  }
-  .variant-picker{
-    margin-left:auto;
-  }
-  .variant-picker select{
-    appearance:none;border:1px solid #1e2731;background:#0f141b;color:#cfe3f5;
-    border-radius:10px;padding:.5rem .9rem;font-weight:600;
-  }
+/* hero */
+.h1{font-weight:800; font-size:38px; margin:6px 0 6px; letter-spacing:.3px}
+.sub{color:#aabbc9; font-size:18px; margin-bottom:16px}
 
-  /* Koszyk u góry (stały) */
-  .cart{
-    position:relative;margin-left:.4rem;
-    width:42px;height:42px;border-radius:10px;
-    display:grid;place-items:center;cursor:pointer;
-    background:#0f141b;border:1px solid #1e2731;
-  }
-  .cart svg{width:22px;height:22px;fill:var(--text)}
-  .cart .badge{
-    position:absolute;top:-6px;right:-6px;
-    background:var(--accent);color:#000;font-weight:800;
-    border-radius:999px;padding:.1rem .42rem;font-size:.72rem;box-shadow:0 0 0 3px #0d1218;
-  }
+/* mic button */
+.mic {
+  --size: 240px;
+  width:var(--size); height:var(--size); margin:18px auto 12px; border-radius:50%; position:relative; display:grid; place-items:center; cursor:pointer; user-select:none;
+  background: radial-gradient(55% 55% at 50% 45%, rgba(255,122,24,.15) 0%, rgba(255,122,24,.05) 60%, transparent 100%),
+              radial-gradient(90% 90% at 50% 60%, rgba(39,198,255,.12) 0%, rgba(39,198,255,0) 70%);
+  box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 40px rgba(255,122,24,.15);
+}
+.mic::before{content:""; position:absolute; inset:-10px; border-radius:inherit; filter:blur(16px);
+  background: conic-gradient(from 0deg, #ff7a18, #ffb86b, #19c0ff, #7a5cff, #ff7a18);
+  opacity:.15; animation:spin 12s linear infinite;
+}
+.mic img{width:72%; border-radius:50%; display:block; filter:drop-shadow(0 8px 16px rgba(255,122,24,.35));}
+.mic.pulse{animation:pulse 2.2s ease-in-out infinite;}
+@keyframes spin{to{transform:rotate(1turn)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
 
-  /* Obszar wariantu */
-  .wrap{max-width:900px;margin:0 auto;padding:1rem .9rem 90px}
+.mic-hint{ text-align:center; margin:6px 0 18px; color:#d7dee6; font-weight:600 }
 
-  /* Logo / przycisk */
-  .logo-button{
-    width:min(72vw,360px);aspect-ratio:1;display:grid;place-items:center;
-    margin:1.1rem auto .7rem;background:#000;border-radius:999px;
-    border:1px solid #1d2330;
-    box-shadow:
-      0 0 0 2px rgba(255,106,0,.08) inset,
-      0 16px 40px rgba(0,0,0,.55),
-      0 0 60px rgba(255,106,0,.15);
-    overflow:hidden;position:relative;cursor:pointer;
-  }
-  .logo-button img{width:102%;height:102%;object-fit:cover;object-position:center}
-  .logo-button::after{
-    /* delikatna poświata */
-    content:"";position:absolute;inset:-14%;border-radius:50%;
-    background:radial-gradient(60% 60% at 50% 50%,rgba(255,106,0,.28),transparent 60%);
-    filter:blur(16px);pointer-events:none;mix-blend:screen;
-    animation:breath 2.5s ease-in-out infinite;
-  }
-  @keyframes breath{
-    0%,100%{transform:scale(1);opacity:.55}
-    50%{transform:scale(1.06);opacity:.9}
-  }
-  /* Stan nagrywania */
-  .listening .logo-button{
-    animation: spin 6s linear infinite;
-    box-shadow:
-      0 0 0 2px rgba(255,106,0,.18) inset,
-      0 0 110px rgba(255,106,0,.3),
-      0 0 60px rgba(0,224,255,.25);
-  }
-  @keyframes spin{to{transform:rotate(360deg)}}
+/* quick category */
+.cats{display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin:8px 0 16px}
+.chip{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:999px; background:#121922; border:1px solid #1a2430; color:#d7e2f1}
+.chip svg{width:18px;height:18px; fill:var(--accent)}
 
-  .title{margin:.3rem auto .25rem;text-align:center}
-  .title h2{margin:0;font-size:2.25rem;letter-spacing:.3px}
-  .title p{
-    margin:.25rem 0 1rem;color:var(--muted);font-size:1.05rem
-  }
+/* suggestions */
+.suggest{display:grid; gap:10px; margin:12px 0 16px}
+.pill{background:#0f141a; border:1px solid #1a2430; color:#dde7f4; border-radius:16px; padding:14px; text-align:center}
 
-  /* status + kapsuły quick actions */
-  .status{
-    display:flex;align-items:center;gap:.55rem;justify-content:center;margin:.35rem 0 1.05rem;
-    color:#d8e6f7;font-weight:600;font-size:.98rem;
-  }
-  .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
-  .chips{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0 1.1rem}
-  .chip{
-    display:flex;align-items:center;gap:.5rem;padding:.62rem .9rem;border-radius:999px;
-    background:var(--panel);border:1px solid #1f2935;color:#dfe8f2;cursor:pointer;font-weight:650;
-  }
-  .chip svg{width:18px;height:18px;fill:#ffb574}
-  .chip:active{transform:translateY(1px)}
+/* transcript */
+.panel{background:linear-gradient(180deg,#0f141a,#0b0f14); border:1px solid #17202b; border-radius:16px; padding:14px; color:#cfe0f5}
+.label{display:flex; align-items:center; gap:8px; color:#8fa3b9; font-size:14px; margin-bottom:6px}
+.label svg{width:16px; height:16px; fill:#8fa3b9}
+.out{min-height:68px}
 
-  /* pole dialogowe (czytanie komend) */
-  .dialog{
-    background:var(--panel-2);
-    border:1px solid #1e2731;border-radius:16px;padding:10px 12px;margin:.7rem 0 1.3rem;
-    max-height:160px;overflow:auto;
-  }
-  .bubble{padding:.7rem .9rem;margin:.45rem 0;border-radius:12px;}
-  .me{background:#0e1620;color:#dfe7ef;border:1px solid #1e2731}
-  .bot{background:#0d1a14;color:#d6f5e8;border:1px solid #193427}
-  .bubble small{display:block;color:#9bb0c3;margin-top:.25rem}
+/* bottom dock (mobile) */
+.dock{ position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px 12px; background: linear-gradient(180deg,rgba(11,15,20,0), rgba(11,15,20,.9)); backdrop-filter: blur(6px); }
+.dock .vbtn{width:36px; height:36px; border-radius:10px; display:grid; place-items:center; background:#121922; color:#90a3b9; border:1px solid #1a2430; font-weight:700}
+.dock .vbtn.active{background:linear-gradient(180deg,#ff8a3d,#ff7a18); color:#000; border:none}
 
-  /* Dolny pasek ikon (zamiast 1-2-3-4) */
-  .dock{
-    position:fixed;z-index:25;left:0;right:0;bottom:10px;display:flex;justify-content:center;
-  }
-  .dock-inner{
-    display:flex;gap:.8rem;background:rgba(15,20,27,.9);backdrop-filter:blur(8px);
-    padding:.55rem .7rem;border:1px solid #1f2935;border-radius:999px;
-    box-shadow:0 18px 40px rgba(0,0,0,.5);
-  }
-  .dock button{
-    appearance:none;border:0;background:#141b24;border:1px solid #223043;color:#dfe8f2;
-    width:58px;height:58px;border-radius:999px;display:grid;place-items:center;cursor:pointer;
-  }
-  .dock svg{width:24px;height:24px;fill:#ffd2a6;filter:drop-shadow(0 0 6px rgba(255,106,0,.3))}
-  .dock .active{outline:2px solid rgba(255,106,0,.35);box-shadow:0 0 22px rgba(255,106,0,.25) inset}
-  .hint{font-size:.82rem;color:#a7b6c7;text-align:center;margin-top:.4rem}
+/* VARIANT ENGINE  ----------------------------------------------------- */
+/* default layout (v1) */
+:root{ --grid:  "brand brand brand"  
+        "title title title" 
+        "sub   sub   sub" 
+        "hero  hero  hero" 
+        "cats  cats  cats" 
+        "sugg  sugg  sugg" 
+        "out   out   out"; }
+.grid{display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-areas:var(--grid); gap:8px;}
+.top{grid-area:brand}
+.h1{grid-area:title}
+.sub{grid-area:sub}
+.hero{grid-area:hero}
+.cats{grid-area:cats}
+.suggest{grid-area:sugg}
+.panel{grid-area:out}
 
-  /* Różnice wariantów */
-  .vx .title h2{font-size:2.05rem}
-  .v1 .chips{order:3}
-  .v2 .status{order:3}
-  .v3 .logo-button{margin-top:.2rem}
-  .v4 .title h2{letter-spacing:1.1px}
-</style>
+/* v2 – koszyk w hero, kategorie pod tytułem */
+:root[data-v="2"]{ --grid:  "brand brand cart"  
+                       "title title title"
+                       "cats  cats  cats" 
+                       "sub   sub   sub" 
+                       "hero  hero  hero"
+                       "sugg  sugg  sugg" 
+                       "out   out   out"; }
+:root[data-v="2"] .top{justify-content:flex-start}
+:root[data-v="2"] .cart{justify-self:end}
+
+/* v3 – mic mniejszy u góry, focus na listę */
+:root[data-v="3"]{ --grid:  "brand brand cart"  
+                       "hero  hero  hero" 
+                       "title title title" 
+                       "sub   sub   sub" 
+                       "cats  cats  cats" 
+                       "sugg  sugg  sugg" 
+                       "out   out   out"; }
+
+/* v4 – kategorie jako boczny pasek (tablet/desktop) */
+:root[data-v="4"]{ --grid:  "brand brand cart" 
+                       "title title title" 
+                       "sub   sub   sub" 
+                       "cats  hero  hero" 
+                       "cats  sugg  sugg" 
+                       "cats  out   out"; }
+:root[data-v="4"] .cats{justify-content:flex-start; align-content:flex-start}
+
+/* v5 – hero full-bleed, treści na panelu pod nim */
+:root[data-v="5"]{ --grid:  "brand brand cart"
+                       "hero  hero  hero"
+                       "title title title"
+                       "sub   sub   sub"
+                       "sugg  sugg  sugg"
+                       "out   out   out"
+                       "cats  cats  cats"; }
+
+/* v6 – minimal: bez sugestii; dock z ikonami kategorii */
+:root[data-v="6"] .suggest{display:none}
+:root[data-v="6"] .dock{justify-content:space-evenly}
+
+/* v7 – dialog na górze (asystent-first) */
+:root[data-v="7"]{ --grid:  "brand brand cart"
+                       "title title title"
+                       "out   out   out"
+                       "hero  hero  hero"
+                       "cats  cats  cats"
+                       "sugg  sugg  sugg"; }
+
+/* v8 – hero jako lewy panel (desktop), treści po prawej */
+:root[data-v="8"]{ --grid:  "brand brand cart"
+                       "title title title"
+                       "sub   sub   sub"
+                       "hero  sugg  sugg"
+                       "hero  out   out"
+                       "cats  out   out"; }
+
+/* v9 – tytuł z logo w jednej linii; mic podtytułem */
+:root[data-v="9"] .brand{gap:14px}
+:root[data-v="9"] .h1{margin-top:0}
+
+/* v10 – tryb prezentacji (duże elementy) */
+:root[data-v="10"] .h1{font-size:42px}
+:root[data-v="10"] .mic{--size: 280px}
+:root[data-v="10"] .pill{font-size:18px}
+
+/* --------- WIDE LAYOUTS (tablety/desktop) --------------------------- */
+@media (min-width: 768px){
+  :root{ --max-w: 960px }
+  .wrap{padding:22px 24px 120px}
+  .h1{font-size:44px}
+  .sub{font-size:20px}
+  .mic{ --size: 300px}
+  .cats{justify-content:flex-start}
+  .top .brand .logo{font-size:40px}
+}
+@media (min-width: 1200px){
+  :root{ --max-w: 1200px }
+  .h1{font-size:52px}
+  .mic{ --size: 340px}
+  .suggest{grid-template-columns:repeat(3,1fr)}
+  .pill{text-align:left}
+}
+
+/* helper */
+.hidden{display:none}
+
+  </style>
 </head>
 <body>
+  <svg aria-hidden="true" style="position:absolute; width:0; height:0">
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM3 4h2l.8 4H21l-2 7H8L6 6H3Zm4 9h10l1.2-4H7.8L9 13Z"/></symbol>
+    <symbol id="i-food" viewBox="0 0 24 24"><path d="M4 3h2v9a4 4 0 0 1-2 3v6H2v-6a4 4 0 0 1 2-3V3Zm8 0h2v7l2-1v-6h2v6l2 1v2h-8V3Z"/></symbol>
+    <symbol id="i-taxi" viewBox="0 0 24 24"><path d="M5 11l2-5h10l2 5h1a2 2 0 0 1 2 2v5h-2v2h-2v-2H6v2H4v-2H2v-5a2 2 0 0 1 2-2h1Zm3 0h8l-1.2-3H9.2L8 11Zm-1 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></symbol>
+    <symbol id="i-hotel" viewBox="0 0 24 24"><path d="M3 20V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6h2a2 2 0 0 1 2 2v6h-2v-4H5v4H3Zm4-9h3V7H7v4Zm5 0h3V7h-3v4Z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm-7-3h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11Z"/></symbol>
+  </svg>  <div class="wrap">
+    <div class="top">
+      <div class="brand"><div class="logo">FreeFlow</div><small>Voice to order</small></div>
+      <button class="cart" id="cartBtn" title="Koszyk">
+        <svg><use href="#i-cart"/></svg>
+        <span class="badge" id="cartCount">0</span>
+      </button>
+    </div><!-- switcher -->
+<div class="dock" id="switcher" aria-label="Wybierz wariant UI">
+  <button class="vbtn active" data-v="1">1</button>
+  <button class="vbtn" data-v="2">2</button>
+  <button class="vbtn" data-v="3">3</button>
+  <button class="vbtn" data-v="4">4</button>
+  <button class="vbtn" data-v="5">5</button>
+  <button class="vbtn" data-v="6">6</button>
+  <button class="vbtn" data-v="7">7</button>
+  <button class="vbtn" data-v="8">8</button>
+  <button class="vbtn" data-v="9">9</button>
+  <button class="vbtn" data-v="10">10</button>
+</div>
 
-<!-- Górny pasek: nazwa + selektor wariantu + KOSZYK -->
-<header class="topbar">
-  <div class="brand">FreeFlow</div>
+<div class="grid">
+  <h1 class="h1">Złóż zamówienie</h1>
+  <div class="sub">Taxi, posiłek, a może nocleg?</div>
 
-  <div class="variant-picker">
-    <label for="variant" class="sr">Wariant</label>
-    <select id="variant">
-      <option value="v1">Wariant 1 – logo środek, status pod spodem</option>
-      <option value="v2">Wariant 2 – status nad kapsułami</option>
-      <option value="v3">Wariant 3 – kompakt header</option>
-      <option value="v4">Wariant 4 – duże kapsuły i krótki tytuł</option>
-    </select>
+  <div class="hero" style="display:grid; place-items:center">
+    <button class="mic pulse" id="micBtn" aria-label="Mów teraz">
+      <img alt="FreeFlow mic" src="Freeflow-logo.png" onerror="this.src='file_000000000e9c62469156924aae2c3ff0.png'" />
+    </button>
+    <div class="mic-hint">Dotknij, aby zamówić</div>
   </div>
 
-  <div class="cart" id="cartBtn" title="Koszyk">
-    <!-- koszyk -->
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 .001 3.999A2 2 0 0 0 17 18ZM3 3h2l3.6 7.59-1.35 2.45A2 2 0 0 0 9 16h9a1 1 0 0 0 0-2H9.42a.25.25 0 0 1-.22-.14l.03-.06L10.1 12h6.45a2 2 0 0 0 1.8-1.1L21 6H7.21L6.27 4H3Z"/>
-    </svg>
-    <span class="badge" id="cartCount">0</span>
-  </div>
-</header>
-
-<main class="wrap v1 vx" id="screen">
-  <section class="title">
-    <h2>Złóż zamówienie</h2>
-    <p>Taxi, posiłek, a może nocleg?</p>
-  </section>
-
-  <!-- Logo jako przycisk nagrywania -->
-  <button class="logo-button" id="micBtn" aria-label="Kliknij, aby mówić">
-    <img src="Freeflow-logo.png" alt="FreeFlow logo" />
-  </button>
-
-  <!-- Status i kapsuły quick actions -->
-  <div class="status" id="status"><span class="dot"></span>Już sprawdzam…</div>
-
-  <div class="chips">
-    <button class="chip" data-act="food">
-      <!-- widelec/nóż -->
-      <svg viewBox="0 0 24 24"><path d="M7 2c.55 0 1 .45 1 1v6a2 2 0 0 1-2 2v9a1 1 0 0 1-2 0v-9a2 2 0 0 1-2-2V3a1 1 0 0 1 2 0v4h1V3c0-.55.45-1 1-1Zm9.5 0c.83 0 1.5.67 1.5 1.5V11h-3V3.5c0-.83.67-1.5 1.5-1.5Zm3.5 0a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3h-3a3 3 0 0 1-3-3V3a1 1 0 1 1 2 0v8c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V3a1 1 0 0 1 1-1Z"/></svg>
-      Jedzenie
-    </button>
-
-    <button class="chip" data-act="taxi">
-      <!-- taxi -->
-      <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h1Zm3.5 0h7L15.1 7H8.9L8.5 8H10a1 1 0 0 1 0 2H8l.5 1ZM6 16a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>
-      Taxi
-    </button>
-
-    <button class="chip" data-act="hotel">
-      <!-- hotel/łóżko -->
-      <svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h6a4 4 0 0 1 4 4h5a3 3 0 0 1 3 3v6h-2v-3H4v3H2V7Zm2 2v4h8a2 2 0 0 0-2-2H5Zm3-2a2 2 0 1 0 0 4h1a2 2 0 1 0 0-4H8Z"/></svg>
-      Hotel
-    </button>
+  <div class="cats">
+    <span class="chip"><svg><use href="#i-food"/></svg> Jedzenie</span>
+    <span class="chip"><svg><use href="#i-taxi"/></svg> Taxi</span>
+    <span class="chip"><svg><use href="#i-hotel"/></svg> Hotel</span>
   </div>
 
-  <!-- Pole dialogowe / log komend -->
-  <div class="dialog" id="dialog" aria-live="polite">
-    <div class="bubble bot">Witaj! Kliknij mikrofon i powiedz czego potrzebujesz.</div>
+  <div class="suggest">
+    <div class="pill">„dwie pizze pepperoni”</div>
+    <div class="pill">„zamów taxi na Dworzec”</div>
+    <div class="pill">„hotel w Krakowie od piątku na 2 noce”</div>
   </div>
 
-  <p class="hint">Dolny pasek: szybkie wejście do trybu Jedzenie / Taxi / Hotel. Kliknięcie doda też pozycję do koszyka (demo).</p>
-</main>
-
-<!-- DOLNY DOCK IKON -->
-<nav class="dock" aria-label="Skróty">
-  <div class="dock-inner">
-    <button id="dockFood" title="Jedzenie">
-      <svg viewBox="0 0 24 24"><path d="M7 2c.55 0 1 .45 1 1v6a2 2 0 0 1-2 2v9a1 1 0 0 1-2 0v-9a2 2 0 0 1-2-2V3a1 1 0 0 1 2 0v4h1V3c0-.55.45-1 1-1Z"/></svg>
-    </button>
-    <button id="dockTaxi" title="Taxi">
-      <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h1Z"/></svg>
-    </button>
-    <button id="dockHotel" title="Hotel">
-      <svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h6a4 4 0 0 1 4 4h5a3 3 0 0 1 3 3v6h-2v-3H4v3H2V7Z"/></svg>
-    </button>
-    <button id="dockMic" class="active" title="Mów teraz">
-      <!-- mikrofon -->
-      <svg viewBox="0 0 24 24"><path d="M12 14a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Zm-7-4a1 1 0 1 0-2 0 9 9 0 0 0 8 8.94V22H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.06A9 9 0 0 0 19 10a1 1 0 1 0-2 0 7 7 0 1 1-14 0Z"/></svg>
-    </button>
+  <div class="panel">
+    <div class="label"><svg><use href="#i-mic"/></svg>Dialog</div>
+    <div class="out" id="out">Jeszcze nic nie nagrano.</div>
   </div>
-</nav>
+</div>
 
-<script>
-  // warianty
-  const screen = document.getElementById('screen');
-  document.getElementById('variant').addEventListener('change', e=>{
-    screen.className = 'wrap vx ' + e.target.value;
-  });
-
-  // demo interakcji: mikrofon
-  const micBtn = document.getElementById('micBtn');
-  const statusEl = document.getElementById('status');
-  const dialog = document.getElementById('dialog');
-  let listening = false;
-  function addBubble(text,who='me'){
-    const b = document.createElement('div');
-    b.className = 'bubble ' + (who==='me'?'me':'bot');
-    b.innerHTML = text.replace(/\n/g,'<br>');
-    dialog.appendChild(b);
-    dialog.scrollTop = dialog.scrollHeight;
-  }
-  function setStatus(text, okDot=true){
-    statusEl.innerHTML = (okDot?'<span class="dot"></span>':'') + text;
-  }
-  micBtn.addEventListener('click', ()=>{
-    listening = !listening;
-    document.body.classList.toggle('listening', listening);
-    if(listening){
-      setStatus('Nasłuchuję…', false);
-      addBubble('• [demo] Rozpoczęto nagrywanie mikrofonu', 'bot');
-    }else{
-      setStatus('Przetwarzam…', false);
-      setTimeout(()=>{
-        addBubble('Użytkownik: „dwie pizze pepperoni”', 'me');
-        addBubble('Asystent: Dodaję do koszyka dwie pizze pepperoni 🍕', 'bot');
-        incCart(2);
-        setStatus('Gotowe ✔︎');
-      }, 700);
-    }
-  });
-
-  // Quick chips
-  const actions = {
-    food: {user:'Chcę coś do jedzenia', bot:'Proponuję pepperoni, margherita i hawajska. Dodać do koszyka? 🍕', plus:1},
-    taxi: {user:'Zamów taxi', bot:'Jasne. Ustawiam kurs na najbliższą taksówkę 🚕', plus:0},
-    hotel:{user:'Potrzebuję noclegu', bot:'Szukam hoteli w pobliżu i pytań dostępność 🛏️', plus:0}
-  };
-  document.querySelectorAll('.chip').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const a = actions[btn.dataset.act];
-      addBubble('Użytkownik: ' + a.user,'me');
-      addBubble('Asystent: ' + a.bot,'bot');
-      if(a.plus) incCart(a.plus);
+  </div>  <script>
+    // warianty
+    const sw = document.getElementById('switcher');
+    sw.addEventListener('click', (e)=>{
+      const b = e.target.closest('[data-v]');
+      if(!b) return;
+      const v = b.getAttribute('data-v');
+      document.documentElement.setAttribute('data-v', v);
+      document.querySelectorAll('.vbtn').forEach(x=>x.classList.toggle('active', x===b));
     });
-  });
 
-  // DOLNY DOCK
-  const dockMap = {
-    dockFood:'food', dockTaxi:'taxi', dockHotel:'hotel', dockMic:'mic'
-  };
-  for (const id in dockMap){
-    document.getElementById(id).addEventListener('click',()=>{
-      if(dockMap[id]==='mic'){ micBtn.click(); return; }
-      const a = actions[dockMap[id]];
-      addBubble('Użytkownik: ' + a.user,'me');
-      addBubble('Asystent: ' + a.bot,'bot');
-      if(a.plus) incCart(a.plus);
+    // cart demo
+    let cart = 0; const cartCount = document.getElementById('cartCount');
+    document.getElementById('cartBtn').addEventListener('click', ()=>{ cart++; cartCount.textContent = cart; });
+
+    // mic animations demo
+    const mic = document.getElementById('micBtn');
+    const out = document.getElementById('out');
+    let listening = false; let rot = 0; let spinId;
+    function spin(){ rot = (rot+1)%360; mic.style.transform = `rotate(${rot}deg)`; }
+    mic.addEventListener('click', ()=>{
+      listening = !listening;
+      if(listening){
+        out.textContent = 'Słucham… powiedz, co zamawiasz.';
+        mic.classList.add('pulse');
+        spinId = setInterval(spin, 16);
+      }else{
+        out.textContent = 'Dzięki! Rozumiem: (tu pojawi się wynik STT)';
+        mic.classList.remove('pulse');
+        clearInterval(spinId);
+        mic.style.transform='';
+      }
     });
-  }
-
-  // Koszyk
-  const cartCount = document.getElementById('cartCount');
-  function incCart(n=1){
-    cartCount.textContent = String(parseInt(cartCount.textContent||'0',10)+n);
-  }
-  document.getElementById('cartBtn').addEventListener('click',()=>{
-    addBubble('Koszyk: ' + cartCount.textContent + ' pozycji. (demo)','bot');
-  });
-</script>
-</body>
+  </script></body>
 </html>

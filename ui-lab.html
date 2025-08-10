@@ -2,308 +2,318 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow • UI Lab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow – UI Lab (4 warianty)</title>
 <style>
-/* —— Reset & tło —— */
-*{box-sizing:border-box}
-:root{
-  --bg:#0b0e13; --panel:#111722; --line:#232838;
-  --txt:#e9edf3; --mut:#a7b0c0;
-  --accent:#ff7a1a; --accent-2:#ffae55;
-  --glow: 0 0 30px rgba(255,122,26,.35), 0 0 60px rgba(255,122,26,.15);
-}
-html,body{height:100%}
-body{
-  margin:0; color:var(--txt); background: radial-gradient(1200px 600px at 50% -10%, #151b28 0%, #0b0e13 45%, #0b0e13 100%);
-  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-}
+  :root{
+    --bg:#0c0f13;
+    --panel:#13171d;
+    --panel-2:#101419;
+    --text:#e7ecf1;
+    --muted:#9aa6b2;
+    --accent:#ff6a00;        /* neon pomarańcz */
+    --accent-2:#00e0ff;      /* turkusowy blik */
+    --card:#0e1217;
+    --ok:#27d07d;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:radial-gradient(1200px 700px at 50% -200px,#1a222c 0%,#0b0e13 55%,#07090c 100%);
+    color:var(--text);font:16px/1.45 system-ui,Segoe UI,Inter,Arial,sans-serif;
+  }
 
-/* —— Wrappery —— */
-.container{max-width:960px; margin:0 auto; padding:20px 16px 120px}
-.hero{padding:18px 12px 4px; text-align:center}
-.brand{font-weight:900; letter-spacing:.3px; font-size:44px; margin:8px 0 2px;
-  background:linear-gradient(180deg, var(--accent), var(--accent-2));
-  -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 8px 30px rgba(255,122,26,.15);
-}
-.h1{font-size:34px; font-weight:800; margin:8px 0 6px}
-.sub{color:var(--mut); font-weight:600; margin-bottom:14px}
+  /* Główny przełącznik wariantów */
+  .topbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;gap:.8rem;
+    padding:.8rem .9rem;
+    background:linear-gradient(180deg,#0d1218 0,#0d1218cc 65%,transparent 100%);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid #0f151c;
+  }
+  .brand{
+    font-weight:800;letter-spacing:.4px;
+    background:linear-gradient(90deg,var(--accent),#ff9a2b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-size:1.55rem;
+  }
+  .variant-picker{
+    margin-left:auto;
+  }
+  .variant-picker select{
+    appearance:none;border:1px solid #1e2731;background:#0f141b;color:#cfe3f5;
+    border-radius:10px;padding:.5rem .9rem;font-weight:600;
+  }
 
-/* —— Logo-button (centralny) —— */
-.logoWrap{
-  display:grid; place-items:center; margin:10px auto 14px;
-  width:clamp(220px, 70vw, 440px); aspect-ratio:1/1; position:relative;
-}
-.ring{
-  position:absolute; inset:0; border-radius:50%;
-  background:radial-gradient(60% 60% at 50% 50%, rgba(255,122,26,.15), rgba(0,0,0,0) 70%),
-             radial-gradient(50% 50% at 50% 50%, rgba(255,174,85,.18), rgba(0,0,0,0) 65%);
-  filter:blur(2px); opacity:.8; transition:.3s;
-}
-.logoBtn{
-  width:82%; aspect-ratio:1/1; border-radius:50%;
-  display:grid; place-items:center; border:1px solid var(--line); background:rgba(255,255,255,.02);
-  box-shadow:0 10px 30px rgba(0,0,0,.5), inset 0 0 50px rgba(255,122,26,.06);
-  backdrop-filter: blur(6px);
-  cursor:pointer; transition:.2s;
-}
-.logoBtn img{width:86%; height:86%; object-fit:contain; filter: drop-shadow(0 8px 22px rgba(0,0,0,.45))}
-.logoBtn:active{transform:translateY(1px);}
+  /* Koszyk u góry (stały) */
+  .cart{
+    position:relative;margin-left:.4rem;
+    width:42px;height:42px;border-radius:10px;
+    display:grid;place-items:center;cursor:pointer;
+    background:#0f141b;border:1px solid #1e2731;
+  }
+  .cart svg{width:22px;height:22px;fill:var(--text)}
+  .cart .badge{
+    position:absolute;top:-6px;right:-6px;
+    background:var(--accent);color:#000;font-weight:800;
+    border-radius:999px;padding:.1rem .42rem;font-size:.72rem;box-shadow:0 0 0 3px #0d1218;
+  }
 
-/* Stany mikrofonu */
-.stateBadge{margin-top:10px; text-align:center; color:var(--mut); font-weight:700; letter-spacing:.3px}
-.stateBadge .dot{display:inline-block; width:10px; height:10px; margin-right:8px; border-radius:50%; background:#7a8aa0}
-.logoWrap.listening .ring{animation:pulse 1.2s ease-in-out infinite; box-shadow:var(--glow)}
-.logoWrap.listening .dot{background:#11d36b}
-.logoWrap.thinking .ring{animation:spin 2.6s linear infinite; opacity:.7}
-.logoWrap.thinking .dot{background:#ffd257}
-.logoWrap.speaking .ring{animation:pulseBig 1.05s ease-in-out infinite; opacity:1}
-.logoWrap.speaking .dot{background:#ff7a1a}
-@keyframes pulse{0%{transform:scale(.96)} 50%{transform:scale(1.02)} 100%{transform:scale(.96)}}
-@keyframes pulseBig{0%{transform:scale(.92)} 50%{transform:scale(1.06)} 100%{transform:scale(.92)}}
-@keyframes spin{to{transform:rotate(360deg)}}
+  /* Obszar wariantu */
+  .wrap{max-width:900px;margin:0 auto;padding:1rem .9rem 90px}
 
-/* —— Kategorie —— */
-.cats{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:10px 0 8px}
-.cat{
-  display:flex; gap:8px; align-items:center; border:1px solid var(--line); background:var(--panel);
-  padding:10px 14px; border-radius:999px; color:#e5e7eb; font-weight:600;
-}
-.cat svg{width:18px; height:18px; fill:var(--accent)}
-.cat:active{transform:translateY(1px)}
+  /* Logo / przycisk */
+  .logo-button{
+    width:min(72vw,360px);aspect-ratio:1;display:grid;place-items:center;
+    margin:1.1rem auto .7rem;background:#000;border-radius:999px;
+    border:1px solid #1d2330;
+    box-shadow:
+      0 0 0 2px rgba(255,106,0,.08) inset,
+      0 16px 40px rgba(0,0,0,.55),
+      0 0 60px rgba(255,106,0,.15);
+    overflow:hidden;position:relative;cursor:pointer;
+  }
+  .logo-button img{width:102%;height:102%;object-fit:cover;object-position:center}
+  .logo-button::after{
+    /* delikatna poświata */
+    content:"";position:absolute;inset:-14%;border-radius:50%;
+    background:radial-gradient(60% 60% at 50% 50%,rgba(255,106,0,.28),transparent 60%);
+    filter:blur(16px);pointer-events:none;mix-blend:screen;
+    animation:breath 2.5s ease-in-out infinite;
+  }
+  @keyframes breath{
+    0%,100%{transform:scale(1);opacity:.55}
+    50%{transform:scale(1.06);opacity:.9}
+  }
+  /* Stan nagrywania */
+  .listening .logo-button{
+    animation: spin 6s linear infinite;
+    box-shadow:
+      0 0 0 2px rgba(255,106,0,.18) inset,
+      0 0 110px rgba(255,106,0,.3),
+      0 0 60px rgba(0,224,255,.25);
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-/* —— Chips / prompty —— */
-.chips{background:rgba(255,255,255,.03); border:1px solid var(--line);
-  border-radius:16px; padding:14px; margin-top:14px}
-.chip{display:block; width:100%; text-align:center; border-radius:12px; border:1px solid var(--line);
-  padding:12px 14px; margin:10px 0; background:#0f1420; color:#e7ebf3; font-weight:700}
-.chip:active{transform:translateY(1px)}
+  .title{margin:.3rem auto .25rem;text-align:center}
+  .title h2{margin:0;font-size:2.25rem;letter-spacing:.3px}
+  .title p{
+    margin:.25rem 0 1rem;color:var(--muted);font-size:1.05rem
+  }
 
-/* —— Transkrypcja —— */
-.card{margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px}
-.tag{display:inline-flex; gap:8px; align-items:center; font-weight:700; color:#dbe2ee}
-.tag svg{width:18px; height:18px; fill:var(--accent)}
-.tt{color:#c6cfdd}
+  /* status + kapsuły quick actions */
+  .status{
+    display:flex;align-items:center;gap:.55rem;justify-content:center;margin:.35rem 0 1.05rem;
+    color:#d8e6f7;font-weight:600;font-size:.98rem;
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .chips{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0 1.1rem}
+  .chip{
+    display:flex;align-items:center;gap:.5rem;padding:.62rem .9rem;border-radius:999px;
+    background:var(--panel);border:1px solid #1f2935;color:#dfe8f2;cursor:pointer;font-weight:650;
+  }
+  .chip svg{width:18px;height:18px;fill:#ffb574}
+  .chip:active{transform:translateY(1px)}
 
-/* —— Koszyk FAB —— */
-.cartFab{
-  position:fixed; right:16px; bottom:84px; background:#111722; border:1px solid var(--line);
-  border-radius:999px; padding:10px 14px; display:flex; align-items:center; gap:10px;
-  box-shadow:0 10px 26px rgba(0,0,0,.35); color:#fff; z-index:10;
-}
-.cartFab svg{width:20px; height:20px; fill:var(--accent)}
-.cartFab .dot{
-  min-width:20px; height:20px; border-radius:999px; background:linear-gradient(180deg,#ff6a00,#ff9a3c);
-  display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;
-}
-.cartFab .sum{opacity:.85; font-weight:700}
+  /* pole dialogowe (czytanie komend) */
+  .dialog{
+    background:var(--panel-2);
+    border:1px solid #1e2731;border-radius:16px;padding:10px 12px;margin:.7rem 0 1.3rem;
+    max-height:160px;overflow:auto;
+  }
+  .bubble{padding:.7rem .9rem;margin:.45rem 0;border-radius:12px;}
+  .me{background:#0e1620;color:#dfe7ef;border:1px solid #1e2731}
+  .bot{background:#0d1a14;color:#d6f5e8;border:1px solid #193427}
+  .bubble small{display:block;color:#9bb0c3;margin-top:.25rem}
 
-/* —— Przełącznik wariantów —— */
-.variants{
-  position:fixed; left:0; right:0; bottom:0; border-top:1px solid var(--line);
-  background:#0b0e13CC; backdrop-filter: blur(8px);
-  display:flex; gap:8px; justify-content:center; padding:10px 10px 14px; z-index:9;
-}
-.vbtn{
-  width:36px; height:36px; border-radius:50%; border:1px solid var(--line); color:#d5dbe7;
-  background:#101624; font-weight:800;
-}
-.vbtn.on{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#111; border:0}
+  /* Dolny pasek ikon (zamiast 1-2-3-4) */
+  .dock{
+    position:fixed;z-index:25;left:0;right:0;bottom:10px;display:flex;justify-content:center;
+  }
+  .dock-inner{
+    display:flex;gap:.8rem;background:rgba(15,20,27,.9);backdrop-filter:blur(8px);
+    padding:.55rem .7rem;border:1px solid #1f2935;border-radius:999px;
+    box-shadow:0 18px 40px rgba(0,0,0,.5);
+  }
+  .dock button{
+    appearance:none;border:0;background:#141b24;border:1px solid #223043;color:#dfe8f2;
+    width:58px;height:58px;border-radius:999px;display:grid;place-items:center;cursor:pointer;
+  }
+  .dock svg{width:24px;height:24px;fill:#ffd2a6;filter:drop-shadow(0 0 6px rgba(255,106,0,.3))}
+  .dock .active{outline:2px solid rgba(255,106,0,.35);box-shadow:0 0 22px rgba(255,106,0,.25) inset}
+  .hint{font-size:.82rem;color:#a7b6c7;text-align:center;margin-top:.4rem}
 
-/* —— Layouty —— */
-.hidden{display:none}
-
-/* Toast */
-.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(12px);
-  background:#111722; color:#fff; border:1px solid var(--line); padding:10px 14px; border-radius:12px;
-  opacity:0; transition:.25s; box-shadow:0 10px 28px rgba(0,0,0,.35); z-index:12}
-.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+  /* Różnice wariantów */
+  .vx .title h2{font-size:2.05rem}
+  .v1 .chips{order:3}
+  .v2 .status{order:3}
+  .v3 .logo-button{margin-top:.2rem}
+  .v4 .title h2{letter-spacing:1.1px}
 </style>
 </head>
 <body>
 
-<div class="container">
+<!-- Górny pasek: nazwa + selektor wariantu + KOSZYK -->
+<header class="topbar">
+  <div class="brand">FreeFlow</div>
 
-  <!-- Wspólna góra -->
-  <header class="hero">
-    <div class="brand">FreeFlow</div>
-    <div class="h1">Złóż zamówienie</div>
-    <div class="sub">Taxi, posiłek, a może nocleg?</div>
-  </header>
+  <div class="variant-picker">
+    <label for="variant" class="sr">Wariant</label>
+    <select id="variant">
+      <option value="v1">Wariant 1 – logo środek, status pod spodem</option>
+      <option value="v2">Wariant 2 – status nad kapsułami</option>
+      <option value="v3">Wariant 3 – kompakt header</option>
+      <option value="v4">Wariant 4 – duże kapsuły i krótki tytuł</option>
+    </select>
+  </div>
 
-  <!-- VAR 1: centralne logo jako przycisk + kategorie + chipsy -->
-  <section id="v1">
-    <div class="logoWrap" id="logo1">
-      <div class="ring"></div>
-      <button class="logoBtn" id="micBtn1" aria-label="Mów teraz">
-        <img src="Freeflow-logo.png" alt="FreeFlow logo" onerror="this.style.opacity=.0">
-      </button>
-      <div class="stateBadge"><span class="dot"></span><span id="s1">Gotowy do nagrywania…</span></div>
-    </div>
+  <div class="cart" id="cartBtn" title="Koszyk">
+    <!-- koszyk -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 .001 3.999A2 2 0 0 0 17 18ZM3 3h2l3.6 7.59-1.35 2.45A2 2 0 0 0 9 16h9a1 1 0 0 0 0-2H9.42a.25.25 0 0 1-.22-.14l.03-.06L10.1 12h6.45a2 2 0 0 0 1.8-1.1L21 6H7.21L6.27 4H3Z"/>
+    </svg>
+    <span class="badge" id="cartCount">0</span>
+  </div>
+</header>
 
-    <div class="cats" role="navigation" aria-label="Kategorie">
-      <button class="cat" data-k="food">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2v8a2 2 0 1 0 4 0V3h2v8a4 4 0 1 1-8 0V3zm12 0h2v7h2V3h2v18h-2v-9h-2v9h-2V3z"/></svg> Jedzenie
-      </button>
-      <button class="cat" data-k="taxi">
-        <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5h-2v-2H4v2H2v-5a2 2 0 0 1 2-2h1zm2.5 0h9L15 7H9l-1.5 4zM6 15.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg> Taxi
-      </button>
-      <button class="cat" data-k="hotel">
-        <svg viewBox="0 0 24 24"><path d="M3 3h2v18H3V3zm4 2h11a3 3 0 0 1 3 3v13h-2v-4H7v4H5V8a3 3 0 0 1 3-3zm0 6h7V7H7v4zm9 0h3V9h-3v2z"/></svg> Hotel
-      </button>
-    </div>
-
-    <div class="chips">
-      <button class="chip ex">„dwie pizze pepperoni”</button>
-      <button class="chip ex">„zamów taxi na Dworzec”</button>
-      <button class="chip ex">„hotel w Krakowie od piątku na 2 noce”</button>
-
-      <div class="card">
-        <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Ostatnia rozmowa</div>
-        <div class="tt" id="log1">Jeszcze nic nie nagrano.</div>
-      </div>
-    </div>
+<main class="wrap v1 vx" id="screen">
+  <section class="title">
+    <h2>Złóż zamówienie</h2>
+    <p>Taxi, posiłek, a może nocleg?</p>
   </section>
 
-  <!-- VAR 2: duże logo u góry, przycisk na dole (CTA) -->
-  <section id="v2" class="hidden">
-    <div class="logoWrap" id="logo2">
-      <div class="ring"></div>
-      <button class="logoBtn" id="micBtn2" aria-label="Mów teraz">
-        <img src="Freeflow-logo.png" alt="">
-      </button>
-      <div class="stateBadge"><span class="dot"></span><span id="s2">Gotowy do nagrywania…</span></div>
-    </div>
-    <div class="chips">
-      <button class="chip ex">„poproszę ramen pikantny”</button>
-      <button class="chip ex">„wezwij taxi na lotnisko”</button>
-    </div>
-  </section>
+  <!-- Logo jako przycisk nagrywania -->
+  <button class="logo-button" id="micBtn" aria-label="Kliknij, aby mówić">
+    <img src="Freeflow-logo.png" alt="FreeFlow logo" />
+  </button>
 
-  <!-- VAR 3: minimal – tylko logo i transkrypcja -->
-  <section id="v3" class="hidden">
-    <div class="logoWrap" id="logo3">
-      <div class="ring"></div>
-      <button class="logoBtn" id="micBtn3"><img src="Freeflow-logo.png" alt=""></button>
-      <div class="stateBadge"><span class="dot"></span><span id="s3">Gotowy do nagrywania…</span></div>
-    </div>
-    <div class="card">
-      <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Dialog</div>
-      <div class="tt" id="log3">—</div>
-    </div>
-  </section>
+  <!-- Status i kapsuły quick actions -->
+  <div class="status" id="status"><span class="dot"></span>Już sprawdzam…</div>
 
-  <!-- VAR 4: kategorie jako karty na siatce -->
-  <section id="v4" class="hidden">
-    <div class="logoWrap" id="logo4">
-      <div class="ring"></div>
-      <button class="logoBtn" id="micBtn4"><img src="Freeflow-logo.png" alt=""></button>
-      <div class="stateBadge"><span class="dot"></span><span id="s4">Gotowy do nagrywania…</span></div>
-    </div>
-    <div class="cats" style="justify-content:space-between; gap:12px">
-      <button class="cat" data-k="food">🍕 Jedzenie</button>
-      <button class="cat" data-k="taxi">🚕 Taxi</button>
-      <button class="cat" data-k="hotel">🏨 Hotel</button>
-      <button class="cat" data-k="other">🛒 Zakupy</button>
-    </div>
-  </section>
+  <div class="chips">
+    <button class="chip" data-act="food">
+      <!-- widelec/nóż -->
+      <svg viewBox="0 0 24 24"><path d="M7 2c.55 0 1 .45 1 1v6a2 2 0 0 1-2 2v9a1 1 0 0 1-2 0v-9a2 2 0 0 1-2-2V3a1 1 0 0 1 2 0v4h1V3c0-.55.45-1 1-1Zm9.5 0c.83 0 1.5.67 1.5 1.5V11h-3V3.5c0-.83.67-1.5 1.5-1.5Zm3.5 0a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3h-3a3 3 0 0 1-3-3V3a1 1 0 1 1 2 0v8c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V3a1 1 0 0 1 1-1Z"/></svg>
+      Jedzenie
+    </button>
 
-  <!-- VAR 5: chat-first -->
-  <section id="v5" class="hidden">
-    <div class="logoWrap" id="logo5">
-      <div class="ring"></div>
-      <button class="logoBtn" id="micBtn5"><img src="Freeflow-logo.png" alt=""></button>
-      <div class="stateBadge"><span class="dot"></span><span id="s5">Gotowy do nagrywania…</span></div>
-    </div>
-    <div class="card">
-      <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Transkrypcja</div>
-      <div class="tt" id="log5">Powiedz coś, a tu pokaże się rozmowa.</div>
-    </div>
-  </section>
+    <button class="chip" data-act="taxi">
+      <!-- taxi -->
+      <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h1Zm3.5 0h7L15.1 7H8.9L8.5 8H10a1 1 0 0 1 0 2H8l.5 1ZM6 16a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>
+      Taxi
+    </button>
 
-</div>
+    <button class="chip" data-act="hotel">
+      <!-- hotel/łóżko -->
+      <svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h6a4 4 0 0 1 4 4h5a3 3 0 0 1 3 3v6h-2v-3H4v3H2V7Zm2 2v4h8a2 2 0 0 0-2-2H5Zm3-2a2 2 0 1 0 0 4h1a2 2 0 1 0 0-4H8Z"/></svg>
+      Hotel
+    </button>
+  </div>
 
-<!-- Koszyk demo -->
-<button id="cartFab" class="cartFab" aria-label="Koszyk">
-  <span class="dot" id="cartCount">0</span>
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h-2l-1 2H1v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 7 21h12v-2H7.42a.25.25 0 0 1-.22-.37L8 16h9a2 2 0 0 0 1.8-1.1l3.1-6.2A1 1 0 0 0 21 7H6.42l-.7-1.4L7 4zM7 22a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 .001 4A2 2 0 0 0 17 22z"/></svg>
-  <span class="sum" id="cartSum">0,00 zł</span>
-</button>
+  <!-- Pole dialogowe / log komend -->
+  <div class="dialog" id="dialog" aria-live="polite">
+    <div class="bubble bot">Witaj! Kliknij mikrofon i powiedz czego potrzebujesz.</div>
+  </div>
 
-<!-- Przełącznik wariantów -->
-<nav class="variants" id="variants">
-  <button class="vbtn on" data-v="1">1</button>
-  <button class="vbtn" data-v="2">2</button>
-  <button class="vbtn" data-v="3">3</button>
-  <button class="vbtn" data-v="4">4</button>
-  <button class="vbtn" data-v="5">5</button>
+  <p class="hint">Dolny pasek: szybkie wejście do trybu Jedzenie / Taxi / Hotel. Kliknięcie doda też pozycję do koszyka (demo).</p>
+</main>
+
+<!-- DOLNY DOCK IKON -->
+<nav class="dock" aria-label="Skróty">
+  <div class="dock-inner">
+    <button id="dockFood" title="Jedzenie">
+      <svg viewBox="0 0 24 24"><path d="M7 2c.55 0 1 .45 1 1v6a2 2 0 0 1-2 2v9a1 1 0 0 1-2 0v-9a2 2 0 0 1-2-2V3a1 1 0 0 1 2 0v4h1V3c0-.55.45-1 1-1Z"/></svg>
+    </button>
+    <button id="dockTaxi" title="Taxi">
+      <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h1Z"/></svg>
+    </button>
+    <button id="dockHotel" title="Hotel">
+      <svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h6a4 4 0 0 1 4 4h5a3 3 0 0 1 3 3v6h-2v-3H4v3H2V7Z"/></svg>
+    </button>
+    <button id="dockMic" class="active" title="Mów teraz">
+      <!-- mikrofon -->
+      <svg viewBox="0 0 24 24"><path d="M12 14a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Zm-7-4a1 1 0 1 0-2 0 9 9 0 0 0 8 8.94V22H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.06A9 9 0 0 0 19 10a1 1 0 1 0-2 0 7 7 0 1 1-14 0Z"/></svg>
+    </button>
+  </div>
 </nav>
 
 <script>
-/* —— Helpers —— */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => [...document.querySelectorAll(sel)];
-function toast(txt){
-  const t = Object.assign(document.createElement('div'), {className:'toast', textContent:txt});
-  document.body.appendChild(t);
-  setTimeout(()=>t.classList.add('on'), 10);
-  setTimeout(()=>{ t.classList.remove('on'); setTimeout(()=>t.remove(), 250); }, 2200);
-}
-
-/* —— Przełącznik wariantów —— */
-const sections = ['#v1','#v2','#v3','#v4','#v5'].map(id=>$(id));
-$('#variants').addEventListener('click', (e)=>{
-  const b = e.target.closest('.vbtn'); if(!b) return;
-  $$('.vbtn').forEach(x=>x.classList.toggle('on', x===b));
-  const v = +b.dataset.v;
-  sections.forEach((s,i)=>s.classList.toggle('hidden', (i+1)!==v));
-  window.scrollTo({top:0, behavior:'smooth'});
-});
-
-/* —— Demo stany mikrofonu —— */
-function makeMic(micBtnId, wrapId, labelId, logId){
-  const btn = document.getElementById(micBtnId);
-  const wrap = document.getElementById(wrapId);
-  const lab  = document.getElementById(labelId);
-  const log  = logId ? document.getElementById(logId) : null;
-  let state = 'idle'; // idle -> listening -> thinking -> speaking -> idle
-  function setState(s){
-    wrap.classList.remove('listening','thinking','speaking');
-    if(s!=='idle') wrap.classList.add(s);
-    state = s;
-    lab.textContent = s==='idle' ? 'Gotowy do nagrywania…' :
-                      s==='listening' ? 'Słucham… mów śmiało' :
-                      s==='thinking' ? 'Już sprawdzam…' :
-                      'Odpowiadam…';
-  }
-  btn.addEventListener('click', ()=>{
-    if(state==='idle'){ setState('listening'); if(log) log.innerText='Ty: „przykładowa fraza…”'; }
-    else if(state==='listening'){ setState('thinking'); if(log) log.innerText += '\nAsystent: przetwarzam…'; }
-    else if(state==='thinking'){ setState('speaking'); if(log) log.innerText += '\nAsystent: gotowe!'; }
-    else { setState('idle'); }
+  // warianty
+  const screen = document.getElementById('screen');
+  document.getElementById('variant').addEventListener('change', e=>{
+    screen.className = 'wrap vx ' + e.target.value;
   });
-  setState('idle');
-}
-makeMic('micBtn1','logo1','s1','log1');
-makeMic('micBtn2','logo2','s2');
-makeMic('micBtn3','logo3','s3','log3');
-makeMic('micBtn4','logo4','s4');
-makeMic('micBtn5','logo5','s5','log5');
 
-/* —— Kategorie + mini koszyk (demo) —— */
-const cart = {count:0, sum:0};
-const $cnt = document.getElementById('cartCount');
-const $sum = document.getElementById('cartSum');
-function addDemoItem(kind){
-  const prices = { food: 38.0, taxi: 25.0, hotel: 199.0, other: 15.0 };
-  cart.count++; cart.sum += prices[kind] || 15;
-  $cnt.textContent = cart.count;
-  $sum.textContent = cart.sum.toFixed(2).replace('.',',') + ' zł';
-  toast('Dodano do koszyka: ' + (kind||'pozycja'));
-}
-$$('.cat').forEach(btn=>{
-  btn.addEventListener('click', ()=> addDemoItem(btn.dataset.k));
-});
+  // demo interakcji: mikrofon
+  const micBtn = document.getElementById('micBtn');
+  const statusEl = document.getElementById('status');
+  const dialog = document.getElementById('dialog');
+  let listening = false;
+  function addBubble(text,who='me'){
+    const b = document.createElement('div');
+    b.className = 'bubble ' + (who==='me'?'me':'bot');
+    b.innerHTML = text.replace(/\n/g,'<br>');
+    dialog.appendChild(b);
+    dialog.scrollTop = dialog.scrollHeight;
+  }
+  function setStatus(text, okDot=true){
+    statusEl.innerHTML = (okDot?'<span class="dot"></span>':'') + text;
+  }
+  micBtn.addEventListener('click', ()=>{
+    listening = !listening;
+    document.body.classList.toggle('listening', listening);
+    if(listening){
+      setStatus('Nasłuchuję…', false);
+      addBubble('• [demo] Rozpoczęto nagrywanie mikrofonu', 'bot');
+    }else{
+      setStatus('Przetwarzam…', false);
+      setTimeout(()=>{
+        addBubble('Użytkownik: „dwie pizze pepperoni”', 'me');
+        addBubble('Asystent: Dodaję do koszyka dwie pizze pepperoni 🍕', 'bot');
+        incCart(2);
+        setStatus('Gotowe ✔︎');
+      }, 700);
+    }
+  });
+
+  // Quick chips
+  const actions = {
+    food: {user:'Chcę coś do jedzenia', bot:'Proponuję pepperoni, margherita i hawajska. Dodać do koszyka? 🍕', plus:1},
+    taxi: {user:'Zamów taxi', bot:'Jasne. Ustawiam kurs na najbliższą taksówkę 🚕', plus:0},
+    hotel:{user:'Potrzebuję noclegu', bot:'Szukam hoteli w pobliżu i pytań dostępność 🛏️', plus:0}
+  };
+  document.querySelectorAll('.chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const a = actions[btn.dataset.act];
+      addBubble('Użytkownik: ' + a.user,'me');
+      addBubble('Asystent: ' + a.bot,'bot');
+      if(a.plus) incCart(a.plus);
+    });
+  });
+
+  // DOLNY DOCK
+  const dockMap = {
+    dockFood:'food', dockTaxi:'taxi', dockHotel:'hotel', dockMic:'mic'
+  };
+  for (const id in dockMap){
+    document.getElementById(id).addEventListener('click',()=>{
+      if(dockMap[id]==='mic'){ micBtn.click(); return; }
+      const a = actions[dockMap[id]];
+      addBubble('Użytkownik: ' + a.user,'me');
+      addBubble('Asystent: ' + a.bot,'bot');
+      if(a.plus) incCart(a.plus);
+    });
+  }
+
+  // Koszyk
+  const cartCount = document.getElementById('cartCount');
+  function incCart(n=1){
+    cartCount.textContent = String(parseInt(cartCount.textContent||'0',10)+n);
+  }
+  document.getElementById('cartBtn').addEventListener('click',()=>{
+    addBubble('Koszyk: ' + cartCount.textContent + ' pozycji. (demo)','bot');
+  });
 </script>
 </body>
 </html>

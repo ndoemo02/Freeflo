@@ -1,205 +1,199 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FreeFlow — Voice to Order</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FreeFlow – Voice to Order</title>
 
-<!-- Kaligraficzny font podobny do loga -->
-<link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+  <!-- Font zbliżony do stylu logotypu (script) -->
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-<style>
-  :root{
-    --bg:#000;                /* total black */
-    --txt:#eae7e1;
-    --muted:#9aa0a6;
-    --accent:#ff7a1a;         /* soczysty pomarańcz */
-    --neonA:#ff7a1a;
-    --neonB:#ff3bd4;
-    --neonC:#19d7ff;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--txt);
-    font:400 16px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .wrap{ width:min(920px,100%); padding:28px 18px 36px }
+  <style>
+    :root{
+      --bg:#0b0c0f;
+      --panel:#111319;
+      --text:#e9e9ec;
+      --muted:#b9bdc7;
+      --brand:#ff7a1a;
+      --brand2:#ffb347;
+      --glow: rgba(255,122,26,.45);
+    }
 
-  /* Tytuł – skrypt + gradient jak w logo */
-  header{ text-align:center; margin-bottom:10px }
-  .brand{
-    font-family:'Lobster', cursive;
-    font-size: clamp(42px, 9vw, 96px);
-    line-height:1;
-    margin:0 0 4px;
-    background:linear-gradient(20deg, var(--neonA), #ffb05a 35%, var(--neonA) 70%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow: 0 10px 40px rgba(255,122,26,.18);
-    letter-spacing:.5px;
-  }
-  .subtitle{
-    margin:.2rem 0 0; font-weight:700;
-    font-size: clamp(22px, 4.4vw, 40px);
-  }
-  .hint{ color:var(--muted); margin:.35rem 0 18px }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 800px at 50% -200px,#12141a 0%, var(--bg) 55%);
+      color:var(--text); font-family:Inter,system-ui,Arial,Helvetica,sans-serif;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
 
-  /* Logo jako przycisk – bez żadnej ramki, pełne PNG */
-  .stage{ display:grid; place-items:center; gap:8px; margin:8px auto 10px }
-  .mic-btn{
-    position:relative; border:none; background:transparent; outline:none; cursor:pointer;
-    width:min(78vw, 480px); aspect-ratio:1/1; display:grid; place-items:center;
-  }
-  .mic-img{
-    width:100%; height:100%; user-select:none; -webkit-user-drag:none;
-    /* neonowa poświata spód */
-    filter:
-      drop-shadow(0 0 35px rgba(255,122,26,.22))
-      drop-shadow(0 0 18px rgba(25,215,255,.12))
-      drop-shadow(0 0 22px rgba(255,59,212,.10));
-    transition: transform .25s ease, filter .25s ease;
-  }
-  .mic-btn:hover .mic-img{ transform:scale(1.02) }
+    .wrap{max-width:980px; margin:0 auto; padding:24px 20px 28dvh}
 
-  /* Obrót + puls + kolorowy glow podczas nasłuchu */
-  .mic-btn.listening .mic-img{
-    animation:
-      spin 7s linear infinite,
-      throb 1.3s ease-in-out infinite,
-      hue 6s linear infinite;
-    filter:
-      drop-shadow(0 0 45px rgba(255,122,26,.45))
-      drop-shadow(0 0 26px rgba(25,215,255,.28))
-      drop-shadow(0 0 30px rgba(255,59,212,.26));
-  }
-  @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-  @keyframes throb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
-  @keyframes hue { 0%{ filter:hue-rotate(0deg) } 100%{ filter:hue-rotate(360deg) } }
+    /* Nagłówek */
+    .brand{
+      font-family:Pacifico, cursive;
+      font-size: clamp(38px, 7.5vw, 82px);
+      line-height: .95;
+      letter-spacing:.5px;
+      margin: 8px 0 6px;
+      background: linear-gradient(180deg, var(--brand) 0%, var(--brand2) 100%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 8px 28px rgba(255,122,26,.15);
+      text-align:center;
+    }
+    .h1{font-size:clamp(24px,4.5vw,42px); font-weight:800; margin: 0 0 6px; text-align:center}
+    .sub{color:var(--muted); font-size:clamp(14px,2.9vw,18px); text-align:center; margin:0 0 24px}
 
-  /* falująca poświata pod logo (delikatna) */
-  .aura{
-    position:absolute; inset:6% 6% 0 6%; pointer-events:none; border-radius:50%;
-    background:radial-gradient(40% 40% at 50% 55%,
-      rgba(255,122,26,.25), rgba(25,215,255,.16) 40%, rgba(255,59,212,.12) 70%, transparent 72%);
-    mix-blend-mode:screen; filter:blur(14px); opacity:.55;
-    transition:opacity .3s ease, transform .3s ease;
-  }
-  .mic-btn.listening .aura{ opacity:.8; transform:scale(1.06) }
+    /* Przycisk–logo (bez napisu) */
+    .mic-btn{
+      position:relative; border:none; background:transparent; outline:none; cursor:pointer;
+      width:min(60vw, 360px); aspect-ratio:1/1; display:grid; place-items:center;
+      margin: 18px auto 12px; filter: drop-shadow(0 18px 50px rgba(0,0,0,.5));
+    }
+    .mic-btn img{
+      width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none;
+      transition: transform .6s cubic-bezier(.2,.7,.2,1), filter .3s ease;
+      filter: drop-shadow(0 0 0 rgba(255,122,26,0));
+    }
+    /* stan słuchania = puls + obrót + neonowa poświata */
+    .mic-btn.listening img{
+      animation: spin 6s linear infinite;
+      filter: drop-shadow(0 0 18px var(--glow)) drop-shadow(0 0 48px rgba(255,122,26,.25));
+    }
+    @keyframes spin{ to{ transform: rotate(360deg) scale(1.02);} }
 
-  /* Equalizer + status */
-  .status{ display:grid; place-items:center; margin-top:8px; min-height:28px }
-  .eq{ display:flex; gap:6px; height:18px; align-items:flex-end }
-  .bar{ width:6px; border-radius:6px; background:linear-gradient(180deg,var(--neonC),var(--neonA)); height:6px; opacity:.7 }
-  .mic-btn.listening + .status .bar:nth-child(1){ animation: eq 0.6s .0s ease-in-out infinite }
-  .mic-btn.listening + .status .bar:nth-child(2){ animation: eq 0.6s .1s ease-in-out infinite }
-  .mic-btn.listening + .status .bar:nth-child(3){ animation: eq 0.6s .2s ease-in-out infinite }
-  .mic-btn.listening + .status .bar:nth-child(4){ animation: eq 0.6s .3s ease-in-out infinite }
-  @keyframes eq{ 0%,100%{height:6px} 50%{height:18px} }
+    .hint{
+      text-align:center; color:#d9dde6; opacity:.9;
+      font-size:clamp(14px,3.4vw,18px); margin: 2px 0 22px;
+    }
 
-  /* Log bąbelek */
-  .log{
-    margin:18px auto 0; width:min(880px,100%);
-    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
-    padding:14px 16px; border-radius:14px; color:#cfd3d8;
-  }
-  footer{ text-align:center; color:#808892; margin-top:18px; font-size:.95rem }
-</style>
+    /* Kapsuła z podpowiedziami + transkrypt */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:18px; padding:16px; max-width:900px; margin: 8px auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25) inset, 0 12px 40px rgba(0,0,0,.25);
+    }
+    .chips{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:4px 0 14px}
+    .chip{
+      padding:10px 14px; border-radius:14px; background:#12141a; color:#cfd5df;
+      border:1px solid rgba(255,255,255,.08); font-size:15px;
+    }
+    .log{
+      margin:6px auto 0; padding:14px 16px; border-radius:14px;
+      background:#0e0f14; color:#dfe3ea; font-size:16px; line-height:1.5;
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    /* Przyklejony wskaźnik stanu (3 kropki) */
+    .dots{display:flex; justify-content:center; gap:10px; margin-top:10px}
+    .dot{width:8px; height:8px; border-radius:999px; background:#2a2f38; opacity:.6}
+    .dot.on{background:var(--brand); opacity:1; box-shadow: 0 0 16px var(--glow)}
+
+    /* Responsywne odsunięcie, by treść nie zderzała się z krawędzią */
+    @media (min-width:880px){ .wrap{padding-bottom:22dvh} }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1 class="brand">FreeFlow</h1>
-      <p class="subtitle">Złóż zamówienie</p>
-      <p class="hint">Taxi, posiłek, a może nocleg?</p>
-    </header>
+  <main class="wrap">
+    <div class="brand">FreeFlow</div>
+    <h1 class="h1">Złóż zamówienie</h1>
+    <p class="sub">Taxi, posiłek, a może nocleg?</p>
 
-    <section class="stage" aria-live="polite">
-      <button id="micBtn" class="mic-btn" aria-label="Mów teraz">
-        <span class="aura"></span>
-        <img id="micImg" class="mic-img"
-             src="Freeflow-logo.png"
-             onerror="this.onerror=null; this.src=document.querySelector('[data-fallback]')?.dataset.fallback"
-             alt="FreeFlow – mikrofon">
-        <img data-fallback style="display:none" src="file_000000000e9c62469156924aae2c3ff0.png" alt="">
-      </button>
-      <div class="status" id="status">
-        <div class="eq" aria-hidden="true">
-          <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
-        </div>
+    <!-- PRZYCISK: mikrofon bez napisu (sam orb) -->
+    <button id="micBtn" class="mic-btn" aria-label="Naciśnij, aby mówić">
+      <img src="mic-orb.png" alt="FreeFlow – mikrofon" />
+    </button>
+    <div class="hint" id="hint">Dotknij, aby mówić</div>
+
+    <section class="card">
+      <div class="chips">
+        <span class="chip">„dwie pizze pepperoni”</span>
+        <span class="chip">„zamów taxi na Dworzec”</span>
+        <span class="chip">„hotel w Krakowie od piątku na 2 noce”</span>
       </div>
+      <div class="log" id="log">Jeszcze nic nie nagrano.</div>
+      <div class="dots"><span class="dot" id="d1"></span><span class="dot" id="d2"></span><span class="dot" id="d3"></span></div>
     </section>
+  </main>
 
-    <p id="log" class="log">Dotknij logo, aby zacząć. Powiedz np. „dwie pizze pepperoni”, „zamów taxi na Dworzec”, „hotel w Krakowie na 2 noce”.</p>
+  <script>
+    // --- Web Speech demo (rozpoznawanie + synteza) ---
+    const micBtn = document.getElementById('micBtn');
+    const hint   = document.getElementById('hint');
+    const logEl  = document.getElementById('log');
+    const dots   = [document.getElementById('d1'), document.getElementById('d2'), document.getElementById('d3')];
 
-    <footer>Demo: Web Speech API (rozpoznanie) + Speech Synthesis (odpowiedź).</footer>
-  </div>
+    let rec, listening = false, dotI = 0, dotTimer;
 
-<script>
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const synth = window.speechSynthesis;
-  const btn   = document.getElementById('micBtn');
-  const logEl = document.getElementById('log');
-  const statusEl = document.getElementById('status');
+    function setDots(on){
+      dots.forEach(d=>d.classList.remove('on'));
+      if(on){ dots[dotI%3].classList.add('on'); dotI++; }
+    }
+    function startDots(){ stopDots(); dotTimer = setInterval(()=>setDots(true), 400); }
+    function stopDots(){ clearInterval(dotTimer); dots.forEach(d=>d.classList.remove('on')); }
 
-  let recognition=null, listening=false;
+    function speak(text){
+      try{
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'pl-PL'; u.rate = 1; u.pitch = 1;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      }catch(e){}
+    }
 
-  function speak(text){
-    if(!synth) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang='pl-PL'; u.rate=1.02; u.pitch=1;
-    synth.cancel(); synth.speak(u);
-  }
+    function ensureRecognizer(){
+      if(rec) return rec;
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR){ logEl.textContent = 'Twoja przeglądarka nie obsługuje rozpoznawania mowy.'; return null; }
+      rec = new SR();
+      rec.lang = 'pl-PL'; rec.interimResults = false; rec.maxAlternatives = 1;
+      rec.onresult = (e)=>{
+        const text = e.results[0][0].transcript.trim();
+        logEl.textContent = 'Ty: ' + text;
+        // BARDZO PROSTY routing do odpowiedzi demo:
+        let reply = 'Jasne! Co dokładnie podać?';
+        const t = text.toLowerCase();
+        if(t.includes('pizza') || t.includes('pizze')) reply = 'OK! Jakie rozmiary i z czym?';
+        else if(t.includes('taxi')) reply = 'Zamawiam taxi. Skąd i dokąd jedziemy?';
+        else if(t.includes('hotel')) reply = 'Szukam hotelu. Podaj miasto oraz daty przyjazdu i wyjazdu.';
+        logEl.textContent += '\nAsystent: ' + reply;
+        speak(reply);
+      };
+      rec.onstart = ()=>{
+        listening = true;
+        micBtn.classList.add('listening');
+        hint.textContent = 'Słucham… mów teraz';
+        startDots();
+      };
+      rec.onend = ()=>{
+        listening = false;
+        micBtn.classList.remove('listening');
+        hint.textContent = 'Dotknij, aby mówić';
+        stopDots();
+      };
+      rec.onerror = (e)=>{
+        listening = false;
+        micBtn.classList.remove('listening');
+        hint.textContent = 'Błąd rozpoznawania. Spróbuj ponownie.';
+        stopDots();
+      };
+      return rec;
+    }
 
-  function initSR(){
-    if(!SR){ logEl.textContent='Twoja przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome na Androidzie.'; return; }
-    recognition = new SR();
-    recognition.lang='pl-PL';
-    recognition.interimResults=false;
-    recognition.maxAlternatives=1;
+    micBtn.addEventListener('click', ()=>{
+      const r = ensureRecognizer(); if(!r) return;
+      if(listening){ r.stop(); return; }
+      r.start();
+    });
 
-    recognition.onstart = () => { listening=true; btn.classList.add('listening'); logEl.textContent='Nasłuchuję…'; };
-    recognition.onend   = () => { listening=false; btn.classList.remove('listening'); };
-    recognition.onerror = e  => { listening=false; btn.classList.remove('listening'); logEl.textContent='Błąd: '+(e.error||'nieznany'); };
-
-    recognition.onresult= ev =>{
-      const text = ev.results[0]?.[0]?.transcript || '';
-      logEl.textContent = 'Ty: '+text;
-      const t=text.toLowerCase();
-      let reply='Jasne. Co dokładnie podać?';
-
-      if(t.includes('pizz')||t.includes('pepperoni')){
-        reply='OK, dwie pizze pepperoni. Na wynos czy z dostawą?';
-      }else if(t.includes('tax')||t.includes('dworzec')){
-        reply='Zamawiam taxi na Dworzec. O której ma podjechać?';
-      }else if(t.includes('hotel')||t.includes('noc')||t.includes('krakow')||t.includes('krakowie')){
-        reply='Szukam hotelu w Krakowie. Jaki standard i daty pobytu?';
-      }else if(t.includes('anuluj')||t.includes('stop')){
-        reply='Anulowano. Daj znać, kiedy kontynuujemy.';
-      }
-      speak(reply);
-      setTimeout(()=> logEl.textContent += '\nAsystent: '+reply, 80);
-    };
-  }
-
-  function toggleListen(){
-    if(!recognition){ initSR(); if(!recognition) return; }
-    try{
-      if(!listening) recognition.start(); else recognition.stop();
-    }catch(_){ try{ recognition.stop(); }catch(__){} }
-  }
-
-  btn.addEventListener('click', ()=>{
-    if(navigator.vibrate) navigator.vibrate(12);
-    toggleListen();
-  });
-
-  // odblokowanie TTS po pierwszym tapnięciu (iOS)
-  window.addEventListener('click', ()=>{
-    try{ const d=new SpeechSynthesisUtterance(''); synth.speak(d); synth.cancel(); }catch(_){}
-  }, {once:true});
-
-  initSR();
-</script>
+    // Tap na przykładowych chipach
+    document.querySelectorAll('.chip').forEach(ch=>{
+      ch.addEventListener('click', ()=>{
+        const text = ch.textContent.replace(/[„”]/g,'').trim();
+        logEl.textContent = 'Ty: ' + text;
+        speak('OK, ' + text);
+      });
+    });
+  </script>
 </body>
 </html>

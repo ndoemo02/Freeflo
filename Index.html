@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FreeFlow — Voice Reply Demo</title>
+  <title>FreeFlow — Voice to Order (Demo)</title>
   <meta name="theme-color" content="#000000" />
   <style>
     :root{ --ring: rgba(255,140,0,.35); }
@@ -15,14 +15,100 @@
           box-shadow:0 8px 30px rgba(255,120,0,.25), inset 0 0 30px rgba(255,120,0,.12);
           overflow:hidden; cursor:pointer; transition:transform .15s ease; }
     .mic:active{ transform:scale(.96) }
-    .disc{ position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ffb347 0%, #ff6a00 35%, #a23bff 80%); opacity:.2; filter:blur(8px) }
+    .disc{ position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ffb347 0%, #ff6a00 35%, #a23bff 80%); opacity:.22; filter:blur(8px) }
     .pulse{ position:absolute; inset:0; border-radius:9999px; border:2px solid var(--ring); animation:pulse 1.8s ease-out infinite; pointer-events:none }
     .p2{ animation-delay:.25s } .p3{ animation-delay:.5s }
     @keyframes pulse{ from{ transform:scale(.9); opacity:.65 } to{ transform:scale(1.8); opacity:0 } }
-    .tx{ position:fixed; left:50%; bottom:140px; transform:translateX(-50%);
-         max-width:min(680px,92vw); padding:10px 14px; border-radius:14px;
-         background:#0d1117; color:#d6d8db; border:1px solid rgba(255,255,255,.06); display:none }
-    .badge{ position:fixed; left:50%; bottom:120px; transform:translateX(-50%);
-            padding:4px 10px; border-radius:9999px; background:rgba(255,165,0,.12);
-            color:#ffb347; border:1px solid rgba(255,165,0,.2); font-size:12px }
-    .logo{ position:relative; z
+    .logo{ position:relative; z-index:2; width:60px; height:60px; border-radius:12px; object-fit:cover }
+    .tx{ position:fixed; left:50%; bottom:140px; transform:translateX(-50%); max-width:min(680px,92vw);
+         padding:10px 14px; border-radius:14px; background:#0d1117; color:#d6d8db; border:1px solid rgba(255,255,255,.06); display:none }
+    .badge{ position:fixed; left:50%; bottom:120px; transform:translateX(-50%); padding:4px 10px; border-radius:9999px;
+            background:rgba(255,165,0,.12); color:#ffb347; border:1px solid rgba(255,165,0,.2); font-size:12px }
+    .note{ position:fixed; left:0; right:0; bottom:0; text-align:center; color:#80858a; font-size:12px; padding:6px 10px; opacity:.8 }
+  </style>
+</head>
+<body>
+  <div class="headline">W czym<br>mogę<br>służyć?</div>
+  <div id="badge" class="badge">Gotowy</div>
+  <div id="tx" class="tx"></div>
+
+  <div class="wrap">
+    <button id="mic" class="mic" aria-label="Run Voice">
+      <span class="disc"></span>
+      <!-- Minimalne logo w data-URL; możesz podmienić src na własne PNG/SVG -->
+      <img class="logo" alt="FreeFlow"
+           src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNjAnIGhlaWdodD0nNjAnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnPjxkZWZzPjxyYWRpYWxHcmFkaWVudCBpZD0nZycgY3g9JzMwJScgY3k9JzMwJScgcj0nNzAlJz48c3RvcCBvZmZzZXQ9JzAlJyBzdG9wLWNvbG9yPScjZmZiMzQ3Jy8+PHN0b3Agb2Zmc2V0PSczNSUnIHN0b3AtY29sb3I9JyNmZjZhMDAnLz48c3RvcCBvZmZzZXQ9JzgwJScgc3RvcC1jb2xvcj0nI2EyM2JmZicvPjwvcmFkaWFsR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPScxMDAnIGhlaWdodD0nMTAwJyByeD0nMjAnIGZpbGw9InVybCgjZykiLz48L3N2Zz4=" />
+    </button>
+  </div>
+
+  <div class="note">Najlepiej użyj Chrome na Androidzie (HTTPS + zgoda na mikrofon). Kliknij 🎤 i powiedz: „czy mogę złożyć zamówienie”.</div>
+
+<script>
+  // ——— UI ———
+  const mic = document.getElementById('mic'), badge = document.getElementById('badge'), tx = document.getElementById('tx');
+  let active=false, recog=null;
+
+  function speak(text, lang='pl-PL'){
+    try{
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang=lang; u.rate=1; u.pitch=1;
+      window.speechSynthesis.speak(u);
+    }catch(e){ console.log(e); }
+  }
+  function startUI(){ active=true; ['','',''].forEach((_,i)=>{ const s=document.createElement('span'); s.className='pulse '+(i==1?'p2':(i==2?'p3':'')); mic.appendChild(s); }); badge.textContent='Nasłuchuję…'; }
+  function stopUI(){ active=false; mic.querySelectorAll('.pulse').forEach(e=>e.remove()); badge.textContent='Gotowy'; tx.style.display='block'; }
+  function supportsSR(){ return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window; }
+
+  // ——— Proste NLU (intenty) ———
+  const MENU = {
+    pizza: { id:'p1', names:['pizza','pepperoni','margarita','margherita'] },
+    cola:  { id:'d1', names:['cola','coca cola','cola zero','kola'] },
+    woda:  { id:'d2', names:['woda','woda gazowana','woda niegazowana'] }
+  };
+  const NUM = { "jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10 };
+  const norm = s => s.toLowerCase().replace(/[.,!?]/g," ").replace(/\s+/g," ").trim();
+  function findItem(t){ for(const k in MENU){ for(const n of MENU[k].names){ if(t.includes(n)) return {key:k,id:MENU[k].id,name:n}; } } return null; }
+  function findQty(t){ const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1]; for(const [w,n] of Object.entries(NUM)){ if(t.includes(" "+w+" ")) return n; } if(t.includes("podwój")||t.includes("x2")) return 2; return 1; }
+
+  function handleIntent(text){
+    const t=(" "+norm(text)+" ");
+    if(t.includes("dzień dobry")||t.includes("cześć")){ speak("Dzień dobry! W czym mogę służyć?"); tx.textContent="👋 Cześć!"; return; }
+    if(t.includes("anuluj")||t.includes("stop")){ speak("Anulowano. Czekam na kolejne polecenie."); tx.textContent="✖️ Anulowano"; return; }
+    if(t.includes("złożyć zamówienie")||t.includes("zamówić")||t.includes("zamówienie")){ speak("Jasne! Co podać do zamówienia?"); tx.textContent="🧾 Start zamówienia"; return; }
+
+    const item=findItem(t);
+    if(item){ const qty=findQty(t); speak(`Dodaję ${qty} ${item.name}. Czy potwierdzić?`); tx.textContent=`🛒 Dodano: ${qty} × ${item.name}`; return; }
+
+    speak("Zrozumiałem: "+text+". Powtórz proszę nazwę pozycji lub ilość.");
+    tx.textContent="🤔 "+text;
+  }
+
+  // ——— ASR ———
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function startRec(){
+    if(!supportsSR()){
+      tx.textContent = "Web Speech API niedostępne w tej przeglądarce. Na Androidzie użyj Chrome.";
+      tx.style.display='block'; return;
+    }
+    const r = new SR();
+    recog = r; r.lang='pl-PL'; r.continuous=true; r.interimResults=true;
+    r.onresult = (e)=>{
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const res=e.results[i];
+        if(res.isFinal){ const finalText=res[0].transcript; tx.textContent="Powiedziałeś: "+finalText; handleIntent(finalText); }
+        else { tx.textContent=res[0].transcript; tx.style.display='block'; }
+      }
+    };
+    r.onend = ()=> stopUI();
+    try{ r.start(); }catch{}
+  }
+
+  function toggle(){
+    if(!active){ startUI(); startRec(); if(navigator.vibrate) try{ navigator.vibrate([40,20,40]); }catch{} }
+    else { if(recog) try{ recog.stop(); }catch{} stopUI(); }
+  }
+  mic.addEventListener('click', toggle);
+</script>
+</body>
+</html>

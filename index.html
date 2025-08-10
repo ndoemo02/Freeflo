@@ -1,107 +1,95 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow</title>
-<style>
-  :root{
-    --bg:#0b0d0f;
-    --fg:#ffffff;
-    --accent:#ff7a1a; /* soczysty pomarańcz */
-    --muted:#cfc7bd;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    background:radial-gradient(1200px 900px at 50% -20%, #13161a 0%, var(--bg) 60%);
-    color:var(--fg);
-    font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    display:flex; flex-direction:column; align-items:center;
-  }
-  .wrap{width:min(900px, 100%); padding:28px 20px 120px}
-  h1{
-    margin:14px 0 6px;
-    font-size:clamp(40px, 6.5vw, 80px);
-    font-weight:800;
-    color:var(--accent);
-    letter-spacing:.5px;
-  }
-  h2{
-    margin:0 0 28px;
-    font-size:clamp(18px, 3.3vw, 32px);
-    color:var(--muted);
-    font-weight:700;
-  }
-  .card{
-    margin:0 auto;
-    background:#0f1216;
-    border:1px solid #1b2026;
-    border-radius:18px;
-    padding:16px 18px;
-    max-width:720px;
-    box-shadow:0 10px 32px rgba(0,0,0,.35);
-  }
-  .row{display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap}
-  .pill{padding:6px 10px; border-radius:999px; background:#131820; color:#b7c0ca; font-size:14px}
-  #heard,#reply{
-    margin-top:14px;
-    padding:14px 16px;
-    border-radius:14px;
-    background:#0d1116;
-    border:1px solid #1b2026;
-    color:#dfe6ee;
-    word-break:break-word;
-  }
-  #reply{color:#ffd5b1; border-color:#312018; background:linear-gradient(180deg,#15100c,#0d0a07)}
-  .hint{margin-top:10px; color:#98a3af; font-size:14px}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0d10;
+      --panel:#0f1318;
+      --muted:#dccfbe;
+      --accent:#ff7a1a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 900px at 50% -20%, #151a20 0%, var(--bg) 60%);
+      color:#fff; font:16px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; align-items:center;
+    }
+    .wrap{width:min(940px,100%); padding:28px 18px 140px}
+    .brand{
+      font-family: Pacifico, cursive;
+      font-size: clamp(44px, 8.5vw, 96px);
+      color: var(--accent);
+      letter-spacing:.5px;
+      margin: 10px 0 6px;
+      text-shadow: 0 6px 22px rgba(255,122,26,.18);
+    }
+    .subtitle{
+      margin:0 0 28px; color:var(--muted);
+      font-size: clamp(20px, 3.4vw, 36px); font-weight:800;
+    }
 
-  /* --- Przycisk-logo --- */
-  .ff-btn{
-    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
-    width:168px; height:168px; border-radius:50%;
-    border:0; outline:0; cursor:pointer;
-    background:#000 center/cover no-repeat url("./file_0000000082cc6243bc1c86d7735f6ad2.png");
-    box-shadow:0 10px 34px rgba(255,120,0,.35), inset 0 0 24px rgba(255,120,0,.18);
-    transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .ff-btn:active{ transform:translateX(-50%) scale(.97) }
-  .ff-btn.listening{
-    box-shadow:0 12px 50px rgba(255,120,0,.6), inset 0 0 34px rgba(255,120,0,.3);
-    filter:saturate(1.08);
-  }
-  .ff-btn::after{
-    content:""; position:absolute; inset:-8px; border-radius:50%;
-    border:2px solid rgba(255,140,0,.45); opacity:0; pointer-events:none;
-  }
-  .ff-btn.listening::after{ animation:ffpulse 1.8s ease-out infinite; opacity:1 }
-  @keyframes ffpulse{ from{transform:scale(.9);opacity:.7} to{transform:scale(1.85);opacity:0} }
+    .panel{
+      background:linear-gradient(180deg,#0d1116,#0a0e13);
+      border:1px solid #1a212a; border-radius:18px;
+      padding:18px; max-width:780px; margin: 0 auto 10px;
+      box-shadow: 0 10px 34px rgba(0,0,0,.35);
+    }
+    .pill{display:inline-block; margin:6px 8px 0 0; padding:8px 12px; border-radius:999px;
+      background:#121822; color:#b8c2ce; font-size:14px}
+    #heard,#reply{
+      margin-top:14px; padding:14px 16px; border-radius:14px; border:1px solid #1c232c;
+      background:#0a0f14; color:#e8eef6
+    }
+    #reply{background:linear-gradient(180deg,#15100c,#0d0a07); color:#ffd5b1; border-color:#2d1c12}
 
-  .toast{
-    position:fixed; top:10px; left:50%; transform:translateX(-50%);
-    background:#11161d; color:#e7edf5; border:1px solid #1f2730; border-radius:12px;
-    padding:10px 14px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.35);
-    max-width:92%; display:none;
-  }
-  .show{display:block}
-</style>
+    /* === PRZYCISK-LOGO === */
+    .ff-btn{
+      position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+      width:190px; height:190px; border-radius:50%; border:0; outline:0; cursor:pointer;
+      background:#000 center/cover no-repeat url("./file_000000000e9c62469156924aae2c3ff0.png");
+      /* jeśli zmienisz nazwę pliku, popraw ścieżkę powyżej */
+      box-shadow:0 14px 42px rgba(255,120,0,.38), inset 0 0 26px rgba(255,120,0,.2);
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .ff-btn:active{ transform:translateX(-50%) scale(.97) }
+    .ff-btn.listening{
+      box-shadow:0 16px 60px rgba(255,120,0,.62), inset 0 0 36px rgba(255,120,0,.3);
+      filter:saturate(1.08);
+    }
+    .ff-btn::after{
+      content:""; position:absolute; inset:-10px; border-radius:50%;
+      border:2px solid rgba(255,140,0,.45); opacity:0; pointer-events:none;
+    }
+    .ff-btn.listening::after{ animation:ffpulse 1.9s ease-out infinite; opacity:1 }
+    @keyframes ffpulse{ from{transform:scale(.9);opacity:.7} to{transform:scale(1.9);opacity:0} }
+
+    .toast{
+      position:fixed; top:10px; left:50%; transform:translateX(-50%);
+      background:#11161d; color:#e7edf5; border:1px solid #1f2730; border-radius:12px;
+      padding:10px 14px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.35);
+      max-width:92%; display:none;
+    }
+    .show{display:block}
+  </style>
 </head>
 <body>
   <div class="wrap" aria-live="polite">
-    <h1>FreeFlow</h1>
-    <h2>Złóż zamówienie</h2>
+    <div class="brand">FreeFlow</div>
+    <div class="subtitle">Jak mogę pomóc?</div>
 
-    <div class="card">
-      <div class="row">
-        <div class="pill">Powiedz: <b>„dwie pizze pepperoni”</b></div>
-        <div class="pill">„zamów taxi na Dworzec”</div>
-        <div class="pill">„hotel w Krakowie od piątku na 2 noce”</div>
-      </div>
+    <div class="panel">
+      <div class="pill">Powiedz: <b>„dwie pizze pepperoni”</b></div>
+      <div class="pill">„zamów taxi na Dworzec”</div>
+      <div class="pill">„hotel w Krakowie na 2 noce”</div>
+
       <div id="heard">🎙️ <i>Jeszcze nic nie nagrano.</i></div>
       <div id="reply">🔊 <i>Witaj! Kliknij mikrofon na dole i powiedz, czego potrzebujesz.</i></div>
-      <div class="hint">Podpowiedź: mów wyraźnie. W hałasie też zadziała, ale może potrzebować powtórki.</div>
     </div>
   </div>
 
@@ -109,93 +97,105 @@
   <div id="toast" class="toast"></div>
 
 <script>
-/* ====== UTIL ====== */
+/* ========== UI helpers ========== */
 const $ = s => document.querySelector(s);
-const micBtn = $('#mic');
-const heard  = $('#heard');
-const reply  = $('#reply');
-const toast  = $('#toast');
+const mic = $('#mic'), heard = $('#heard'), reply = $('#reply'), toast = $('#toast');
+const showToast = t => { toast.textContent = t; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1800); };
+function speak(t){ try{ speechSynthesis.cancel(); }catch{} const u=new SpeechSynthesisUtterance(t); u.lang='pl-PL'; speechSynthesis.speak(u); }
 
-function showToast(txt){ toast.textContent = txt; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); }
-
-function speak(text){
-  try{ speechSynthesis.cancel(); }catch{}
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'pl-PL'; u.rate = 1; u.pitch = 1; u.volume = 1;
-  speechSynthesis.speak(u);
-}
-
-function deaccent(s){
-  const map = {'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z'};
-  return s.replace(/[ąćęłńóśźż]/g, ch => map[ch] || ch);
-}
+/* Normalizacja PL */
+const repl = {'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z'};
+const deaccent = s => s.replace(/[ąćęłńóśźż]/g,c=>repl[c]||c);
 const norm = s => (' '+deaccent(s.toLowerCase()).replace(/[.,!?]/g,' ')+' ').replace(/\s+/g,' ');
 
-/* liczebniki → ilość */
+/* liczebniki -> ilość */
 const NUM = {"jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"piec":5,"szesc":6,"siedem":7,"osiem":8,"dziewiec":9,"dziesiec":10};
-function getQty(t){
-  const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1];
-  for(const [w,n] of Object.entries(NUM)) if(t.includes(' '+w+' ')) return n;
-  if(t.includes(' x2 ')||t.includes(' podwoj')) return 2;
-  return 1;
-}
+const qtyFrom = t => { const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1]; for(const [w,n] of Object.entries(NUM)) if(t.includes(' '+w+' ')) return n; return 1; };
 
 /* aliasy jedzenia */
-const FOOD_ALIASES = [
+const FOOD = [
   {key:'pizza pepperoni', names:['pizza pepperoni','pizze pepperoni','pizze peperoni','pepperoni','peperoni','pepp','peproni','papperoni']},
   {key:'pizza margherita', names:['pizza margherita','pizze margherita','margherita','margarita']},
-  {key:'pizza hawajska',   names:['pizza hawajska','pizze hawajska','hawajska']},
-  {key:'pizza',            names:['pizza','pizze','pizzy','pizz']},
-  {key:'burger',           names:['burger','hamburger']},
-  {key:'cola zero',        names:['cola zero','coca cola zero','kola zero']},
-  {key:'cola',             names:['cola','coca cola','kola']},
-  {key:'woda',             names:['woda','woda gazowana','woda niegazowana']}
+  {key:'pizza hawajska', names:['pizza hawajska','pizze hawajska','hawajska']},
+  {key:'pizza', names:['pizza','pizze','pizz']},
+  {key:'burger', names:['burger','hamburger']},
+  {key:'cola zero', names:['cola zero','coca cola zero','kola zero']},
+  {key:'cola', names:['cola','coca cola','kola']},
+  {key:'woda', names:['woda','woda gazowana','woda niegazowana']}
 ];
 function findFood(t){
-  for(const item of FOOD_ALIASES){
-    for(const name of item.names){
-      const n = deaccent(name);
-      if(t.includes(' '+n+' ')) return item.key;
-      if(t.replace(/\s+/g,'').includes(n.replace(/\s+/g,''))) return item.key;
+  for(const it of FOOD){
+    for(const n of it.names){
+      const ne = deaccent(n);
+      if(t.includes(' '+ne+' ')) return it.key;
+      if(t.replace(/\s+/g,'').includes(ne.replace(/\s+/g,''))) return it.key;
     }
-  }
-  return null;
+  } return null;
 }
 
-const cart = [];
-function addToCart(name, qty=1){ cart.push({name,qty}); }
+/* Prosty router intencji */
+function handleIntent(raw){
+  const t = norm(raw);
+  if(t.includes(' anuluj ')||t.includes(' przerwij ')||t.includes(' stop ')) return 'Ok, anulowano.';
 
-/* ====== INTENT ====== */
-function handleIntent(text){
-  const t = norm(text);
-
-  // anulowanie
-  if(t.includes(' anuluj ') || t.includes(' przerwij ') || t.includes(' stop ')){
-    return 'Ok, anulowano.';
-  }
-
-  // taxi
-  if(t.includes(' taxi ') || t.includes(' taksi ') || t.includes(' kierowc') || t.includes(' przejazd ')){
+  if(t.includes(' taxi ')||t.includes(' taksi ')||t.includes(' kierowc')||t.includes(' przejazd '))
     return 'Jasne! Podaj skąd i dokąd jedziemy?';
-  }
 
-  // hotel
-  if(t.includes(' hotel ') || t.includes(' nocleg ') || t.includes(' rezerwacj')){
+  if(t.includes(' hotel ')||t.includes(' nocleg ')||t.includes(' rezerwacj'))
     return 'Jasne! Powiedz miasto, datę przyjazdu i liczbę nocy.';
-  }
 
-  // zamówienie jedzenia
-  if(t.includes(' pizza ') || t.includes(' pizze ') || t.includes(' burger ') || t.includes(' cola ') || t.includes(' woda ') || t.includes(' pepperoni ') || t.includes(' peperoni ')){
-    const qty = getQty(t);
+  if(t.includes(' pizza ')||t.includes(' pizze ')||t.includes(' burger ')||t.includes(' cola ')||t.includes(' woda ')||t.includes(' pepperoni ')||t.includes(' peperoni ')){
+    const q = qtyFrom(t);
     const item = findFood(t) || 'pozycja';
-    addToCart(item, qty);
-    return `Dodaję ${qty} × ${item}. Czy dorzucić coś jeszcze?`;
+    return `Dodaję ${q} × ${item}. Czy dorzucić coś jeszcze?`;
   }
 
-  // prośba o złożenie zamówienia
-  if(t.includes(' zamow ') || t.includes(' zamowi ') || t.includes(' zlozyc ') ){
+  if(t.includes(' zamow ')||t.includes(' zlozyc ')||t.includes(' zamowi '))
     return 'Jasne! Co podać? Pizza, burger czy napoje?';
-  }
 
-  // powitanie
-  if(t.includes(' dzien dobry ') || t.includes('
+  if(t.includes(' dzien dobry ')||t.includes(' czesc ')||t.includes(' hej '))
+    return 'Cześć! Powiedz, co zamawiamy: dwie pizze pepperoni, taxi czy hotel?';
+
+  return 'Powiedz np. „dwie pizze pepperoni”, „zamów taxi na Dworzec”, albo „hotel w Krakowie na 2 noce”.';
+}
+
+/* ========== Rozpoznawanie mowy (Web Speech API) ========== */
+let rec=null, active=false;
+(function initASR(){
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!R){ showToast('Brak Web Speech API – otwórz w Chrome.'); return; }
+  rec = new R();
+  rec.lang = 'pl-PL';
+  rec.interimResults = true; rec.maxAlternatives = 1;
+
+  rec.onstart = ()=>{ mic.classList.add('listening'); showToast('Nasłuchuję…'); };
+  rec.onend   = ()=>{ mic.classList.remove('listening'); active=false; };
+  rec.onerror = e => { mic.classList.remove('listening'); active=false; showToast('Błąd: '+e.error); };
+
+  rec.onresult = ev=>{
+    let finalText='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const res=ev.results[i], txt=res[0].transcript;
+      if(res.isFinal) finalText += txt + ' ';
+      else heard.innerHTML = '🎙️ (w trakcie) ' + txt;
+    }
+    finalText=finalText.trim();
+    if(finalText){
+      heard.innerHTML = '🗣️ ' + finalText;
+      const ans = handleIntent(finalText);
+      reply.innerHTML = '🔊 ' + ans;
+      speak(ans);
+    }
+  };
+})();
+
+function toggleMic(){
+  if(!rec){ showToast('Twoja przeglądarka nie wspiera rozpoznawania mowy.'); return; }
+  try{ speechSynthesis.cancel(); }catch{}
+  if(active){ rec.stop(); active=false; mic.classList.remove('listening'); }
+  else      { rec.start(); active=true;  mic.classList.add('listening'); }
+}
+mic.addEventListener('click', toggleMic);
+</script>
+</body>
+</html>

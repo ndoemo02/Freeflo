@@ -1,127 +1,310 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Freeflo — Voice to Order</title>
-  <meta name="theme-color" content="#000000" />
-  <style>
-    html,body{height:100%;margin:0;background:#000;color:#eaeaea;font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
-    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px}
-    h1{margin:0;text-align:center;font-size:clamp(22px,5vw,36px);color:#e6e6e6}
-    .hint{opacity:.75;text-align:center}
-    .mic{width:110px;height:110px;border-radius:50%;position:relative;display:grid;place-items:center;
-         background:#0d1117;border:4px solid rgba(255,165,0,.25);
-         box-shadow:0 10px 34px rgba(255,120,0,.25), inset 0 0 30px rgba(255,120,0,.12);
-         overflow:hidden;cursor:pointer;transition:transform .15s ease}
-    .mic:active{transform:scale(.97)}
-    .disc{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffb347 0%,#ff6a00 35%,#a23bff 80%);opacity:.22;filter:blur(10px)}
-    .emoji{font-size:42px;z-index:1}
-    .ring{position:absolute;inset:0;border-radius:9999px;border:2px solid rgba(255,140,0,.38);opacity:0;pointer-events:none}
-    .pulse{animation:pulse 1.8s ease-out infinite}
-    .p2{animation-delay:.25s}.p3{animation-delay:.5s}
-    @keyframes pulse{from{transform:scale(.9);opacity:.7}to{transform:scale(1.9);opacity:0}}
-    .badge{font-size:12px;padding:6px 10px;border-radius:9999px;background:rgba(255,165,0,.12);color:#ffb347;border:1px solid rgba(255,165,0,.2)}
-    .out{max-width:min(780px,92vw);padding:12px 14px;border-radius:14px;background:#0d1117;color:#d6d8db;border:1px solid rgba(255,255,255,.06);min-height:22px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
-    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:#1f6feb;color:#fff}
-    .btn:disabled{opacity:.5}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeFlow — Voice to Order</title>
+<meta name="theme-color" content="#000000">
+<style>
+  :root{ --glow: rgba(255,120,0,.35); --soft:#0d1117; }
+  html,body{height:100%;margin:0;background:#000;color:#eaeaea;font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:28px 16px}
+  .brand{margin-top:2px;font-weight:800;letter-spacing:.3px;
+    font-size:clamp(24px,6vw,44px);
+    background:linear-gradient(90deg,#ffb347,#ff6a00 40%,#a23bff 90%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,120,0,.12))}
+  .subtitle{margin-top:-6px;color:#cfcfcf;font-size:clamp(16px,4.2vw,24px)}
+  .status{font-size:13px;padding:6px 10px;border-radius:9999px;background:rgba(255,165,0,.12);color:#ffb347;border:1px solid rgba(255,165,0,.2)}
+  .zone{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:6px}
+
+  /* logo-button */
+  .ff-btn{width:150px;height:150px;border-radius:50%;
+    background:#000 center/cover no-repeat url("./file_000000000e9c62469156924aae2c3ff0.png"); /* <- zmień, jeśli nazwa pliku inna */
+    border:0;position:relative;cursor:pointer;outline:none;
+    box-shadow:0 10px 34px var(--glow), inset 0 0 30px rgba(255,120,0,.18);
+    transition:transform .15s ease, box-shadow .2s ease}
+  .ff-btn:active{transform:scale(.97)}
+  .ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,140,0,.38);opacity:0;pointer-events:none}
+  .ff-btn.listening .ring{opacity:1;animation:pulse 1.8s ease-out infinite}
+  .ff-btn.listening .r2{animation-delay:.25s}.ff-btn.listening .r3{animation-delay:.5s}
+  @keyframes pulse{from{transform:scale(.9);opacity:.7}to{transform:scale(1.85);opacity:0}}
+
+  /* VU meter (canvas) */
+  .vu{position:absolute;inset:0}
+  .ff-btn.listening{box-shadow:0 10px 40px rgba(255,120,0,.55), inset 0 0 40px rgba(255,120,0,.25)}
+
+  .panel{width:min(980px,94vw);display:grid;gap:12px;margin-top:12px}
+  .cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .card{background:var(--soft);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px 14px;color:#d6d8db}
+  .card h3{margin:0 0 8px 0;font-size:16px;color:#ffe1b3}
+  .log b{color:#ffd699}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{font-size:12px;padding:6px 10px;border-radius:999px;background:#111;border:1px solid rgba(255,255,255,.08);opacity:.9}
+  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:#1f6feb;color:#fff}
+  .btn.secondary{background:#30363d}
+  .btn:disabled{opacity:.6}
+  ul{margin:6px 0 0 18px;padding:0}
+</style>
 </head>
 <body>
   <div class="wrap">
-    <h1>W czym<br>mogę<br>służyć?</h1>
-    <div id="badge" class="badge">Gotowy</div>
+    <div class="brand">FreeFlow</div>
+    <div class="subtitle">W czym mogę pomóc?</div>
+    <div id="badge" class="status">Gotowy</div>
 
-    <button id="mic" class="mic" aria-label="Start/Stop">
-      <span class="disc"></span>
-      <span class="emoji">🎤</span>
-      <span id="r1" class="ring"></span>
-      <span id="r2" class="ring"></span>
-      <span id="r3" class="ring"></span>
-    </button>
+    <div class="zone">
+      <!-- logo jako przycisk + VU -->
+      <button id="mic" class="ff-btn" aria-label="Start/Stop">
+        <canvas id="vu" class="vu" width="150" height="150"></canvas>
+        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+      </button>
 
-    <div id="out" class="out"></div>
+      <div class="chips">
+        <div class="chip">Jedzenie: „dwie pizze pepperoni”</div>
+        <div class="chip">Taxi: „zamów taxi z Rynku do Dworca PKP”</div>
+        <div class="chip">Hotel: „zarezerwuj hotel w Krakowie na dwie noce od piątku”</div>
+      </div>
 
-    <div class="row">
-      <button id="testOrder" class="btn" type="button">Podpowiedz frazy</button>
-      <button id="stopTTS" class="btn" type="button">Wyłącz lektora</button>
+      <div class="panel">
+        <div class="cards">
+          <div class="card">
+            <h3>🎧 Odsłuch</h3>
+            <div id="heard" class="log">—</div>
+          </div>
+          <div class="card">
+            <h3>🗣️ Odpowiedź</h3>
+            <div id="reply" class="log">—</div>
+          </div>
+          <div class="card">
+            <h3>🧺 Koszyk</h3>
+            <div id="cartSummary">Brak pozycji</div>
+            <ul id="cartList"></ul>
+            <div class="row" style="margin-top:6px">
+              <button id="clearCart" class="btn secondary" type="button">Wyczyść</button>
+              <button id="confirmCart" class="btn" type="button">Potwierdź</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>🚕 Taxi</h3>
+            <div id="taxiSummary">Brak danych</div>
+          </div>
+          <div class="card">
+            <h3>🏨 Hotel</h3>
+            <div id="hotelSummary">Brak danych</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="hint" class="btn" type="button">Podpowiedz frazy</button>
+          <button id="stopTTS" class="btn secondary" type="button">Wyłącz lektora</button>
+        </div>
+      </div>
     </div>
-
-    <div class="hint">Kliknij przycisk i powiedz: „czy mogę złożyć zamówienie”, „dwie pizze pepperoni”, „cola zero x2”, „anuluj”.</div>
   </div>
 
 <script>
-  // UI refs
+  // --- UI refs
   const mic = document.getElementById('mic');
   const badge = document.getElementById('badge');
-  const out = document.getElementById('out');
-  const r1 = document.getElementById('r1'), r2 = document.getElementById('r2'), r3 = document.getElementById('r3');
-  const btnTips = document.getElementById('testOrder');
-  const btnStopTTS = document.getElementById('stopTTS');
+  const heard = document.getElementById('heard');
+  const reply = document.getElementById('reply');
+  const cartList = document.getElementById('cartList');
+  const cartSummary = document.getElementById('cartSummary');
+  const taxiSummary = document.getElementById('taxiSummary');
+  const hotelSummary = document.getElementById('hotelSummary');
+  const btnHint = document.getElementById('hint');
+  const btnStop = document.getElementById('stopTTS');
+  const btnClear = document.getElementById('clearCart');
+  const btnConfirm = document.getElementById('confirmCart');
+  const vu = document.getElementById('vu');
+  const vuctx = vu.getContext('2d');
 
-  // Web Speech
+  let active=false, recog=null, audioStream=null, audioCtx=null, analyser=null, vuTimer=null;
+
+  // --- Speech utils
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recog = null, active = false;
+  const okSR = !!SR;
+  function speak(text, lang='pl-PL'){ try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=lang; speechSynthesis.speak(u);}catch{} }
+  function startUI(){ active=true; mic.classList.add('listening'); badge.textContent='Nasłuchuję…'; }
+  function stopUI(){ active=false; mic.classList.remove('listening'); badge.textContent='Gotowy'; stopVU(); }
 
-  function speak(text, lang='pl-PL'){
-    try{
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang; u.rate = 1; u.pitch = 1;
-      speechSynthesis.speak(u);
-    }catch(e){ console.log(e); }
+  // --- LocalStorage cart
+  const CART_KEY = 'ff_cart';
+  let cart = [];
+  try{ cart = JSON.parse(localStorage.getItem(CART_KEY)||'[]'); }catch{}
+  function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); renderCart(); }
+  function addToCart(name, qty=1){ cart.push({name,qty}); saveCart(); }
+  function clearCart(){ cart = []; saveCart(); }
+  function renderCart(){
+    cartList.innerHTML = '';
+    if(cart.length===0){ cartSummary.textContent='Brak pozycji'; return; }
+    cartSummary.textContent = `Pozycji: ${cart.length}`;
+    cart.forEach((it,i)=>{
+      const li = document.createElement('li');
+      li.textContent = `${it.qty} × ${it.name}`;
+      cartList.appendChild(li);
+    });
   }
+  renderCart();
 
-  // Simple NLU
-  const MENU = {
-    pizza: { names:['pizza','pepperoni','margherita','margarita'] },
-    cola:  { names:['cola','cola zero','coca cola','kola'] },
-    woda:  { names:['woda','woda gazowana','woda niegazowana'] }
-  };
+  // --- Simple NLU + state (jedzenie / taxi / hotel)
   const NUM = {"jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10};
-  const norm = s => s.toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
-  const findItem = t => { for(const k in MENU){ for(const n of MENU[k].names){ if(t.includes(n)) return n; } } return null; };
-  function findQty(t){ const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1]; for(const [w,n] of Object.entries(NUM)){ if(t.includes(' '+w+' ')) return n; } if(t.includes('podwój')||t.includes('x2')) return 2; return 1; }
+  const FOODS = ['pizza','pepperoni','margherita','hawajska','quattro','wegetariańska','burger','cola','woda','cola zero'];
 
-  function handleIntent(text){
-    const t = ' ' + norm(text) + ' ';
-    if(t.includes('dzień dobry')||t.includes('cześć')){ say('Dzień dobry! W czym mogę służyć?'); return; }
-    if(t.includes('anuluj')||t.includes('stop')){ say('Anulowano. Czekam na kolejne polecenie.'); return; }
-    if(t.includes('złożyć zamówienie')||t.includes('zamówić')||t.includes('zamówienie')){ say('Jasne! Co podać do zamówienia?'); return; }
-    const item = findItem(t);
-    if(item){ const qty = findQty(t); say(`Dodaję ${qty} ${item}. Czy potwierdzić?`); return; }
-    say('Zrozumiałem: '+text+'. Powtórz proszę nazwę pozycji lub ilość.');
+  let ctx = { mode:null, data:{ taxi:{}, hotel:{} } };
+
+  const norm = s => (' '+s.toLowerCase().replace(/[.,!?]/g,' ')+' ').replace(/\s+/g,' ');
+  function getQty(t){
+    const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1];
+    for(const [w,n] of Object.entries(NUM)) if(t.includes(' '+w+' ')) return n;
+    if(t.includes(' x2 ')||t.includes(' podwój')) return 2;
+    return 1;
   }
 
-  function say(text){ out.textContent = text; speak(text); }
+  function setTaxiSummary(){ const d=ctx.data.taxi; taxiSummary.textContent = (d.pickup||d.drop)? `Z: ${d.pickup||'-'} → Do: ${d.drop||'-'}` : 'Brak danych'; }
+  function setHotelSummary(){ const d=ctx.data.hotel; hotelSummary.textContent = (d.city||d.nights||d.date)? `Miasto: ${d.city||'-'}, Noce: ${d.nights||'-'}, Od: ${d.date||'-'}` : 'Brak danych'; }
 
-  // UI helpers
-  function startUI(){ active=true; [r1,r2,r3].forEach((e,i)=>{e.classList.add('pulse'); e.style.opacity=1; e.classList.toggle('p2',i===1); e.classList.toggle('p3',i===2);}); badge.textContent='Nasłuchuję…'; }
-  function stopUI(){ active=false; [r1,r2,r3].forEach(e=>{e.classList.remove('pulse'); e.style.opacity=0;}); badge.textContent='Gotowy'; }
+  function intent(text){
+    const t = norm(text);
 
+    if(t.includes('anuluj')||t.includes('stop')){
+      ctx={mode:null,data:{ taxi:{}, hotel:{} }}; setTaxiSummary(); setHotelSummary();
+      return {say:'Anulowano. Co dalej?'};
+    }
+    if(t.includes('cześć')||t.includes('dzień dobry')) return {say:'Cześć! Mogę przyjąć zamówienie jedzenia, zamówić taxi albo znaleźć hotel.'};
+
+    // mode hints
+    if(/zamów.*taxi|wezwij.*taxi|uber|bolt/.test(t)) ctx.mode='taxi';
+    if(/hotel|nocleg|rezerwuj.*pokój/.test(t)) ctx.mode='hotel';
+    if(/zamówić|zamówienie|pizza|burger|cola|woda/.test(t)) ctx.mode = ctx.mode || 'food';
+
+    // FOOD
+    if(ctx.mode==='food'){
+      const qty = getQty(t);
+      const item = FOODS.find(n=>t.includes(n));
+      if(t.includes('zamów') && !item) return {say:'Jasne, co podać? Pizza, burger, napoje?'};
+      if(item){ addToCart(item, qty); return {say:`Dodaję ${qty} ${item}. Czy coś jeszcze?`}; }
+      return {say:'Powiedz np. „dwie pizze pepperoni” albo „cola zero x2”.'};
+    }
+
+    // TAXI
+    if(ctx.mode==='taxi'){
+      const d = ctx.data.taxi;
+      if(!d.pickup && /(z|ze|od)\s+(.+?)\s+do\s+/.test(t)){
+        const m=t.match(/(z|ze|od)\s+(.+?)\s+do\s+(.+?)\s*$/); if(m){ d.pickup=m[2].trim(); d.drop=m[3].trim(); setTaxiSummary(); return {say:`Start: ${d.pickup}. Cel: ${d.drop}. Potwierdzić zamówienie taxi?`}; }
+      }
+      if(!d.pickup && /z\s+(.+)$/.test(t)){ d.pickup=t.match(/z\s+(.+)/)[1].trim(); setTaxiSummary(); return {say:`Punkt startu: ${d.pickup}. Dokąd jedziemy?`}; }
+      if(!d.drop   && /do\s+(.+)$/.test(t)){ d.drop=t.match(/do\s+(.+)/)[1].trim(); setTaxiSummary(); return {say:`Cel: ${d.drop}. Potwierdzić zamówienie taxi?`}; }
+      if(/tak|potwierdź|potwierdzam/.test(t) && d.pickup && d.drop){ const s=`Zamawiam taxi z ${d.pickup} do ${d.drop}.`; ctx.mode=null; ctx.data.taxi={}; setTaxiSummary(); return {say:s}; }
+      return {say:'Powiedz „zamów taxi z Rynku do Dworca PKP” albo osobno: „z Rynku… do Dworca PKP”.'};
+    }
+
+    // HOTEL
+    if(ctx.mode==='hotel'){
+      const d = ctx.data.hotel;
+      if(!d.city && /w\s+([a-ząćęłńóśźż\- ]+)/.test(t)){ d.city=t.match(/w\s+([a-ząćęłńóśźż\- ]+)/)[1].trim(); setHotelSummary(); return {say:`Miasto: ${d.city}. Na ile nocy?`}; }
+      if(!d.nights && (/\b(\d{1,2})\s+noc/.test(t) || Object.keys(NUM).some(w=>t.includes(w+' noc')))){
+        d.nights = getQty(t); setHotelSummary(); return {say:`OK, ${d.nights} noce. Jaka data przyjazdu? (np. jutro, w piątek)`}; }
+      if(!d.date && /(jutro|pojutrze|dziś|dzisiaj|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela|\d{1,2}\.\d{1,2})/.test(t)){
+        d.date = text.match(/(jutro|pojutrze|dziś|dzisiaj|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela|\d{1,2}\.\d{1,2})/i)[0];
+        setHotelSummary(); return {say:`Rezerwuję w ${d.city} na ${d.nights} noce od ${d.date}. Potwierdzić?`}; }
+      if(/tak|potwierdź|potwierdzam/.test(t) && d.city && d.nights && d.date){
+        const s=`Rezerwuję hotel w ${d.city} na ${d.nights} noce od ${d.date}.`; ctx.mode=null; ctx.data.hotel={}; setHotelSummary(); return {say:s}; }
+      return {say:'Powiedz „zarezerwuj hotel w Krakowie na dwie noce od piątku”.'};
+    }
+
+    // default
+    return {say:'Mogę: przyjąć zamówienie jedzenia, zamówić taxi lub hotel. Czego potrzebujesz?'};
+  }
+
+  function handle(text){
+    heard.innerHTML = text;
+    const res = intent(text);
+    reply.innerHTML = res.say || '—';
+    if(res.say) speak(res.say);
+  }
+
+  // --- VU meter (WebAudio)
+  function startVU(stream){
+    audioStream = stream;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+    src.connect(analyser);
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+
+    function draw(){
+      analyser.getByteTimeDomainData(buf);
+      // prosty RMS
+      let sum=0; for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; sum+=v*v; }
+      const rms = Math.sqrt(sum/buf.length); // 0..~0.5
+      const pct = Math.min(1, rms*3); // skalowanie
+
+      // rysuj łuk
+      const W = vu.width, H = vu.height, R = (W/2)-6, cx=W/2, cy=H/2;
+      vuctx.clearRect(0,0,W,H);
+      // tło półprzezroczyste
+      vuctx.beginPath(); vuctx.arc(cx,cy,R,0,Math.PI*2); vuctx.strokeStyle='rgba(255,140,0,.15)'; vuctx.lineWidth=6; vuctx.stroke();
+      // wartość
+      vuctx.beginPath();
+      vuctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2 + Math.PI*2*pct);
+      vuctx.strokeStyle='rgba(255,180,0,.9)'; vuctx.lineWidth=6; vuctx.shadowColor='rgba(255,120,0,.6)'; vuctx.shadowBlur=12;
+      vuctx.stroke(); vuctx.shadowBlur=0;
+
+      vuTimer = requestAnimationFrame(draw);
+    }
+    cancelAnimationFrame(vuTimer); draw();
+  }
+  function stopVU(){
+    cancelAnimationFrame(vuTimer);
+    vuctx.clearRect(0,0,vu.width,vu.height);
+    if(audioStream){ audioStream.getTracks().forEach(t=>t.stop()); audioStream=null; }
+    if(audioCtx){ audioCtx.close(); audioCtx=null; analyser=null; }
+  }
+
+  // --- Speech Recognition wiring
   function startRec(){
-    if(!SR){ out.textContent='Web Speech API niedostępne. Użyj Chrome na Androidzie (HTTPS).'; return; }
-    recog = new SR(); recog.lang='pl-PL'; recog.continuous=true; recog.interimResults=true;
-    recog.onresult = (e)=>{
-      let final='';
-      for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) final += r[0].transcript; }
+    if(!okSR){ reply.innerHTML='Ta przeglądarka nie wspiera Web Speech API. Użyj Chrome na Androidzie.'; return; }
+    const r = new SR(); recog=r; r.lang='pl-PL'; r.continuous=true; r.interimResults=true;
+    r.onresult = (e)=>{
+      let final=''; for(let i=e.resultIndex;i<e.results.length;i++){ const rr=e.results[i]; if(rr.isFinal) final += rr[0].transcript; }
       const interim = e.results[e.results.length-1][0].transcript;
-      out.textContent = (final||interim).trim();
-      if(final){ handleIntent(final); }
+      heard.innerHTML = final || interim || '—';
+      if(final) handle(final);
     };
-    recog.onend = () => { stopUI(); };
-    try{ recog.start(); }catch{}
+    r.onend = ()=> stopUI();
+    try{ r.start(); }catch{}
   }
 
-  function toggle(){
-    if(!active){ startUI(); startRec(); if(navigator.vibrate) try{ navigator.vibrate([40,20,40]); }catch{} }
-    else { if(recog) try{ recog.stop(); }catch{} stopUI(); }
+  async function toggleMic(){
+    if(!active){
+      startUI();
+      // poproś o mikrofon do VU i SR
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        startVU(stream);
+      }catch(e){ reply.innerHTML='Brak dostępu do mikrofonu.'; }
+      startRec();
+      if(navigator.vibrate) try{ navigator.vibrate([40,20,40]); }catch{}
+    }else{
+      if(recog) try{ recog.stop(); }catch{}
+      stopUI();
+    }
   }
 
-  mic.addEventListener('click', toggle);
-  btnTips.addEventListener('click', ()=>say('Powiedz: „czy mogę złożyć zamówienie”, „dwie pizze pepperoni”, „cola zero x2”, „anuluj”.'));
-  btnStopTTS.addEventListener('click', ()=>window.speechSynthesis.cancel());
+  mic.addEventListener('click', toggleMic);
+  btnHint.addEventListener('click', ()=>{
+    const t='Powiedz: „dwie pizze pepperoni”, „zamów taxi z Rynku do Dworca PKP”, „zarezerwuj hotel w Krakowie na dwie noce od piątku”.';
+    reply.innerHTML=t; speak(t);
+  });
+  btnStop.addEventListener('click', ()=>speechSynthesis.cancel());
+  btnClear.addEventListener('click', ()=>{ clearCart(); speak('Koszyk wyczyszczony.'); });
+  btnConfirm.addEventListener('click', ()=>{
+    if(cart.length===0){ reply.innerHTML='Koszyk jest pusty.'; speak('Koszyk jest pusty.'); return; }
+    const s = 'Potwierdzam zamówienie: ' + cart.map(i=>`${i.qty} ${i.name}`).join(', ') + '.';
+    reply.innerHTML=s; speak(s); clearCart();
+  });
 </script>
 </body>
 </html>

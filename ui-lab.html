@@ -2,116 +2,308 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow • UI Lab (10 wariantów)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FreeFlow • UI Lab</title>
 <style>
-  :root{
-    --bg:#0a0a0f; --fg:#eae9e6; --muted:#b7b7b7;
-    --neon:#ff6a00; --neon2:#ff9a3c;
-    --brandSize:44px; --titleSize:34px; --subtitleSize:18px;
-    --heroGap:18px; --micSize:220px; --chips:1; --align:center; --ctaPos:65vh;
-  }
-  *{box-sizing:border-box} html,body{height:100%}
-  body{
-    margin:0; background:radial-gradient(1200px 800px at 50% -10%,#10131a 0%,var(--bg) 40%);
-    color:var(--fg); font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-    display:flex; min-height:100dvh;
-  }
-  .wrap{display:flex; flex-direction:column; gap:var(--heroGap);
-        width:100%; padding:24px; max-width:960px; margin:auto;
-        align-items: var(--align); text-align: var(--align);}
-  .brand{font-size:var(--brandSize); font-weight:900;
-         color:var(--neon); letter-spacing:.5px; font-style:italic;
-         text-shadow: 0 8px 28px rgba(255,106,0,.25);}
-  h1{margin:0; font-size:var(--titleSize); line-height:1.1}
-  .sub{color:var(--muted); font-size:var(--subtitleSize)}
-  .hero{position:relative; width:100%; display:flex; justify-content:center; margin-top:8px;}
-  .mic{
-    width:var(--micSize); aspect-ratio:1/1; border-radius:50%; border:0; cursor:pointer;
-    background: url('Freeflow-logo.png') center/cover no-repeat;
-    filter: drop-shadow(0 12px 42px rgba(255,110,0,.30))
-            drop-shadow(0 0 22px rgba(255,110,0,.25));
-    transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  .mic::before{content:""; position:absolute; inset:-18px; border-radius:inherit;
-    background: radial-gradient(closest-side, rgba(255,110,0,.35), transparent 72%);
-    filter: blur(18px); opacity:.7; pointer-events:none;}
-  .mic:active{transform:scale(.98)}
-  @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)} 50%{box-shadow:0 0 38px rgba(255,110,0,.55), 0 0 110px rgba(255,120,0,.35)}}
-  .tips{display: grid; gap:10px; width:100%; max-width:680px; opacity: var(--chips);}
-  .chip{padding:10px 14px; border-radius:14px; background:#151922; color:#cfd0d2; font-size:16px}
-  .switch{
-    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-    background:#12151c; border:1px solid #222733; border-radius:999px; padding:6px 10px;
-    display:flex; gap:6px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.35)
-  }
-  .switch button{
-    min-width:34px; height:34px; border-radius:999px; border:0; color:#fff;
-    background:#1a1f2a; opacity:.8
-  }
-  .switch button.on{background:linear-gradient(180deg,var(--neon),var(--neon2)); opacity:1}
-  /* ————— 10 WARIANTÓW (tylko zmiany zmiennych i kilku reguł) ————— */
-  body.v1 { --align:center;  --brandSize:52px; --titleSize:36px; --micSize:240px; --chips:1 }
-  body.v2 { --align:left;    --brandSize:44px; --titleSize:34px; --micSize:220px; --chips:1 }
-  body.v3 { --align:center;  --brandSize:48px; --titleSize:32px; --micSize:260px; --chips:0 }
-  body.v4 { --align:left;    --brandSize:40px; --titleSize:30px; --micSize:240px; --chips:1 }
-  body.v5 { --align:center;  --brandSize:54px; --titleSize:34px; --micSize:200px; --chips:1 }
-  body.v6 { --align:center;  --brandSize:40px; --titleSize:28px; --micSize:280px; --chips:0 }
-  body.v7 { --align:left;    --brandSize:50px; --titleSize:32px; --micSize:210px; --chips:1 }
-  body.v8 { --align:center;  --brandSize:46px; --titleSize:30px; --micSize:230px; --chips:1 }
-  body.v9 { --align:center;  --brandSize:42px; --titleSize:36px; --micSize:260px; --chips:1 }
-  body.v10{ --align:left;    --brandSize:56px; --titleSize:28px; --micSize:220px; --chips:0 }
-  /* dodatki: gradient dekoracyjny w niektórych wariantach */
-  body.v3 .wrap, body.v6 .wrap, body.v9 .wrap{
-    background:
-      radial-gradient(420px 260px at 50% 10%, rgba(255,110,0,.20), transparent 60%),
-      radial-gradient(320px 200px at 70% 30%, rgba(0,190,255,.10), transparent 70%);
-    border-radius:24px; padding:28px; margin:16px auto;
-  }
+/* —— Reset & tło —— */
+*{box-sizing:border-box}
+:root{
+  --bg:#0b0e13; --panel:#111722; --line:#232838;
+  --txt:#e9edf3; --mut:#a7b0c0;
+  --accent:#ff7a1a; --accent-2:#ffae55;
+  --glow: 0 0 30px rgba(255,122,26,.35), 0 0 60px rgba(255,122,26,.15);
+}
+html,body{height:100%}
+body{
+  margin:0; color:var(--txt); background: radial-gradient(1200px 600px at 50% -10%, #151b28 0%, #0b0e13 45%, #0b0e13 100%);
+  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+}
+
+/* —— Wrappery —— */
+.container{max-width:960px; margin:0 auto; padding:20px 16px 120px}
+.hero{padding:18px 12px 4px; text-align:center}
+.brand{font-weight:900; letter-spacing:.3px; font-size:44px; margin:8px 0 2px;
+  background:linear-gradient(180deg, var(--accent), var(--accent-2));
+  -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 8px 30px rgba(255,122,26,.15);
+}
+.h1{font-size:34px; font-weight:800; margin:8px 0 6px}
+.sub{color:var(--mut); font-weight:600; margin-bottom:14px}
+
+/* —— Logo-button (centralny) —— */
+.logoWrap{
+  display:grid; place-items:center; margin:10px auto 14px;
+  width:clamp(220px, 70vw, 440px); aspect-ratio:1/1; position:relative;
+}
+.ring{
+  position:absolute; inset:0; border-radius:50%;
+  background:radial-gradient(60% 60% at 50% 50%, rgba(255,122,26,.15), rgba(0,0,0,0) 70%),
+             radial-gradient(50% 50% at 50% 50%, rgba(255,174,85,.18), rgba(0,0,0,0) 65%);
+  filter:blur(2px); opacity:.8; transition:.3s;
+}
+.logoBtn{
+  width:82%; aspect-ratio:1/1; border-radius:50%;
+  display:grid; place-items:center; border:1px solid var(--line); background:rgba(255,255,255,.02);
+  box-shadow:0 10px 30px rgba(0,0,0,.5), inset 0 0 50px rgba(255,122,26,.06);
+  backdrop-filter: blur(6px);
+  cursor:pointer; transition:.2s;
+}
+.logoBtn img{width:86%; height:86%; object-fit:contain; filter: drop-shadow(0 8px 22px rgba(0,0,0,.45))}
+.logoBtn:active{transform:translateY(1px);}
+
+/* Stany mikrofonu */
+.stateBadge{margin-top:10px; text-align:center; color:var(--mut); font-weight:700; letter-spacing:.3px}
+.stateBadge .dot{display:inline-block; width:10px; height:10px; margin-right:8px; border-radius:50%; background:#7a8aa0}
+.logoWrap.listening .ring{animation:pulse 1.2s ease-in-out infinite; box-shadow:var(--glow)}
+.logoWrap.listening .dot{background:#11d36b}
+.logoWrap.thinking .ring{animation:spin 2.6s linear infinite; opacity:.7}
+.logoWrap.thinking .dot{background:#ffd257}
+.logoWrap.speaking .ring{animation:pulseBig 1.05s ease-in-out infinite; opacity:1}
+.logoWrap.speaking .dot{background:#ff7a1a}
+@keyframes pulse{0%{transform:scale(.96)} 50%{transform:scale(1.02)} 100%{transform:scale(.96)}}
+@keyframes pulseBig{0%{transform:scale(.92)} 50%{transform:scale(1.06)} 100%{transform:scale(.92)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* —— Kategorie —— */
+.cats{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:10px 0 8px}
+.cat{
+  display:flex; gap:8px; align-items:center; border:1px solid var(--line); background:var(--panel);
+  padding:10px 14px; border-radius:999px; color:#e5e7eb; font-weight:600;
+}
+.cat svg{width:18px; height:18px; fill:var(--accent)}
+.cat:active{transform:translateY(1px)}
+
+/* —— Chips / prompty —— */
+.chips{background:rgba(255,255,255,.03); border:1px solid var(--line);
+  border-radius:16px; padding:14px; margin-top:14px}
+.chip{display:block; width:100%; text-align:center; border-radius:12px; border:1px solid var(--line);
+  padding:12px 14px; margin:10px 0; background:#0f1420; color:#e7ebf3; font-weight:700}
+.chip:active{transform:translateY(1px)}
+
+/* —— Transkrypcja —— */
+.card{margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px}
+.tag{display:inline-flex; gap:8px; align-items:center; font-weight:700; color:#dbe2ee}
+.tag svg{width:18px; height:18px; fill:var(--accent)}
+.tt{color:#c6cfdd}
+
+/* —— Koszyk FAB —— */
+.cartFab{
+  position:fixed; right:16px; bottom:84px; background:#111722; border:1px solid var(--line);
+  border-radius:999px; padding:10px 14px; display:flex; align-items:center; gap:10px;
+  box-shadow:0 10px 26px rgba(0,0,0,.35); color:#fff; z-index:10;
+}
+.cartFab svg{width:20px; height:20px; fill:var(--accent)}
+.cartFab .dot{
+  min-width:20px; height:20px; border-radius:999px; background:linear-gradient(180deg,#ff6a00,#ff9a3c);
+  display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;
+}
+.cartFab .sum{opacity:.85; font-weight:700}
+
+/* —— Przełącznik wariantów —— */
+.variants{
+  position:fixed; left:0; right:0; bottom:0; border-top:1px solid var(--line);
+  background:#0b0e13CC; backdrop-filter: blur(8px);
+  display:flex; gap:8px; justify-content:center; padding:10px 10px 14px; z-index:9;
+}
+.vbtn{
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--line); color:#d5dbe7;
+  background:#101624; font-weight:800;
+}
+.vbtn.on{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#111; border:0}
+
+/* —— Layouty —— */
+.hidden{display:none}
+
+/* Toast */
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(12px);
+  background:#111722; color:#fff; border:1px solid var(--line); padding:10px 14px; border-radius:12px;
+  opacity:0; transition:.25s; box-shadow:0 10px 28px rgba(0,0,0,.35); z-index:12}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
 </style>
 </head>
-<body class="v1">
-  <div class="wrap">
+<body>
+
+<div class="container">
+
+  <!-- Wspólna góra -->
+  <header class="hero">
     <div class="brand">FreeFlow</div>
-    <h1>Złóż zamówienie</h1>
+    <div class="h1">Złóż zamówienie</div>
     <div class="sub">Taxi, posiłek, a może nocleg?</div>
+  </header>
 
-    <div class="hero">
-      <button id="mic" class="mic" aria-label="Mów teraz"></button>
+  <!-- VAR 1: centralne logo jako przycisk + kategorie + chipsy -->
+  <section id="v1">
+    <div class="logoWrap" id="logo1">
+      <div class="ring"></div>
+      <button class="logoBtn" id="micBtn1" aria-label="Mów teraz">
+        <img src="Freeflow-logo.png" alt="FreeFlow logo" onerror="this.style.opacity=.0">
+      </button>
+      <div class="stateBadge"><span class="dot"></span><span id="s1">Gotowy do nagrywania…</span></div>
     </div>
 
-    <div class="tips">
-      <div class="chip">„dwie pizze pepperoni”</div>
-      <div class="chip">„zamów taxi na Dworzec”</div>
-      <div class="chip">„hotel w Krakowie od piątku na 2 noce”</div>
+    <div class="cats" role="navigation" aria-label="Kategorie">
+      <button class="cat" data-k="food">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2v8a2 2 0 1 0 4 0V3h2v8a4 4 0 1 1-8 0V3zm12 0h2v7h2V3h2v18h-2v-9h-2v9h-2V3z"/></svg> Jedzenie
+      </button>
+      <button class="cat" data-k="taxi">
+        <svg viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a2 2 0 0 1 2 2v5h-2v-2H4v2H2v-5a2 2 0 0 1 2-2h1zm2.5 0h9L15 7H9l-1.5 4zM6 15.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg> Taxi
+      </button>
+      <button class="cat" data-k="hotel">
+        <svg viewBox="0 0 24 24"><path d="M3 3h2v18H3V3zm4 2h11a3 3 0 0 1 3 3v13h-2v-4H7v4H5V8a3 3 0 0 1 3-3zm0 6h7V7H7v4zm9 0h3V9h-3v2z"/></svg> Hotel
+      </button>
     </div>
-  </div>
 
-  <!-- przełącznik presetów -->
-  <div class="switch" role="tablist" aria-label="Wariant UI">
-    <script>
-      const total=10, sw=document.currentScript.parentElement, body=document.body;
-      const q = new URLSearchParams(location.search);
-      const start = Math.min(total, Math.max(1, +q.get('v') || 1));
-      function setV(n){ body.className='v'+n; [...sw.children].forEach((b,i)=>b.classList.toggle('on', i+1===n)); history.replaceState(null,'',`?v=${n}`) }
-      for(let i=1;i<=total;i++){
-        const b=document.createElement('button'); b.textContent=i;
-        b.onclick=()=>setV(i); sw.appendChild(b);
-      }
-      setV(start);
+    <div class="chips">
+      <button class="chip ex">„dwie pizze pepperoni”</button>
+      <button class="chip ex">„zamów taxi na Dworzec”</button>
+      <button class="chip ex">„hotel w Krakowie od piątku na 2 noce”</button>
 
-      // demo animacji nagrywania (toggle po tapnięciu)
-      const mic=document.getElementById('mic');
-      let rec=false; mic.addEventListener('click',()=>{
-        rec=!rec;
-        if(rec){ mic.style.animation = 'spin 2.6s linear infinite, pulse 1.1s ease-in-out infinite';
-                 mic.style.filter='drop-shadow(0 0 14px rgba(255,110,0,.9)) drop-shadow(0 0 42px rgba(255,120,0,.55))' }
-        else   { mic.style.animation = ''; mic.style.filter='' }
-      });
-    </script>
-  </div>
+      <div class="card">
+        <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Ostatnia rozmowa</div>
+        <div class="tt" id="log1">Jeszcze nic nie nagrano.</div>
+      </div>
+    </div>
+  </section>
 
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  <!-- VAR 2: duże logo u góry, przycisk na dole (CTA) -->
+  <section id="v2" class="hidden">
+    <div class="logoWrap" id="logo2">
+      <div class="ring"></div>
+      <button class="logoBtn" id="micBtn2" aria-label="Mów teraz">
+        <img src="Freeflow-logo.png" alt="">
+      </button>
+      <div class="stateBadge"><span class="dot"></span><span id="s2">Gotowy do nagrywania…</span></div>
+    </div>
+    <div class="chips">
+      <button class="chip ex">„poproszę ramen pikantny”</button>
+      <button class="chip ex">„wezwij taxi na lotnisko”</button>
+    </div>
+  </section>
+
+  <!-- VAR 3: minimal – tylko logo i transkrypcja -->
+  <section id="v3" class="hidden">
+    <div class="logoWrap" id="logo3">
+      <div class="ring"></div>
+      <button class="logoBtn" id="micBtn3"><img src="Freeflow-logo.png" alt=""></button>
+      <div class="stateBadge"><span class="dot"></span><span id="s3">Gotowy do nagrywania…</span></div>
+    </div>
+    <div class="card">
+      <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Dialog</div>
+      <div class="tt" id="log3">—</div>
+    </div>
+  </section>
+
+  <!-- VAR 4: kategorie jako karty na siatce -->
+  <section id="v4" class="hidden">
+    <div class="logoWrap" id="logo4">
+      <div class="ring"></div>
+      <button class="logoBtn" id="micBtn4"><img src="Freeflow-logo.png" alt=""></button>
+      <div class="stateBadge"><span class="dot"></span><span id="s4">Gotowy do nagrywania…</span></div>
+    </div>
+    <div class="cats" style="justify-content:space-between; gap:12px">
+      <button class="cat" data-k="food">🍕 Jedzenie</button>
+      <button class="cat" data-k="taxi">🚕 Taxi</button>
+      <button class="cat" data-k="hotel">🏨 Hotel</button>
+      <button class="cat" data-k="other">🛒 Zakupy</button>
+    </div>
+  </section>
+
+  <!-- VAR 5: chat-first -->
+  <section id="v5" class="hidden">
+    <div class="logoWrap" id="logo5">
+      <div class="ring"></div>
+      <button class="logoBtn" id="micBtn5"><img src="Freeflow-logo.png" alt=""></button>
+      <div class="stateBadge"><span class="dot"></span><span id="s5">Gotowy do nagrywania…</span></div>
+    </div>
+    <div class="card">
+      <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 .001 18.001A9 9 0 0 0 12 3zm-1 5h2v4h3v2h-5V8z"/></svg>Transkrypcja</div>
+      <div class="tt" id="log5">Powiedz coś, a tu pokaże się rozmowa.</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Koszyk demo -->
+<button id="cartFab" class="cartFab" aria-label="Koszyk">
+  <span class="dot" id="cartCount">0</span>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h-2l-1 2H1v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 7 21h12v-2H7.42a.25.25 0 0 1-.22-.37L8 16h9a2 2 0 0 0 1.8-1.1l3.1-6.2A1 1 0 0 0 21 7H6.42l-.7-1.4L7 4zM7 22a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 .001 4A2 2 0 0 0 17 22z"/></svg>
+  <span class="sum" id="cartSum">0,00 zł</span>
+</button>
+
+<!-- Przełącznik wariantów -->
+<nav class="variants" id="variants">
+  <button class="vbtn on" data-v="1">1</button>
+  <button class="vbtn" data-v="2">2</button>
+  <button class="vbtn" data-v="3">3</button>
+  <button class="vbtn" data-v="4">4</button>
+  <button class="vbtn" data-v="5">5</button>
+</nav>
+
+<script>
+/* —— Helpers —— */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+function toast(txt){
+  const t = Object.assign(document.createElement('div'), {className:'toast', textContent:txt});
+  document.body.appendChild(t);
+  setTimeout(()=>t.classList.add('on'), 10);
+  setTimeout(()=>{ t.classList.remove('on'); setTimeout(()=>t.remove(), 250); }, 2200);
+}
+
+/* —— Przełącznik wariantów —— */
+const sections = ['#v1','#v2','#v3','#v4','#v5'].map(id=>$(id));
+$('#variants').addEventListener('click', (e)=>{
+  const b = e.target.closest('.vbtn'); if(!b) return;
+  $$('.vbtn').forEach(x=>x.classList.toggle('on', x===b));
+  const v = +b.dataset.v;
+  sections.forEach((s,i)=>s.classList.toggle('hidden', (i+1)!==v));
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+/* —— Demo stany mikrofonu —— */
+function makeMic(micBtnId, wrapId, labelId, logId){
+  const btn = document.getElementById(micBtnId);
+  const wrap = document.getElementById(wrapId);
+  const lab  = document.getElementById(labelId);
+  const log  = logId ? document.getElementById(logId) : null;
+  let state = 'idle'; // idle -> listening -> thinking -> speaking -> idle
+  function setState(s){
+    wrap.classList.remove('listening','thinking','speaking');
+    if(s!=='idle') wrap.classList.add(s);
+    state = s;
+    lab.textContent = s==='idle' ? 'Gotowy do nagrywania…' :
+                      s==='listening' ? 'Słucham… mów śmiało' :
+                      s==='thinking' ? 'Już sprawdzam…' :
+                      'Odpowiadam…';
+  }
+  btn.addEventListener('click', ()=>{
+    if(state==='idle'){ setState('listening'); if(log) log.innerText='Ty: „przykładowa fraza…”'; }
+    else if(state==='listening'){ setState('thinking'); if(log) log.innerText += '\nAsystent: przetwarzam…'; }
+    else if(state==='thinking'){ setState('speaking'); if(log) log.innerText += '\nAsystent: gotowe!'; }
+    else { setState('idle'); }
+  });
+  setState('idle');
+}
+makeMic('micBtn1','logo1','s1','log1');
+makeMic('micBtn2','logo2','s2');
+makeMic('micBtn3','logo3','s3','log3');
+makeMic('micBtn4','logo4','s4');
+makeMic('micBtn5','logo5','s5','log5');
+
+/* —— Kategorie + mini koszyk (demo) —— */
+const cart = {count:0, sum:0};
+const $cnt = document.getElementById('cartCount');
+const $sum = document.getElementById('cartSum');
+function addDemoItem(kind){
+  const prices = { food: 38.0, taxi: 25.0, hotel: 199.0, other: 15.0 };
+  cart.count++; cart.sum += prices[kind] || 15;
+  $cnt.textContent = cart.count;
+  $sum.textContent = cart.sum.toFixed(2).replace('.',',') + ' zł';
+  toast('Dodano do koszyka: ' + (kind||'pozycja'));
+}
+$$('.cat').forEach(btn=>{
+  btn.addEventListener('click', ()=> addDemoItem(btn.dataset.k));
+});
+</script>
 </body>
 </html>

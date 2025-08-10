@@ -1,72 +1,127 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Freeflo Voice to Order</title>
-    <style>
-        body {
-            background-color: #000;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 40px;
-        }
-        button {
-            padding: 15px 25px;
-            font-size: 18px;
-            margin-top: 20px;
-            background-color: #4CAF50;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 8px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Freeflo — Voice to Order</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    html,body{height:100%;margin:0;background:#000;color:#eaeaea;font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
+    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px}
+    h1{margin:0;text-align:center;font-size:clamp(22px,5vw,36px);color:#e6e6e6}
+    .hint{opacity:.75;text-align:center}
+    .mic{width:110px;height:110px;border-radius:50%;position:relative;display:grid;place-items:center;
+         background:#0d1117;border:4px solid rgba(255,165,0,.25);
+         box-shadow:0 10px 34px rgba(255,120,0,.25), inset 0 0 30px rgba(255,120,0,.12);
+         overflow:hidden;cursor:pointer;transition:transform .15s ease}
+    .mic:active{transform:scale(.97)}
+    .disc{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffb347 0%,#ff6a00 35%,#a23bff 80%);opacity:.22;filter:blur(10px)}
+    .emoji{font-size:42px;z-index:1}
+    .ring{position:absolute;inset:0;border-radius:9999px;border:2px solid rgba(255,140,0,.38);opacity:0;pointer-events:none}
+    .pulse{animation:pulse 1.8s ease-out infinite}
+    .p2{animation-delay:.25s}.p3{animation-delay:.5s}
+    @keyframes pulse{from{transform:scale(.9);opacity:.7}to{transform:scale(1.9);opacity:0}}
+    .badge{font-size:12px;padding:6px 10px;border-radius:9999px;background:rgba(255,165,0,.12);color:#ffb347;border:1px solid rgba(255,165,0,.2)}
+    .out{max-width:min(780px,92vw);padding:12px 14px;border-radius:14px;background:#0d1117;color:#d6d8db;border:1px solid rgba(255,255,255,.06);min-height:22px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:#1f6feb;color:#fff}
+    .btn:disabled{opacity:.5}
+  </style>
 </head>
 <body>
-    <h1>W czym mogę służyć?</h1>
-    <p>Kliknij przycisk i powiedz swoje zamówienie</p>
-    <button id="startBtn">🎤 Start</button>
-    <p id="output"></p>
+  <div class="wrap">
+    <h1>W czym<br>mogę<br>służyć?</h1>
+    <div id="badge" class="badge">Gotowy</div>
 
-    <script>
-        const startBtn = document.getElementById('startBtn');
-        const output = document.getElementById('output');
+    <button id="mic" class="mic" aria-label="Start/Stop">
+      <span class="disc"></span>
+      <span class="emoji">🎤</span>
+      <span id="r1" class="ring"></span>
+      <span id="r2" class="ring"></span>
+      <span id="r3" class="ring"></span>
+    </button>
 
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'pl-PL';
-        recognition.interimResults = false;
+    <div id="out" class="out"></div>
 
-        startBtn.addEventListener('click', () => {
-            recognition.start();
-        });
+    <div class="row">
+      <button id="testOrder" class="btn" type="button">Podpowiedz frazy</button>
+      <button id="stopTTS" class="btn" type="button">Wyłącz lektora</button>
+    </div>
 
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            output.textContent = "Usłyszałem: " + transcript;
+    <div class="hint">Kliknij przycisk i powiedz: „czy mogę złożyć zamówienie”, „dwie pizze pepperoni”, „cola zero x2”, „anuluj”.</div>
+  </div>
 
-            let odpowiedz = "";
-            if (transcript.toLowerCase().includes("zamówienie")) {
-                odpowiedz = "Oczywiście, proszę podać szczegóły zamówienia.";
-            } else if (transcript.toLowerCase().includes("dzień dobry")) {
-                odpowiedz = "Dzień dobry, witam w Freeflo!";
-            } else {
-                odpowiedz = "Nie do końca zrozumiałem, proszę powtórzyć.";
-            }
+<script>
+  // UI refs
+  const mic = document.getElementById('mic');
+  const badge = document.getElementById('badge');
+  const out = document.getElementById('out');
+  const r1 = document.getElementById('r1'), r2 = document.getElementById('r2'), r3 = document.getElementById('r3');
+  const btnTips = document.getElementById('testOrder');
+  const btnStopTTS = document.getElementById('stopTTS');
 
-            // Odpowiedź głosowa
-            const utterance = new SpeechSynthesisUtterance(odpowiedz);
-            utterance.lang = 'pl-PL';
-            speechSynthesis.speak(utterance);
-        };
+  // Web Speech
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null, active = false;
 
-        recognition.onerror = (event) => {
-            output.textContent = "Błąd rozpoznawania: " + event.error;
-        };
-    </script>
+  function speak(text, lang='pl-PL'){
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang; u.rate = 1; u.pitch = 1;
+      speechSynthesis.speak(u);
+    }catch(e){ console.log(e); }
+  }
+
+  // Simple NLU
+  const MENU = {
+    pizza: { names:['pizza','pepperoni','margherita','margarita'] },
+    cola:  { names:['cola','cola zero','coca cola','kola'] },
+    woda:  { names:['woda','woda gazowana','woda niegazowana'] }
+  };
+  const NUM = {"jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10};
+  const norm = s => s.toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
+  const findItem = t => { for(const k in MENU){ for(const n of MENU[k].names){ if(t.includes(n)) return n; } } return null; };
+  function findQty(t){ const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1]; for(const [w,n] of Object.entries(NUM)){ if(t.includes(' '+w+' ')) return n; } if(t.includes('podwój')||t.includes('x2')) return 2; return 1; }
+
+  function handleIntent(text){
+    const t = ' ' + norm(text) + ' ';
+    if(t.includes('dzień dobry')||t.includes('cześć')){ say('Dzień dobry! W czym mogę służyć?'); return; }
+    if(t.includes('anuluj')||t.includes('stop')){ say('Anulowano. Czekam na kolejne polecenie.'); return; }
+    if(t.includes('złożyć zamówienie')||t.includes('zamówić')||t.includes('zamówienie')){ say('Jasne! Co podać do zamówienia?'); return; }
+    const item = findItem(t);
+    if(item){ const qty = findQty(t); say(`Dodaję ${qty} ${item}. Czy potwierdzić?`); return; }
+    say('Zrozumiałem: '+text+'. Powtórz proszę nazwę pozycji lub ilość.');
+  }
+
+  function say(text){ out.textContent = text; speak(text); }
+
+  // UI helpers
+  function startUI(){ active=true; [r1,r2,r3].forEach((e,i)=>{e.classList.add('pulse'); e.style.opacity=1; e.classList.toggle('p2',i===1); e.classList.toggle('p3',i===2);}); badge.textContent='Nasłuchuję…'; }
+  function stopUI(){ active=false; [r1,r2,r3].forEach(e=>{e.classList.remove('pulse'); e.style.opacity=0;}); badge.textContent='Gotowy'; }
+
+  function startRec(){
+    if(!SR){ out.textContent='Web Speech API niedostępne. Użyj Chrome na Androidzie (HTTPS).'; return; }
+    recog = new SR(); recog.lang='pl-PL'; recog.continuous=true; recog.interimResults=true;
+    recog.onresult = (e)=>{
+      let final='';
+      for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) final += r[0].transcript; }
+      const interim = e.results[e.results.length-1][0].transcript;
+      out.textContent = (final||interim).trim();
+      if(final){ handleIntent(final); }
+    };
+    recog.onend = () => { stopUI(); };
+    try{ recog.start(); }catch{}
+  }
+
+  function toggle(){
+    if(!active){ startUI(); startRec(); if(navigator.vibrate) try{ navigator.vibrate([40,20,40]); }catch{} }
+    else { if(recog) try{ recog.stop(); }catch{} stopUI(); }
+  }
+
+  mic.addEventListener('click', toggle);
+  btnTips.addEventListener('click', ()=>say('Powiedz: „czy mogę złożyć zamówienie”, „dwie pizze pepperoni”, „cola zero x2”, „anuluj”.'));
+  btnStopTTS.addEventListener('click', ()=>window.speechSynthesis.cancel());
+</script>
 </body>
 </html>

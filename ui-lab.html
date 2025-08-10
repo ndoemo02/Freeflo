@@ -171,6 +171,23 @@
 
 /* helper */
 .hidden{display:none}
+/* --- FLOATING TRANSCRIPT BAR --- */
+.transbar{position:fixed; left:50%; transform:translateX(-50%); top:92px; z-index:20; max-width:var(--max-w); width:calc(100% - 24px);
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:rgba(17,22,29,.9); border:1px solid #1a2430; box-shadow:0 8px 26px rgba(0,0,0,.35);}
+.transbar svg{width:18px;height:18px; fill:var(--accent)}
+.transbar #barText{flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#d9e5f4}
+.transbar .expand{background:transparent; border:0; color:#9fb0c5; font-weight:700; padding:6px 8px; border-radius:10px}
+.transbar .expand:active{box-shadow:var(--ring)}
+
+/* bottom sheet with full transcript */
+.sheet{position:fixed; inset:0; display:none; background:rgba(0,0,0,.35); z-index:40}
+.sheet[aria-hidden="false"]{display:block}
+.sheet-inner{position:absolute; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:var(--max-w); background:#0f141a; border-top-left-radius:16px; border-top-right-radius:16px; border:1px solid #1a2430; box-shadow:0 -20px 50px rgba(0,0,0,.45)}
+.sheet-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; color:#cfe0f5; border-bottom:1px solid #17202b}
+.sheet-head button{background:#121922; border:1px solid #1a2430; color:#9fb0c5; border-radius:10px; padding:6px 10px}
+.sheet-body{max-height:45vh; overflow:auto; padding:12px 14px; color:#dfe9f7}
+
+@media (min-width:768px){ .transbar{top:104px} .sheet-body{max-height:55vh} }
 
   </style>
 </head>
@@ -202,6 +219,12 @@
   <button class="vbtn" data-v="10">10</button>
 </div>
 
+<div class="transbar" id="transbar" title="Pokaż pełną transkrypcję">
+  <svg><use href="#i-mic"/></svg>
+  <div id="barText">Jeszcze nic nie nagrano.</div>
+  <button class="expand" id="openSheet">•••</button>
+</div>
+
 <div class="grid">
   <h1 class="h1">Złóż zamówienie</h1>
   <div class="sub">Taxi, posiłek, a może nocleg?</div>
@@ -231,7 +254,18 @@
   </div>
 </div>
 
-  </div>  <script>
+<!-- Transcript sheet -->
+<div class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <strong>Transkrypcja</strong>
+      <button id="closeSheet">Zamknij</button>
+    </div>
+    <div class="sheet-body" id="sheetBody">Brak wpisów.</div>
+  </div>
+</div>
+
+  <script>
     // warianty
     const sw = document.getElementById('switcher');
     sw.addEventListener('click', (e)=>{
@@ -246,16 +280,42 @@
     let cart = 0; const cartCount = document.getElementById('cartCount');
     document.getElementById('cartBtn').addEventListener('click', ()=>{ cart++; cartCount.textContent = cart; });
 
-    // mic animations demo
+    // mic animations demo + live transcript
     const mic = document.getElementById('micBtn');
     const out = document.getElementById('out');
-    let listening = false; let rot = 0; let spinId;
+    const barText = document.getElementById('barText');
+    const sheet = document.getElementById('sheet');
+    const openSheet = document.getElementById('openSheet');
+    const closeSheet = document.getElementById('closeSheet');
+    const sheetBody = document.getElementById('sheetBody');
+
+    let listening = false; let rot = 0; let spinId; let transcript=[];
     function spin(){ rot = (rot+1)%360; mic.style.transform = `rotate(${rot}deg)`; }
+    function pushTranscript(line){
+      if(!line) return;
+      transcript.push(line);
+      barText.textContent = line;
+      out.textContent = transcript.join('
+');
+      sheetBody.innerHTML = transcript.map(p=>`<div style=\"padding:8px 0;border-bottom:1px solid #17202b;\">${p}</div>`).join('');
+    }
+
     mic.addEventListener('click', ()=>{
       listening = !listening;
       if(listening){
-        out.textContent = 'Słucham… powiedz, co zamawiasz.';
+        pushTranscript('Słucham… powiedz, co zamawiasz.');
         mic.classList.add('pulse');
+        spinId = setInterval(spin, 16);
+      }else{
+        pushTranscript('OK, zapisałem. (Tu pojawi się wynik STT)');
+        mic.classList.remove('pulse');
+        clearInterval(spinId);
+        mic.style.transform='';
+      }
+    });
+
+    openSheet.addEventListener('click', ()=>{ sheet.setAttribute('aria-hidden','false'); });
+    closeSheet.addEventListener('click', ()=>{ sheet.setAttribute('aria-hidden','true'); });
         spinId = setInterval(spin, 16);
       }else{
         out.textContent = 'Dzięki! Rozumiem: (tu pojawi się wynik STT)';

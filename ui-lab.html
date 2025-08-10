@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow • UI Lab (10 wariantów)</title>
+<style>
+  :root{
+    --bg:#0a0a0f; --fg:#eae9e6; --muted:#b7b7b7;
+    --neon:#ff6a00; --neon2:#ff9a3c;
+    --brandSize:44px; --titleSize:34px; --subtitleSize:18px;
+    --heroGap:18px; --micSize:220px; --chips:1; --align:center; --ctaPos:65vh;
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 800px at 50% -10%,#10131a 0%,var(--bg) 40%);
+    color:var(--fg); font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    display:flex; min-height:100dvh;
+  }
+  .wrap{display:flex; flex-direction:column; gap:var(--heroGap);
+        width:100%; padding:24px; max-width:960px; margin:auto;
+        align-items: var(--align); text-align: var(--align);}
+  .brand{font-size:var(--brandSize); font-weight:900;
+         color:var(--neon); letter-spacing:.5px; font-style:italic;
+         text-shadow: 0 8px 28px rgba(255,106,0,.25);}
+  h1{margin:0; font-size:var(--titleSize); line-height:1.1}
+  .sub{color:var(--muted); font-size:var(--subtitleSize)}
+  .hero{position:relative; width:100%; display:flex; justify-content:center; margin-top:8px;}
+  .mic{
+    width:var(--micSize); aspect-ratio:1/1; border-radius:50%; border:0; cursor:pointer;
+    background: url('Freeflow-logo.png') center/cover no-repeat;
+    filter: drop-shadow(0 12px 42px rgba(255,110,0,.30))
+            drop-shadow(0 0 22px rgba(255,110,0,.25));
+    transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .mic::before{content:""; position:absolute; inset:-18px; border-radius:inherit;
+    background: radial-gradient(closest-side, rgba(255,110,0,.35), transparent 72%);
+    filter: blur(18px); opacity:.7; pointer-events:none;}
+  .mic:active{transform:scale(.98)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)} 50%{box-shadow:0 0 38px rgba(255,110,0,.55), 0 0 110px rgba(255,120,0,.35)}}
+  .tips{display: grid; gap:10px; width:100%; max-width:680px; opacity: var(--chips);}
+  .chip{padding:10px 14px; border-radius:14px; background:#151922; color:#cfd0d2; font-size:16px}
+  .switch{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    background:#12151c; border:1px solid #222733; border-radius:999px; padding:6px 10px;
+    display:flex; gap:6px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.35)
+  }
+  .switch button{
+    min-width:34px; height:34px; border-radius:999px; border:0; color:#fff;
+    background:#1a1f2a; opacity:.8
+  }
+  .switch button.on{background:linear-gradient(180deg,var(--neon),var(--neon2)); opacity:1}
+  /* ————— 10 WARIANTÓW (tylko zmiany zmiennych i kilku reguł) ————— */
+  body.v1 { --align:center;  --brandSize:52px; --titleSize:36px; --micSize:240px; --chips:1 }
+  body.v2 { --align:left;    --brandSize:44px; --titleSize:34px; --micSize:220px; --chips:1 }
+  body.v3 { --align:center;  --brandSize:48px; --titleSize:32px; --micSize:260px; --chips:0 }
+  body.v4 { --align:left;    --brandSize:40px; --titleSize:30px; --micSize:240px; --chips:1 }
+  body.v5 { --align:center;  --brandSize:54px; --titleSize:34px; --micSize:200px; --chips:1 }
+  body.v6 { --align:center;  --brandSize:40px; --titleSize:28px; --micSize:280px; --chips:0 }
+  body.v7 { --align:left;    --brandSize:50px; --titleSize:32px; --micSize:210px; --chips:1 }
+  body.v8 { --align:center;  --brandSize:46px; --titleSize:30px; --micSize:230px; --chips:1 }
+  body.v9 { --align:center;  --brandSize:42px; --titleSize:36px; --micSize:260px; --chips:1 }
+  body.v10{ --align:left;    --brandSize:56px; --titleSize:28px; --micSize:220px; --chips:0 }
+  /* dodatki: gradient dekoracyjny w niektórych wariantach */
+  body.v3 .wrap, body.v6 .wrap, body.v9 .wrap{
+    background:
+      radial-gradient(420px 260px at 50% 10%, rgba(255,110,0,.20), transparent 60%),
+      radial-gradient(320px 200px at 70% 30%, rgba(0,190,255,.10), transparent 70%);
+    border-radius:24px; padding:28px; margin:16px auto;
+  }
+</style>
+</head>
+<body class="v1">
+  <div class="wrap">
+    <div class="brand">FreeFlow</div>
+    <h1>Złóż zamówienie</h1>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
+
+    <div class="hero">
+      <button id="mic" class="mic" aria-label="Mów teraz"></button>
+    </div>
+
+    <div class="tips">
+      <div class="chip">„dwie pizze pepperoni”</div>
+      <div class="chip">„zamów taxi na Dworzec”</div>
+      <div class="chip">„hotel w Krakowie od piątku na 2 noce”</div>
+    </div>
+  </div>
+
+  <!-- przełącznik presetów -->
+  <div class="switch" role="tablist" aria-label="Wariant UI">
+    <script>
+      const total=10, sw=document.currentScript.parentElement, body=document.body;
+      const q = new URLSearchParams(location.search);
+      const start = Math.min(total, Math.max(1, +q.get('v') || 1));
+      function setV(n){ body.className='v'+n; [...sw.children].forEach((b,i)=>b.classList.toggle('on', i+1===n)); history.replaceState(null,'',`?v=${n}`) }
+      for(let i=1;i<=total;i++){
+        const b=document.createElement('button'); b.textContent=i;
+        b.onclick=()=>setV(i); sw.appendChild(b);
+      }
+      setV(start);
+
+      // demo animacji nagrywania (toggle po tapnięciu)
+      const mic=document.getElementById('mic');
+      let rec=false; mic.addEventListener('click',()=>{
+        rec=!rec;
+        if(rec){ mic.style.animation = 'spin 2.6s linear infinite, pulse 1.1s ease-in-out infinite';
+                 mic.style.filter='drop-shadow(0 0 14px rgba(255,110,0,.9)) drop-shadow(0 0 42px rgba(255,120,0,.55))' }
+        else   { mic.style.animation = ''; mic.style.filter='' }
+      });
+    </script>
+  </div>
+
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</body>
+</html>

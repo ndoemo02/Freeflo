@@ -1,272 +1,201 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FreeFlow — Voice to Order</title>
-<meta name="theme-color" content="#000000">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FreeFlow</title>
 <style>
-  :root{ --glow: rgba(255,120,0,.35); --soft:#0d1117; }
-  html,body{height:100%;margin:0;background:#000;color:#eaeaea;font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:28px 16px}
-  .brand{margin-top:2px;font-weight:800;letter-spacing:.3px;
-    font-size:clamp(24px,6vw,44px);
-    background:linear-gradient(90deg,#ffb347,#ff6a00 40%,#a23bff 90%);
-    -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,120,0,.12))}
-  .subtitle{margin-top:-6px;color:#cfcfcf;font-size:clamp(16px,4.2vw,24px)}
-  .status{font-size:13px;padding:6px 10px;border-radius:9999px;background:rgba(255,165,0,.12);color:#ffb347;border:1px solid rgba(255,165,0,.2)}
-  .zone{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:6px}
+  :root{
+    --bg:#0b0d0f;
+    --fg:#ffffff;
+    --accent:#ff7a1a; /* soczysty pomarańcz */
+    --muted:#cfc7bd;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 900px at 50% -20%, #13161a 0%, var(--bg) 60%);
+    color:var(--fg);
+    font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .wrap{width:min(900px, 100%); padding:28px 20px 120px}
+  h1{
+    margin:14px 0 6px;
+    font-size:clamp(40px, 6.5vw, 80px);
+    font-weight:800;
+    color:var(--accent);
+    letter-spacing:.5px;
+  }
+  h2{
+    margin:0 0 28px;
+    font-size:clamp(18px, 3.3vw, 32px);
+    color:var(--muted);
+    font-weight:700;
+  }
+  .card{
+    margin:0 auto;
+    background:#0f1216;
+    border:1px solid #1b2026;
+    border-radius:18px;
+    padding:16px 18px;
+    max-width:720px;
+    box-shadow:0 10px 32px rgba(0,0,0,.35);
+  }
+  .row{display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap}
+  .pill{padding:6px 10px; border-radius:999px; background:#131820; color:#b7c0ca; font-size:14px}
+  #heard,#reply{
+    margin-top:14px;
+    padding:14px 16px;
+    border-radius:14px;
+    background:#0d1116;
+    border:1px solid #1b2026;
+    color:#dfe6ee;
+    word-break:break-word;
+  }
+  #reply{color:#ffd5b1; border-color:#312018; background:linear-gradient(180deg,#15100c,#0d0a07)}
+  .hint{margin-top:10px; color:#98a3af; font-size:14px}
 
-  /* logo-button */
-  .ff-btn{width:150px;height:150px;border-radius:50%;
-    background:#000 center/cover no-repeat url("./file_000000000e9c62469156924aae2c3ff0.png"); /* <-- podmień jeśli zmienisz nazwę pliku */
-    border:0;position:relative;cursor:pointer;outline:none;
-    box-shadow:0 10px 34px var(--glow), inset 0 0 30px rgba(255,120,0,.18);
-    transition:transform .15s ease, box-shadow .2s ease}
-  .ff-btn:active{transform:scale(.97)}
-  .ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,140,0,.38);opacity:0;pointer-events:none}
-  .ff-btn.listening .ring{opacity:1;animation:pulse 1.8s ease-out infinite}
-  .ff-btn.listening .r2{animation-delay:.25s}.ff-btn.listening .r3{animation-delay:.5s}
-  @keyframes pulse{from{transform:scale(.9);opacity:.7}to{transform:scale(1.85);opacity:0}}
+  /* --- Przycisk-logo --- */
+  .ff-btn{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    width:168px; height:168px; border-radius:50%;
+    border:0; outline:0; cursor:pointer;
+    background:#000 center/cover no-repeat url("./file_0000000082cc6243bc1c86d7735f6ad2.png");
+    box-shadow:0 10px 34px rgba(255,120,0,.35), inset 0 0 24px rgba(255,120,0,.18);
+    transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ff-btn:active{ transform:translateX(-50%) scale(.97) }
+  .ff-btn.listening{
+    box-shadow:0 12px 50px rgba(255,120,0,.6), inset 0 0 34px rgba(255,120,0,.3);
+    filter:saturate(1.08);
+  }
+  .ff-btn::after{
+    content:""; position:absolute; inset:-8px; border-radius:50%;
+    border:2px solid rgba(255,140,0,.45); opacity:0; pointer-events:none;
+  }
+  .ff-btn.listening::after{ animation:ffpulse 1.8s ease-out infinite; opacity:1 }
+  @keyframes ffpulse{ from{transform:scale(.9);opacity:.7} to{transform:scale(1.85);opacity:0} }
 
-  /* VU meter (canvas) */
-  .vu{position:absolute;inset:0}
-  .ff-btn.listening{box-shadow:0 10px 40px rgba(255,120,0,.55), inset 0 0 40px rgba(255,120,0,.25)}
-
-  .panel{width:min(980px,94vw);display:grid;gap:12px;margin-top:12px}
-  .cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-  .card{background:var(--soft);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px 14px;color:#d6d8db}
-  .card h3{margin:0 0 8px 0;font-size:16px;color:#ffe1b3}
-  .log b{color:#ffd699}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-  .chip{font-size:12px;padding:6px 10px;border-radius:999px;background:#111;border:1px solid rgba(255,255,255,.08);opacity:.9}
-  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-  .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:#1f6feb;color:#fff}
-  .btn.secondary{background:#30363d}
-  .btn:disabled{opacity:.6}
-  ul{margin:6px 0 0 18px;padding:0}
+  .toast{
+    position:fixed; top:10px; left:50%; transform:translateX(-50%);
+    background:#11161d; color:#e7edf5; border:1px solid #1f2730; border-radius:12px;
+    padding:10px 14px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.35);
+    max-width:92%; display:none;
+  }
+  .show{display:block}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand">FreeFlow</div>
-    <div class="subtitle">W czym mogę pomóc?</div>
-    <div id="badge" class="status">Gotowy</div>
+  <div class="wrap" aria-live="polite">
+    <h1>FreeFlow</h1>
+    <h2>Złóż zamówienie</h2>
 
-    <div class="zone">
-      <!-- logo jako przycisk + VU -->
-      <button id="mic" class="ff-btn" aria-label="Start/Stop">
-        <canvas id="vu" class="vu" width="150" height="150"></canvas>
-        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
-      </button>
-
-      <div class="chips">
-        <div class="chip">Jedzenie: „dwie pizze pepperoni”</div>
-        <div class="chip">Taxi: „zamów taxi z Rynku do Dworca PKP”</div>
-        <div class="chip">Hotel: „zarezerwuj hotel w Krakowie na dwie noce od piątku”</div>
+    <div class="card">
+      <div class="row">
+        <div class="pill">Powiedz: <b>„dwie pizze pepperoni”</b></div>
+        <div class="pill">„zamów taxi na Dworzec”</div>
+        <div class="pill">„hotel w Krakowie od piątku na 2 noce”</div>
       </div>
-
-      <div class="panel">
-        <div class="cards">
-          <div class="card"><h3>🎧 Odsłuch</h3><div id="heard" class="log">—</div></div>
-          <div class="card"><h3>🗣️ Odpowiedź</h3><div id="reply" class="log">—</div></div>
-          <div class="card">
-            <h3>🧺 Koszyk</h3>
-            <div id="cartSummary">Brak pozycji</div>
-            <ul id="cartList"></ul>
-            <div class="row" style="margin-top:6px">
-              <button id="clearCart" class="btn secondary" type="button">Wyczyść</button>
-              <button id="confirmCart" class="btn" type="button">Potwierdź</button>
-            </div>
-          </div>
-          <div class="card"><h3>🚕 Taxi</h3><div id="taxiSummary">Brak danych</div></div>
-          <div class="card"><h3>🏨 Hotel</h3><div id="hotelSummary">Brak danych</div></div>
-        </div>
-
-        <div class="row">
-          <button id="hint" class="btn" type="button">Podpowiedz frazy</button>
-          <button id="stopTTS" class="btn secondary" type="button">Wyłącz lektora</button>
-        </div>
-      </div>
+      <div id="heard">🎙️ <i>Jeszcze nic nie nagrano.</i></div>
+      <div id="reply">🔊 <i>Witaj! Kliknij mikrofon na dole i powiedz, czego potrzebujesz.</i></div>
+      <div class="hint">Podpowiedź: mów wyraźnie. W hałasie też zadziała, ale może potrzebować powtórki.</div>
     </div>
   </div>
 
+  <button id="mic" class="ff-btn" aria-label="Nagraj / zatrzymaj"></button>
+  <div id="toast" class="toast"></div>
+
 <script>
-  // ===== UI refs
-  const mic = document.getElementById('mic');
-  const badge = document.getElementById('badge');
-  const heard = document.getElementById('heard');
-  const reply = document.getElementById('reply');
-  const cartList = document.getElementById('cartList');
-  const cartSummary = document.getElementById('cartSummary');
-  const taxiSummary = document.getElementById('taxiSummary');
-  const hotelSummary = document.getElementById('hotelSummary');
-  const btnHint = document.getElementById('hint');
-  const btnStop = document.getElementById('stopTTS');
-  const btnClear = document.getElementById('clearCart');
-  const btnConfirm = document.getElementById('confirmCart');
-  const vu = document.getElementById('vu');
-  const vuctx = vu.getContext('2d');
+/* ====== UTIL ====== */
+const $ = s => document.querySelector(s);
+const micBtn = $('#mic');
+const heard  = $('#heard');
+const reply  = $('#reply');
+const toast  = $('#toast');
 
-  // ===== Flags / audio
-  let active=false, audioStream=null, audioCtx=null, analyser=null, vuTimer=null;
+function showToast(txt){ toast.textContent = txt; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); }
 
-  // ===== Speech (ASR/TTS)
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const okSR = !!SR;
-  let recog = null, recActive = false, recRestartTimer = null;
-  function cancelRecTimer(){ if(recRestartTimer){ clearTimeout(recRestartTimer); recRestartTimer=null; } }
-  function scheduleRestart(){ cancelRecTimer(); recRestartTimer = setTimeout(()=>{ if(recActive){ try{ recog.start(); }catch(e){} } }, 250); }
+function speak(text){
+  try{ speechSynthesis.cancel(); }catch{}
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'pl-PL'; u.rate = 1; u.pitch = 1; u.volume = 1;
+  speechSynthesis.speak(u);
+}
 
-  function speak(text, lang='pl-PL'){ try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=lang; speechSynthesis.speak(u);}catch{} }
-  function startUI(){ active=true; mic.classList.add('listening'); badge.textContent='Nasłuchuję…'; }
-  function stopUI(){ active=false; mic.classList.remove('listening'); badge.textContent='Gotowy'; stopVU(); }
+function deaccent(s){
+  const map = {'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z'};
+  return s.replace(/[ąćęłńóśźż]/g, ch => map[ch] || ch);
+}
+const norm = s => (' '+deaccent(s.toLowerCase()).replace(/[.,!?]/g,' ')+' ').replace(/\s+/g,' ');
 
-  // ===== Koszyk (localStorage)
-  const CART_KEY = 'ff_cart';
-  let cart = []; try{ cart = JSON.parse(localStorage.getItem(CART_KEY)||'[]'); }catch{}
-  function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); renderCart(); }
-  function addToCart(name, qty=1){ cart.push({name,qty}); saveCart(); }
-  function clearCart(){ cart = []; saveCart(); }
-  function renderCart(){
-    cartList.innerHTML = '';
-    if(cart.length===0){ cartSummary.textContent='Brak pozycji'; return; }
-    cartSummary.textContent = `Pozycji: ${cart.length}`;
-    cart.forEach((it)=>{ const li=document.createElement('li'); li.textContent=`${it.qty} × ${it.name}`; cartList.appendChild(li); });
-  }
-  renderCart();
+/* liczebniki → ilość */
+const NUM = {"jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"piec":5,"szesc":6,"siedem":7,"osiem":8,"dziewiec":9,"dziesiec":10};
+function getQty(t){
+  const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1];
+  for(const [w,n] of Object.entries(NUM)) if(t.includes(' '+w+' ')) return n;
+  if(t.includes(' x2 ')||t.includes(' podwoj')) return 2;
+  return 1;
+}
 
-  // ===== NLU + state
-  const NUM = {"jeden":1,"jedna":1,"jedno":1,"dwa":2,"dwie":2,"trzy":3,"cztery":4,"pięć":5,"sześć":6,"siedem":7,"osiem":8,"dziewięć":9,"dziesięć":10};
-  const FOODS = ['pizza','pepperoni','margherita','hawajska','quattro','wegetariańska','burger','cola','woda','cola zero'];
-  let ctx = { mode:null, data:{ taxi:{}, hotel:{} } };
-  const norm = s => (' '+s.toLowerCase().replace(/[.,!?]/g,' ')+' ').replace(/\s+/g,' ');
-  function getQty(t){ const m=t.match(/\b(\d{1,2})\b/); if(m) return +m[1]; for(const [w,n] of Object.entries(NUM)) if(t.includes(' '+w+' ')) return n; if(t.includes(' x2 ')||t.includes(' podwój')) return 2; return 1; }
-  function setTaxiSummary(){ const d=ctx.data.taxi; taxiSummary.textContent = (d.pickup||d.drop)? `Z: ${d.pickup||'-'} → Do: ${d.drop||'-'}` : 'Brak danych'; }
-  function setHotelSummary(){ const d=ctx.data.hotel; hotelSummary.textContent = (d.city||d.nights||d.date)? `Miasto: ${d.city||'-'}, Noce: ${d.nights||'-'}, Od: ${d.date||'-'}` : 'Brak danych'; }
-
-  function intent(text){
-    const t = norm(text);
-    if(t.includes('anuluj')||t.includes('stop')){ ctx={mode:null,data:{ taxi:{}, hotel:{} }}; setTaxiSummary(); setHotelSummary(); return {say:'Anulowano. Co dalej?'}; }
-    if(t.includes('cześć')||t.includes('dzień dobry')) return {say:'Cześć! Mogę przyjąć zamówienie jedzenia, zamówić taxi albo znaleźć hotel.'};
-    if(/zamów.*taxi|wezwij.*taxi|uber|bolt/.test(t)) ctx.mode='taxi';
-    if(/hotel|nocleg|rezerwuj.*pokój/.test(t)) ctx.mode='hotel';
-    if(/zamówić|zamówienie|pizza|burger|cola|woda/.test(t)) ctx.mode = ctx.mode || 'food';
-
-    if(ctx.mode==='food'){
-      const qty=getQty(t); const item=FOODS.find(n=>t.includes(n));
-      if(t.includes('zamów') && !item) return {say:'Jasne, co podać? Pizza, burger, napoje?'};
-      if(item){ addToCart(item, qty); return {say:`Dodaję ${qty} ${item}. Czy coś jeszcze?`}; }
-      return {say:'Powiedz np. „dwie pizze pepperoni” albo „cola zero x2”.'};
-    }
-
-    if(ctx.mode==='taxi'){
-      const d=ctx.data.taxi;
-      if(!d.pickup && /(z|ze|od)\s+(.+?)\s+do\s+/.test(t)){ const m=t.match(/(z|ze|od)\s+(.+?)\s+do\s+(.+?)\s*$/); if(m){ d.pickup=m[2].trim(); d.drop=m[3].trim(); setTaxiSummary(); return {say:`Start: ${d.pickup}. Cel: ${d.drop}. Potwierdzić zamówienie taxi?`}; } }
-      if(!d.pickup && /z\s+(.+)$/.test(t)){ d.pickup=t.match(/z\s+(.+)/)[1].trim(); setTaxiSummary(); return {say:`Punkt startu: ${d.pickup}. Dokąd jedziemy?`}; }
-      if(!d.drop   && /do\s+(.+)$/.test(t)){ d.drop=t.match(/do\s+(.+)/)[1].trim(); setTaxiSummary(); return {say:`Cel: ${d.drop}. Potwierdzić zamówienie taxi?`}; }
-      if(/tak|potwierdź|potwierdzam/.test(t) && d.pickup && d.drop){ const s=`Zamawiam taxi z ${d.pickup} do ${d.drop}.`; ctx.mode=null; ctx.data.taxi={}; setTaxiSummary(); return {say:s}; }
-      return {say:'Powiedz „zamów taxi z Rynku do Dworca PKP” albo osobno: „z Rynku… do Dworca PKP”.'};
-    }
-
-    if(ctx.mode==='hotel'){
-      const d=ctx.data.hotel;
-      if(!d.city && /w\s+([a-ząćęłńóśźż\- ]+)/.test(t)){ d.city=t.match(/w\s+([a-ząćęłńóśźż\- ]+)/)[1].trim(); setHotelSummary(); return {say:`Miasto: ${d.city}. Na ile nocy?`}; }
-      if(!d.nights && (/\b(\d{1,2})\s+noc/.test(t) || Object.keys(NUM).some(w=>t.includes(w+' noc')))){ d.nights=getQty(t); setHotelSummary(); return {say:`OK, ${d.nights} noce. Jaka data przyjazdu? (np. jutro, w piątek)`}; }
-      if(!d.date && /(jutro|pojutrze|dziś|dzisiaj|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela|\d{1,2}\.\d{1,2})/.test(t)){ d.date=text.match(/(jutro|pojutrze|dziś|dzisiaj|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela|\d{1,2}\.\d{1,2})/i)[0]; setHotelSummary(); return {say:`Rezerwuję w ${d.city} na ${d.nights} noce od ${d.date}. Potwierdzić?`}; }
-      if(/tak|potwierdź|potwierdzam/.test(t) && d.city && d.nights && d.date){ const s=`Rezerwuję hotel w ${d.city} na ${d.nights} noce od ${d.date}.`; ctx.mode=null; ctx.data.hotel={}; setHotelSummary(); return {say:s}; }
-      return {say:'Powiedz „zarezerwuj hotel w Krakowie na dwie noce od piątku”.'};
-    }
-
-    return {say:'Mogę: przyjąć zamówienie jedzenia, zamówić taxi lub hotel. Czego potrzebujesz?'};
-  }
-
-  function handle(text){
-    heard.innerHTML = text;
-    const res = intent(text);
-    reply.innerHTML = res.say || '—';
-    if(res.say) speak(res.say);
-  }
-
-  // ===== VU meter
-  function startVU(stream){
-    audioStream = stream;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = audioCtx.createMediaStreamSource(stream);
-    analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
-    src.connect(analyser);
-    const buf = new Uint8Array(analyser.frequencyBinCount);
-
-    function draw(){
-      analyser.getByteTimeDomainData(buf);
-      let sum=0; for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; sum+=v*v; }
-      const rms = Math.sqrt(sum/buf.length);
-      const pct = Math.min(1, rms*3);
-
-      const W=vu.width, H=vu.height, R=(W/2)-6, cx=W/2, cy=H/2;
-      vuctx.clearRect(0,0,W,H);
-      vuctx.beginPath(); vuctx.arc(cx,cy,R,0,Math.PI*2); vuctx.strokeStyle='rgba(255,140,0,.15)'; vuctx.lineWidth=6; vuctx.stroke();
-      vuctx.beginPath(); vuctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2 + Math.PI*2*pct);
-      vuctx.strokeStyle='rgba(255,180,0,.9)'; vuctx.lineWidth=6; vuctx.shadowColor='rgba(255,120,0,.6)'; vuctx.shadowBlur=12; vuctx.stroke(); vuctx.shadowBlur=0;
-
-      vuTimer = requestAnimationFrame(draw);
-    }
-    cancelAnimationFrame(vuTimer); draw();
-  }
-  function stopVU(){
-    cancelAnimationFrame(vuTimer);
-    vuctx.clearRect(0,0,vu.width,vu.height);
-    if(audioStream){ audioStream.getTracks().forEach(t=>t.stop()); audioStream=null; }
-    if(audioCtx){ audioCtx.close(); audioCtx=null; analyser=null; }
-  }
-
-  // ===== ASR wiring z auto-restartem
-  function startRec(){
-    if(!okSR){ reply.innerHTML='Ta przeglądarka nie wspiera Web Speech API. Użyj Chrome na Androidzie.'; return; }
-    try{ speechSynthesis.cancel(); }catch{}
-
-    recog = new SR();
-    recog.lang = 'pl-PL';
-    recog.continuous = true;
-    recog.interimResults = true;
-    recog.maxAlternatives = 1;
-
-    recog.onresult = (e)=>{
-      let final=''; 
-      for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) final += r[0].transcript; }
-      const interim = e.results[e.results.length-1][0].transcript;
-      heard.innerHTML = final || interim || '—';
-      if(final){ handle(final); }
-    };
-    recog.onerror = (evt)=>{ if(['no-speech','audio-capture','network','aborted'].includes(evt.error)) scheduleRestart(); };
-    recog.onend = ()=>{ if(recActive) scheduleRestart(); };
-
-    try{ recog.start(); }catch(e){ scheduleRestart(); }
-  }
-
-  async function toggleMic(){
-    if(!recActive){
-      startUI();
-      if(navigator.mediaDevices?.getUserMedia){
-        try{ const stream = await navigator.mediaDevices.getUserMedia({audio:true}); startVU(stream); }
-        catch(e){ reply.innerHTML='Brak dostępu do mikrofonu.'; }
-      }
-      recActive = true;
-      startRec();
-      if(navigator.vibrate) try{ navigator.vibrate([40,20,40]); }catch{}
-    }else{
-      recActive = false;
-      cancelRecTimer();
-      try{ recog && recog.stop(); }catch{}
-      stopUI();
+/* aliasy jedzenia */
+const FOOD_ALIASES = [
+  {key:'pizza pepperoni', names:['pizza pepperoni','pizze pepperoni','pizze peperoni','pepperoni','peperoni','pepp','peproni','papperoni']},
+  {key:'pizza margherita', names:['pizza margherita','pizze margherita','margherita','margarita']},
+  {key:'pizza hawajska',   names:['pizza hawajska','pizze hawajska','hawajska']},
+  {key:'pizza',            names:['pizza','pizze','pizzy','pizz']},
+  {key:'burger',           names:['burger','hamburger']},
+  {key:'cola zero',        names:['cola zero','coca cola zero','kola zero']},
+  {key:'cola',             names:['cola','coca cola','kola']},
+  {key:'woda',             names:['woda','woda gazowana','woda niegazowana']}
+];
+function findFood(t){
+  for(const item of FOOD_ALIASES){
+    for(const name of item.names){
+      const n = deaccent(name);
+      if(t.includes(' '+n+' ')) return item.key;
+      if(t.replace(/\s+/g,'').includes(n.replace(/\s+/g,''))) return item.key;
     }
   }
+  return null;
+}
 
-  mic.addEventListener('click', toggleMic);
-  btnHint.addEventListener('click', ()=>{ const t='Powiedz: „dwie pizze pepperoni”, „zamów taxi z Rynku do Dworca PKP”, „zarezerwuj hotel w Krakowie na dwie noce od piątku”.'; reply.innerHTML=t; speak(t); });
-  btnStop.addEventListener('click', ()=>speechSynthesis.cancel());
-  btnClear.addEventListener('click', ()=>{ clearCart(); speak('Koszyk wyczyszczony.'); });
-  btnConfirm.addEventListener('click', ()=>{ if(cart.length===0){ reply.innerHTML='Koszyk jest pusty.'; speak('Koszyk jest pusty.'); return; } const s='Potwierdzam zamówienie: '+cart.map(i=>`${i.qty} ${i.name}`).join(', ')+'.'; reply.innerHTML=s; speak(s); clearCart(); });
-</script>
-</body>
-</html>
+const cart = [];
+function addToCart(name, qty=1){ cart.push({name,qty}); }
+
+/* ====== INTENT ====== */
+function handleIntent(text){
+  const t = norm(text);
+
+  // anulowanie
+  if(t.includes(' anuluj ') || t.includes(' przerwij ') || t.includes(' stop ')){
+    return 'Ok, anulowano.';
+  }
+
+  // taxi
+  if(t.includes(' taxi ') || t.includes(' taksi ') || t.includes(' kierowc') || t.includes(' przejazd ')){
+    return 'Jasne! Podaj skąd i dokąd jedziemy?';
+  }
+
+  // hotel
+  if(t.includes(' hotel ') || t.includes(' nocleg ') || t.includes(' rezerwacj')){
+    return 'Jasne! Powiedz miasto, datę przyjazdu i liczbę nocy.';
+  }
+
+  // zamówienie jedzenia
+  if(t.includes(' pizza ') || t.includes(' pizze ') || t.includes(' burger ') || t.includes(' cola ') || t.includes(' woda ') || t.includes(' pepperoni ') || t.includes(' peperoni ')){
+    const qty = getQty(t);
+    const item = findFood(t) || 'pozycja';
+    addToCart(item, qty);
+    return `Dodaję ${qty} × ${item}. Czy dorzucić coś jeszcze?`;
+  }
+
+  // prośba o złożenie zamówienia
+  if(t.includes(' zamow ') || t.includes(' zamowi ') || t.includes(' zlozyc ') ){
+    return 'Jasne! Co podać? Pizza, burger czy napoje?';
+  }
+
+  // powitanie
+  if(t.includes(' dzien dobry ') || t.includes('

@@ -1,311 +1,238 @@
 <!doctype html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow — Voice to Order</title>
-<link rel="preload" as="image" href="Freeflow-logo.png">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow — Voice to Order</title>
+  <style>
+    :root{
+      --bg:#0c0f12;
+      --text:#e6e1d9;
+      --accent:#ff7a1a; /* soczysty pomarańcz */
+      --muted:#9aa0a6;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 700px at 50% -200px,#111822 0%, #0d1218 40%, var(--bg) 100%);
+      color:var(--text); font:400 16px/1.4 Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol";
+      display:flex; align-items:center; justify-content:center;
+    }
+    .wrap{width:min(920px, 100%); padding:28px 20px 36px}
+    header{ text-align:center; margin-bottom:16px;}
+    .brand{
+      font:800 clamp(36px,6vw,72px)/1.05 "Secular One", system-ui;
+      letter-spacing:.5px; color:var(--accent); text-shadow:0 10px 30px rgba(255,122,26,.15);
+      margin:0 0 6px;
+    }
+    .subtitle{
+      font-weight:700; font-size: clamp(22px,4.4vw,40px); margin:0 0 6px; letter-spacing:.3px;
+    }
+    .hint{
+      color:var(--muted); font-size:clamp(14px,2.6vw,18px); margin:0 0 28px;
+    }
 
-<style>
-  :root{
-    --bg:#0b0d10;
-    --ink:#f97316;      /* soczysty pomarańcz */
-    --ink-2:#ffb45c;
-    --text:#e7e2db;
-    --muted:#b8b3ad;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-    background: radial-gradient(1200px 800px at 20% 0%, #10141b 0%, var(--bg) 60%) fixed;
-    color:var(--text);
-    display:flex; flex-direction:column; align-items:center;
-  }
-  .wrap{width:min(920px, 92vw); padding:28px 16px 32px}
-  header{margin-top:8px}
-  .brand{
-    font-size: clamp(42px, 9vw, 96px);
-    line-height:.9;
-    font-weight:900;
-    color:var(--ink);
-    letter-spacing:.5px;
-    text-shadow: 0 6px 24px rgba(249,115,22,.25);
-  }
-  h1{
-    margin: 14px 0 6px;
-    font-size: clamp(26px, 6.2vw, 56px);
-    line-height:1.05;
-    letter-spacing:.2px;
-  }
-  .sub{
-    margin: 0 0 28px;
-    color:var(--muted);
-    font-size: clamp(16px, 3.6vw, 22px);
-  }
+    /* CENTRUM: logo jako przycisk */
+    .stage{
+      display:grid; place-items:center; margin:12px auto 22px;
+    }
+    .mic-btn{
+      position:relative;
+      width:min(70vw, 380px);
+      aspect-ratio:1/1;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      border:none; background:none; cursor:pointer; outline:none;
+      transform:translateZ(0);
+      transition:transform .18s ease, filter .18s ease;
+    }
+    .mic-btn:active{ transform:scale(.98) }
+    .mic-img{
+      width:100%; height:100%; border-radius:50%;
+      box-shadow:
+        0 24px 60px rgba(0,0,0,.55),
+        0 0 0 0 rgba(255,122,26,.0);
+      transition:filter .2s ease, transform .25s ease, box-shadow .25s ease;
+      user-select:none; -webkit-user-drag:none;
+    }
+    /* Puls logo (delikatny) */
+    .mic-btn:hover .mic-img{ filter:saturate(1.05) drop-shadow(0 0 12px rgba(255,122,26,.25)); transform:scale(1.015); }
 
-  /* duże koło z mikrofonem */
-  .hero{
-    margin: 22px auto 24px;
-    width:min(440px, 80vw);
-    aspect-ratio:1/1;
-    border-radius:50%;
-    background:#0f1116;
-    position:relative;
-    box-shadow:
-      0 12px 60px rgba(0,0,0,.45),
-      0 0 0 1px rgba(255,255,255,.03) inset;
-    overflow:hidden;
-  }
-  .hero::before{
-    content:"";
-    position:absolute; inset:0;
-    background: url("Freeflow-logo.png") center/cover no-repeat;
-    filter:saturate(1.05) contrast(1.05);
-    transform:scale(1.02);
-  }
+    /* Fale dookoła (3 pierścienie) */
+    .waves{position:absolute; inset:0; pointer-events:none; filter:blur(.4px); }
+    .waves::before, .waves::after, .wave3{
+      content:""; position:absolute; inset:0; border-radius:50%;
+      border:2px solid rgba(255,122,26,.22);
+      transform:scale(.78); opacity:0;
+    }
+    .mic-btn.listening .waves::before{ animation:wave 1.6s ease-out infinite }
+    .mic-btn.listening .waves::after{  animation:wave 1.6s .33s ease-out infinite }
+    .mic-btn.listening .wave3{        animation:wave 1.6s .66s ease-out infinite }
+    @keyframes wave{
+      0%{ transform:scale(.80); opacity:.85 }
+      70%{ opacity:.15 }
+      100%{ transform:scale(1.35); opacity:0 }
+    }
 
-  /* przycisk VOICE */
-  .dock{
-    position: fixed;
-    left: 50%;
-    bottom: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
-    transform: translateX(-50%);
-    width:min(520px, 92vw);
-    display:flex; justify-content:center;
-  }
-  button.mic{
-    --size: 84px;
-    background: linear-gradient(180deg, var(--ink), #f05a00);
-    color:#111;
-    border:none; border-radius:20px;
-    padding: 18px 20px 18px calc(var(--size) + 24px);
-    width:100%;
-    font-size: clamp(17px, 3.9vw, 22px);
-    font-weight:700;
-    letter-spacing:.2px;
-    display:flex; align-items:center; gap:14px;
-    box-shadow:
-      0 18px 60px rgba(249,115,22,.35),
-      0 2px 0 rgba(255,255,255,.16) inset,
-      0 -2px 0 rgba(0,0,0,.25) inset;
-    position:relative;
-    cursor:pointer;
-    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
-  }
-  button.mic:active{ transform: translateY(1px) scale(.995) }
-  .mic .badge{
-    position:absolute; left: 10px; top:50%; transform:translateY(-50%);
-    width: var(--size); height: var(--size); border-radius:50%;
-    background:#121419;
-    display:grid; place-items:center;
-    box-shadow:
-      0 0 0 2px rgba(255,255,255,.08) inset,
-      0 10px 22px rgba(0,0,0,.45);
-    overflow:hidden;
-  }
-  .mic .badge::before{
-    content:""; position:absolute; inset:0;
-    background: url("Freeflow-logo.png") center/130% no-repeat;
-    filter:saturate(1.1);
-  }
-  .mic .txt{
-    color:#111; text-shadow:0 1px 0 rgba(255,255,255,.3);
-  }
-  .hint{ margin-top:14px; color:var(--muted); font-size:14px; opacity:.9 }
+    /* Pierścień świecący podczas nasłuchu */
+    .mic-btn.listening .mic-img{
+      box-shadow:
+        0 28px 70px rgba(0,0,0,.6),
+        0 0 0 10px rgba(255,122,26,.08),
+        0 0 0 22px rgba(255,122,26,.05);
+      transform:scale(1.02);
+      filter:saturate(1.08);
+    }
 
-  /* puls przy nagrywaniu */
-  .pulse{
-    position:absolute; inset:0; border-radius:20px; pointer-events:none;
-    box-shadow: 0 0 0 0 rgba(249,115,22,.0);
-    transition: box-shadow .25s ease;
-  }
-  .listening .pulse{
-    animation: ring 1.6s ease-out infinite;
-  }
-  @keyframes ring{
-    0%{ box-shadow:0 0 0 0 rgba(249,115,22,.45) }
-    100%{ box-shadow:0 0 0 36px rgba(249,115,22,0) }
-  }
+    .under-hint{
+      text-align:center; color:#cfc8be; opacity:.9;
+      font-weight:600; letter-spacing:.2px; margin-top:8px;
+    }
 
-  /* status + podpowiedzi */
-  .panel{
-    width:min(920px, 92vw);
-    margin: 10px auto 86px;
-    background: rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-    border-radius:16px;
-    padding:16px;
-    backdrop-filter: blur(6px);
-  }
-  .chips{
-    display:flex; flex-wrap:wrap; gap:10px;
-    margin: 6px 0 12px;
-  }
-  .chip{
-    background:#171a20; color:#d8d2ca;
-    border:1px solid rgba(255,255,255,.06);
-    border-radius:999px; padding:10px 14px;
-    font-size:14px;
-  }
-  .status{
-    font-size:16px; color:var(--muted);
-    margin-top:6px;
-  }
-  .status.strong{ color:var(--text) }
-  .sr-only{ position:absolute; left:-9999px; }
-</style>
+    /* Karta z przykładowymi frazami */
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(6px);
+      border-radius:18px; padding:18px; margin:20px auto 0; width:min(780px, 100%);
+      box-shadow: 0 10px 28px rgba(0,0,0,.3);
+    }
+    .chips{ display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 12px}
+    .chip{
+      padding:10px 14px; border-radius:12px;
+      background:#141a21; border:1px solid rgba(255,255,255,.06);
+      color:#d8d3ca; font-weight:600; letter-spacing:.2px;
+    }
+    .log{
+      margin:0; padding:14px 12px; border-radius:12px; background:#0f141a;
+      color:#cfd3d8; border:1px dashed rgba(255,255,255,.08); min-height:44px;
+    }
+
+    footer{ text-align:center; color:#808892; margin-top:20px; font-size:.95rem}
+    a{ color:#ffd2b0; text-decoration:none }
+    a:hover{ text-decoration:underline }
+  </style>
 </head>
-
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">FreeFlow</div>
-      <h1>Złóż zamówienie</h1>
-      <p class="sub">Taxi, posiłek, a może nocleg?</p>
+      <h1 class="brand">FreeFlow</h1>
+      <p class="subtitle">Złóż zamówienie</p>
+      <p class="hint">Taxi, posiłek, a może nocleg?</p>
     </header>
 
-    <div class="hero" aria-hidden="true"></div>
-
-    <section class="panel" aria-live="polite">
-      <div class="chips">
-        <div class="chip">„dwie pizze pepperoni”</div>
-        <div class="chip">„zamów taxi na Dworzec”</div>
-        <div class="chip">„hotel w Krakowie od piątku na 2 noce”</div>
-      </div>
-      <div id="status" class="status">Kliknij przycisk na dole i powiedz, czego potrzebujesz.</div>
+    <section class="stage" aria-live="polite">
+      <button id="micBtn" class="mic-btn" aria-label="Mów teraz – przytrzymaj lub kliknij">
+        <!-- fale -->
+        <span class="waves"></span><span class="wave3"></span>
+        <!-- logo -->
+        <img id="micImg" class="mic-img"
+             src="Freeflow-logo.png"
+             onerror="this.onerror=null; this.src=document.querySelector('[data-fallback]')?.dataset.fallback"
+             alt="Logo FreeFlow z mikrofonem">
+        <!-- ukryty fallback -->
+        <img data-fallback style="display:none" src="file_000000000e9c62469156924aae2c3ff0.png" alt="">
+      </button>
+      <div class="under-hint">Dotknij, aby zamówić</div>
     </section>
+
+    <section class="card">
+      <div class="chips">
+        <span class="chip">„dwie pizze pepperoni”</span>
+        <span class="chip">„zamów taxi na Dworzec”</span>
+        <span class="chip">„hotel w Krakowie od piątku na 2 noce”</span>
+      </div>
+      <p id="log" class="log">Słucham… powiedz, co zamawiasz.</p>
+    </section>
+
+    <footer>Demo: rozpoznanie mowy (Web Speech API) + odpowiedź głosowa (Speech Synthesis).</footer>
   </div>
 
-  <div class="dock">
-    <button id="micBtn" class="mic" type="button">
-      <span class="badge" aria-hidden="true"></span>
-      <span class="txt">Mów teraz</span>
-      <span class="pulse"></span>
-    </button>
-  </div>
+  <script>
+    // --- Rozpoznawanie mowy (Chrome/Android najlepiej) ---
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const synth = window.speechSynthesis;
 
-<script>
-(() => {
-  const btn = document.getElementById('micBtn');
-  const statusEl = document.getElementById('status');
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const synth = window.speechSynthesis;
+    const btn = document.getElementById('micBtn');
+    const log = document.getElementById('log');
 
-  let recognition = null;
-  let listening = false;
+    let recognition = null;
+    let listening = false;
 
-  function say(text){
-    try{
+    function speak(text){
+      if(!synth) return;
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "pl-PL";
-      u.rate = 1; u.pitch = 1;
-      synth.cancel(); synth.speak(u);
-    }catch(e){}
-  }
-
-  function setStatus(text, strong=false){
-    statusEl.textContent = text;
-    statusEl.classList.toggle('strong', strong);
-  }
-
-  function notSupported(){
-    setStatus("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Chrome/Edge.", true);
-    btn.disabled = true;
-    btn.querySelector('.txt').textContent = "Brak wsparcia";
-  }
-
-  if(!SpeechRecognition){ notSupported(); return; }
-
-  recognition = new SpeechRecognition();
-  recognition.lang = "pl-PL";
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  function startListen(){
-    if(listening) return;
-    listening = true;
-    document.body.classList.add('listening');
-    btn.querySelector('.txt').textContent = "Nasłuchuję…";
-    setStatus("Słucham… powiedz, co zamawiasz.");
-    try{ recognition.start(); }catch(e){}
-  }
-
-  function stopListen(){
-    if(!listening) return;
-    listening = false;
-    document.body.classList.remove('listening');
-    btn.querySelector('.txt').textContent = "Mów teraz";
-    try{ recognition.stop(); }catch(e){}
-  }
-
-  btn.addEventListener('click', () => {
-    if(!listening) startListen(); else stopListen();
-  });
-
-  // prosta „intencja” na potrzeby demo
-  function handleIntent(text){
-    const t = text.toLowerCase();
-
-    if(t.includes("pizza") || t.includes("pizzę") || t.includes("pizze")){
-      const ile = t.match(/\b(\d+)\b/);
-      const liczba = ile ? ile[1] : "1";
-      say(`Zapisuję: ${liczba} pizza pepperoni. Podaj adres dostawy.`);
-      setStatus(`OK! Zamówienie wstępne: ${liczba}× pepperoni. Podaj adres dostawy.`, true);
-      return;
+      u.lang = 'pl-PL';
+      u.rate = 1.02;
+      u.pitch = 1.0;
+      synth.cancel();
+      synth.speak(u);
     }
 
-    if(t.includes("taxi")){
-      say("Zamawiam taxi. Podaj punkt startu i cel podróży.");
-      setStatus("Taxi: powiedz skąd i dokąd jedziesz.", true);
-      return;
+    function initSR(){
+      if(!SR){ log.textContent = 'Twoja przeglądarka nie obsługuje rozpoznawania mowy (Web Speech API). Spróbuj w Chrome.'; return; }
+      recognition = new SR();
+      recognition.lang = 'pl-PL';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => { log.textContent = 'Nasłuchuję… mów śmiało.'; btn.classList.add('listening'); listening = true; };
+      recognition.onend   = () => { btn.classList.remove('listening'); listening = false; };
+
+      recognition.onerror = (e) => {
+        btn.classList.remove('listening'); listening = false;
+        log.textContent = 'Błąd rozpoznawania: ' + (e.error || 'nieznany');
+      };
+
+      recognition.onresult = (ev) => {
+        const text = (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
+        log.textContent = 'Ty: ' + text;
+
+        // Prosty router intencji (demo)
+        const t = text.toLowerCase();
+        let reply = 'Jasne. Co dokładnie podać?';
+        if(t.includes('pizz') || t.includes('pepperoni')){
+          reply = 'OK, dwie pizze pepperoni. Na wynos czy z dostawą?';
+        }else if(t.includes('tax') || t.includes('dworzec')){
+          reply = 'Zamawiam taxi na Dworzec. O której godzinie ma podjechać?';
+        }else if(t.includes('hotel') || t.includes('noc') || t.includes('krakow') || t.includes('krakowie')){
+          reply = 'Szukam hotelu w Krakowie. Jaki standard i daty przyjazdu/wyjazdu?';
+        }else if(t.includes('anuluj') || t.includes('stop')){
+          reply = 'Anulowano. Powiedz, gdy będziesz gotów.';
+        }
+        speak(reply);
+        setTimeout(()=> log.textContent += '\nAsystent: ' + reply, 100);
+      };
     }
 
-    if(t.includes("hotel") || t.includes("nocleg")){
-      say("Wybierzmy hotel. Powiedz miasto oraz daty przyjazdu i wyjazdu.");
-      setStatus("Hotel: podaj miasto + daty przyjazdu/wyjazdu.", true);
-      return;
+    function toggleListen(){
+      if(!recognition) { initSR(); if(!recognition) return; }
+      try{
+        if(!listening){ recognition.start(); }
+        else { recognition.stop(); }
+      }catch(e){
+        // start() może rzucić, gdy trwa poprzednia sesja – spróbuj restartu
+        try{ recognition.stop(); }catch(_){}
+      }
     }
 
-    // małe powitanie
-    if(t.includes("dzień dobry") || t.includes("cześć")){
-      say("Cześć! W czym mogę pomóc?");
-      setStatus("Cześć! Słucham Cię.", true);
-      return;
-    }
+    // klik + krótka wibracja (na wspieranych)
+    btn.addEventListener('click', () => {
+      if(navigator.vibrate) navigator.vibrate(12);
+      toggleListen();
+    });
 
-    say("Dopytam: chcesz jedzenie, taxi, czy hotel?");
-    setStatus("Nie zrozumiałem. Jedzenie / taxi / hotel?", true);
-  }
+    // Inicjacja po pierwszym dotknięciu (iOS wymaga interakcji do TTS)
+    window.addEventListener('click', ()=> {
+      if(synth && synth.pending===false && synth.speaking===false){
+        // "odblokuj" głos – cichy, natychmiast anulowany
+        try{ const dummy = new SpeechSynthesisUtterance(''); synth.speak(dummy); synth.cancel(); }catch(_){}
+      }
+    }, { once:true });
 
-  recognition.onresult = (e) => {
-    let finalText = "";
-    for (const res of e.results) {
-      if(res.isFinal) finalText = res[0].transcript;
-    }
-    if(finalText){
-      setStatus("Usłyszałem: „" + finalText + "”. Przetwarzam…");
-      stopListen();
-      setTimeout(() => handleIntent(finalText), 120);
-    }else{
-      // podgląd mowy w trakcie
-      const interim = Array.from(e.results).map(r => r[0].transcript).join(" ");
-      if(interim) setStatus("… " + interim);
-    }
-  };
-  recognition.onerror = (e) => {
-    stopListen();
-    setStatus("Błąd rozpoznawania: " + e.error, true);
-  };
-  recognition.onend = () => {
-    if(listening) try{ recognition.start(); }catch(e){}
-  };
-
-  // podpowiedź: automatycznie TTS na starcie (nie zawsze ruszy na mobile)
-  const hello = () => say("Witaj! Kliknij mikrofon na dole i powiedz, czego potrzebujesz.");
-  setTimeout(hello, 500);
-})();
-</script>
+    // start
+    initSR();
+  </script>
 </body>
 </html>

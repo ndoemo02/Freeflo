@@ -8,45 +8,41 @@
 <style>
   :root{
     --bg:#0b0f12; --bg2:#11161b; --panel:#141b22;
-    --text:#e8eef5; --muted:#a6b1bb; --accent:#ff7a1a; --accent-2:#ffb97a;
+    --text:#e8eef5; --muted:#a6b1bb; --accent:#ff7a1a; --accent2:#ffb97a;
     --ring: rgba(255,122,26,.25);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-    color:var(--text); background: radial-gradient(1200px 800px at 50% -10%, #182029 0%, #0b0f12 55%) fixed;
+    margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    color:var(--text);
+    background: radial-gradient(1200px 800px at 50% -10%, #182029 0%, #0b0f12 55%) fixed;
     -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   }
 
-  .wrap{max-width:880px; margin:0 auto; padding:20px 18px 64px}
+  .wrap{max-width:980px; margin:0 auto; padding:24px 18px 90px}
 
-  header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:4px 0 8px}
+  /* header */
+  header{display:flex; align-items:center; justify-content:space-between; gap:10px}
   .brand{display:flex; gap:10px; align-items:baseline}
-  .brand h1{margin:0; font-weight:800; letter-spacing:.5px; font-size:34px; line-height:1}
-  .brand .hl{color:var(--accent)}
-  .tag{color:var(--muted); font-size:14px; line-height:1.2}
-
+  .brand h1{margin:0; font-weight:900; letter-spacing:.5px; font-size:34px; line-height:1; color:var(--accent)}
+  .tag{color:var(--muted); font-size:14px}
   .actions{display:flex; gap:10px}
   .icon-btn{
     position:relative; width:52px; height:52px; border-radius:16px; border:1px solid #1e2630;
     background:linear-gradient(180deg,#192028, #11161b); color:#cfd7df;
     display:grid; place-items:center; box-shadow: inset 0 0 0 1px #0f1419, 0 6px 18px rgba(0,0,0,.35);
-    transition:.18s transform ease, .18s box-shadow ease, .18s border-color ease;
   }
-  .icon-btn:active{transform:translateY(1px); box-shadow: inset 0 0 0 1px #0f1419, 0 3px 10px rgba(0,0,0,.45)}
-  .icon-btn svg{width:24px; height:24px}
-  .badge{
-    position:absolute; top:-8px; right:-8px; min-width:24px; height:24px; padding:0 6px;
+  .icon-btn svg{width:24px;height:24px;pointer-events:none}
+  .badge{position:absolute; top:-8px; right:-8px; min-width:24px; height:24px; padding:0 6px;
     border-radius:999px; background:var(--accent); color:#111; font-weight:800;
-    display:grid; place-items:center; font-size:13px; box-shadow:0 4px 14px rgba(255,122,26,.35);
-  }
+    display:grid; place-items:center; font-size:13px; box-shadow:0 4px 14px rgba(255,122,26,.35)}
 
-  h2{font-size:42px; line-height:1.1; margin:10px 0 6px}
+  h2{font-size:46px; line-height:1.08; margin:14px 0 6px}
   .subtitle{color:var(--muted); margin:0 0 18px; font-size:18px}
 
   /* Logo jako przycisk */
-  .logo-wrap{position:relative; display:grid; place-items:center; margin:4px 0 12px}
+  .logo-wrap{position:relative; display:grid; place-items:center; margin:8px 0 12px}
   .logo-ring{
     position:absolute; inset:-8px; border-radius:999px; pointer-events:none;
     background: radial-gradient(60% 60% at 50% 50%, var(--ring) 0%, transparent 60%);
@@ -54,14 +50,24 @@
   }
   #micBtn{
     appearance:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer;
-    width:min(78vw, 520px); height:min(78vw,520px); display:grid; place-items:center; border-radius:999px;
-    position:relative; outline:none;
+    width:min(86vw, 600px); aspect-ratio:1/1; display:grid; place-items:center; border-radius:999px;
+    position:relative; outline:none; touch-action:manipulation; pointer-events:auto;
+    box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 24px 80px rgba(0,0,0,.55);
+    transition:transform .2s ease, filter .2s ease, box-shadow .2s ease;
+    z-index:2;
   }
-  #micBtn img{width:100%; height:100%; object-fit:cover; border-radius:999px; display:block}
-  #micBtn.recording{animation: pulse 1.3s infinite ease-in-out}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+  #micBtn.recording{
+    animation: micPulse 1.4s ease-in-out infinite;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08),
+               0 0 0 12px rgba(255,122,26,.08),
+               0 28px 120px rgba(255,122,26,.35);
+  }
+  @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+  /* obraz i hint nie łapią dotyku – wszystko trafia w button */
+  #micBtn img, #micBtn .hint{pointer-events:none}
+  #micImg{width:100%; height:100%; object-fit:cover; border-radius:999px; display:block}
 
-  /* Overlay „Dotknij…” nad logo (i w trybie nasłuchu znika) */
+  /* „Dotknij…” nad logo (znika w nasłuchu) */
   .hint{
     position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
     background: linear-gradient(180deg,#1a2128,#10161c);
@@ -69,17 +75,17 @@
     display:flex; align-items:center; gap:10px; box-shadow:0 8px 28px rgba(0,0,0,.35);
     backdrop-filter: blur(6px);
   }
-  .led{width:10px; height:10px; border-radius:999px; box-shadow:0 0 0 2px #0b0f12}
+  .hint.hidden{display:none}
+  .led{width:10px; height:10px; border-radius:999px}
   .led.idle{background:#6b7b88}
   .led.live{background:#4cff6b; box-shadow:0 0 16px rgba(76,255,107,.65)}
-  .hint.hidden{display:none}
 
-  /* Transkrypcja poniżej logo */
+  /* Transkrypcja pod logo */
   .transc{
-    margin:12px auto 18px; width:100%;
+    margin:12px auto 18px; width:min(86vw,600px);
     border-radius:18px; background:linear-gradient(180deg,#151b22,#0f1419);
     border:1px solid #22303a; padding:16px 18px; color:#cfe3f5; min-height:64px;
-    display:flex; gap:12px; align-items:flex-start; line-height:1.45;
+    display:flex; gap:12px; align-items:flex-start; line-height:1.45; font-size:18px;
   }
   .transc .dot{width:10px; height:10px; border-radius:999px; margin-top:6px}
   .dot.idle{background:#6b7b88}
@@ -87,7 +93,7 @@
   .transc p{margin:0; word-wrap:break-word}
 
   /* Chips */
-  .chips{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:6px}
+  .chips{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:8px}
   .chip{
     display:flex; align-items:center; gap:8px; padding:12px 18px; border-radius:18px;
     border:1px solid #1f2832; background:linear-gradient(180deg,#171e26,#10161c);
@@ -96,20 +102,15 @@
   .chip.active{border-color:rgba(255,122,26,.6); box-shadow:0 6px 18px rgba(255,122,26,.15)}
   .chip svg{width:18px; height:18px; color:var(--accent)}
 
-  /* Menu panel (placeholder) */
+  /* Menu panel */
   #menuPanel{
-    display:none; position:fixed; top:72px; right:18px; z-index:50;
+    display:none; position:fixed; top:72px; right:18px; z-index:9999;
     width:280px; border-radius:16px; padding:14px;
     background:linear-gradient(180deg,#1a2128,#11161b); border:1px solid #26303a;
     box-shadow:0 12px 36px rgba(0,0,0,.5);
   }
   #menuPanel a{display:block; padding:10px 8px; color:#dfe8f3; text-decoration:none; border-radius:10px}
   #menuPanel a:hover{background:#0f1419}
-  @media (min-width:920px){
-    .wrap{max-width:1020px}
-    h2{font-size:48px}
-    .subtitle{font-size:20px}
-  }
 </style>
 </head>
 <body>
@@ -117,12 +118,11 @@
 
     <header>
       <div class="brand">
-        <h1><span class="hl">Free</span>Flow</h1>
+        <h1>FreeFlow</h1>
         <div class="tag">Voice to order</div>
       </div>
-
       <div class="actions">
-        <!-- MENU z fallbackiem inline -->
+        <!-- MENU – z fallbackiem inline -->
         <button id="menuBtn" class="icon-btn" aria-label="Menu" onclick="__toggleMenu(event)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
@@ -132,7 +132,7 @@
         <!-- KOSZYK -->
         <button class="icon-btn" aria-label="Koszyk">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M6 6h15l-1.5 9h-12zM6 6l-2-2M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 6h15l-1.5 9h-12zM6 6l-2-2M9 22a1 1 0 1 0 0-2m8 2a1 1 0 1 0 0-2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span class="badge">0</span>
         </button>
@@ -152,10 +152,11 @@
     <!-- LOGO = PRZYCISK -->
     <div class="logo-wrap">
       <div class="logo-ring" aria-hidden="true"></div>
-      <button id="micBtn" aria-label="Nagraj polecenie" onclick="__toggleMic()">
-        <img src="Freeflow-logo.png" alt="FreeFlow — przycisk mikrofonu" />
+      <button id="micBtn" aria-label="Nagraj polecenie"
+              onclick="__toggleMic()" ontouchstart="__toggleMic()">
+        <img id="micImg" src="Freeflow-logo.png" alt="FreeFlow — przycisk mikrofonu" />
         <div id="micHint" class="hint">
-          <span id="liveDot" class="led idle"></span>
+          <span id="ledHint" class="led idle"></span>
           <span>Dotknij, aby zamówić</span>
         </div>
       </button>
@@ -163,26 +164,23 @@
 
     <!-- TRANSKRYPCJA -->
     <div class="transc" aria-live="polite" aria-atomic="true">
-      <span id="dot" class="dot idle"></span>
+      <span id="ledBar" class="dot idle"></span>
       <p id="transcriptText">Transkrypcja pojawi się tutaj…</p>
     </div>
 
     <!-- KATEGORIE -->
     <div id="chips" class="chips" role="tablist">
       <button class="chip active" role="tab" aria-selected="true">
-        <!-- Jedzenie -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 12h16M8 12V4m8 8V4M6 20h12" stroke-linecap="round"/>
         </svg> Jedzenie
       </button>
       <button class="chip" role="tab" aria-selected="false">
-        <!-- Taxi -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18l-2 6H5zM7 12l2-4h6l2 4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg> Taxi
       </button>
       <button class="chip" role="tab" aria-selected="false">
-        <!-- Hotel -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg> Hotel
@@ -191,7 +189,7 @@
 
   </div>
 
-<!-- ====== SKRYPT ODPORNY NA BŁĘDY ====== -->
+<!-- ====== SKRYPT ODPORNY NA BŁĘDY + TOUCH ====== -->
 <script>
 (function () {
   const $ = (sel) => document.querySelector(sel);
@@ -200,12 +198,12 @@
   const panel   = $('#menuPanel');
   const micBtn  = $('#micBtn');
   const micHint = $('#micHint');
-  const liveDot = $('#liveDot');
-  const dot     = $('#dot');
-  const transcriptText = $('#transcriptText');
+  const ledHint = $('#ledHint');
+  const ledBar  = $('#ledBar');
+  const txEl    = $('#transcriptText');
   const chips   = $('#chips');
 
-  // Fallbacki globalne (działają też, gdy eventy się nie podpięły)
+  /* Fallbacki globalne — działają nawet jeśli addEventListener nie chwyci */
   window.__toggleMenu = function (ev) {
     if (ev) ev.stopPropagation();
     if (!panel) return;
@@ -222,36 +220,39 @@
     if (!window.__listening) startListen(); else stopListen();
   };
 
-  document.addEventListener('click', window.__closeMenuIfOutside);
-  if (menuBtn) menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); window.__toggleMenu(e); });
+  /* Nasłuchy (bezpieczne) */
+  document.addEventListener('click', window.__closeMenuIfOutside, {passive:true});
+  if (menuBtn) menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); window.__toggleMenu(e); }, {passive:false});
 
   if (chips) chips.addEventListener('click', (e)=>{
     const chip = e.target.closest('.chip'); if (!chip) return;
     [...chips.querySelectorAll('.chip')].forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-selected','false'); });
     chip.classList.add('active'); chip.setAttribute('aria-selected','true');
-  });
+  }, {passive:true});
 
   if (micBtn){
-    micBtn.addEventListener('click', (e)=>{ e.stopPropagation(); window.__toggleMic(); });
+    const fire = (e)=>{ e.stopPropagation(); window.__toggleMic(); };
+    micBtn.addEventListener('click', fire, {passive:false});
+    micBtn.addEventListener('touchstart', fire, {passive:false});
     micBtn.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.__toggleMic(); }
-    });
+      if (e.key==='Enter' || e.key===' ') { e.preventDefault(); window.__toggleMic(); }
+    }, {passive:false});
   }
 
-  // ---- Rozpoznawanie mowy (Web Speech) ----
+  /* Web Speech (demo) */
   window.__rec = null;
   window.__listening = false;
 
   function makeRecognizer(){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      if (transcriptText) transcriptText.textContent = 'Użyj Chrome/Edge – brak wsparcia dla rozpoznawania mowy.';
+      if (txEl) txEl.textContent = 'Użyj Chrome/Edge – brak wsparcia dla rozpoznawania mowy.';
       return null;
     }
     const r = new SR();
     r.lang = 'pl-PL';
     r.interimResults = true;
-    r.continuous = false;
+    r.continuous = false;  // jedna wypowiedź
     r.maxAlternatives = 1;
     return r;
   }
@@ -262,18 +263,18 @@
 
     window.__listening = true;
     micBtn && micBtn.classList.add('recording');
-    if (micHint) micHint.classList.add('hidden');
-    if (liveDot) { liveDot.classList.remove('idle'); liveDot.classList.add('live'); }
-    if (dot) { dot.classList.remove('idle'); dot.classList.add('live'); }
-    if (transcriptText) transcriptText.textContent = '';
+    micHint && micHint.classList.add('hidden');
+    ledHint && (ledHint.className = 'led live');
+    ledBar  && (ledBar.className = 'dot live');
+    txEl && (txEl.textContent = '');
 
     window.__rec.onresult = (ev)=>{
       let final='', interim='';
       for (const res of ev.results) {
         (res.isFinal ? final : interim) += res[0].transcript + ' ';
       }
-      if (transcriptText) {
-        transcriptText.innerHTML =
+      if (txEl) {
+        txEl.innerHTML =
           (final ? '<strong>'+final.trim()+'</strong> ' : '') +
           (interim ? '<span style="opacity:.7">'+interim.trim()+'</span>' : '');
       }
@@ -289,9 +290,9 @@
     window.__listening = false;
     try { window.__rec && window.__rec.stop(); } catch {}
     micBtn && micBtn.classList.remove('recording');
-    if (micHint) micHint.classList.remove('hidden');
-    if (liveDot) { liveDot.classList.add('idle'); liveDot.classList.remove('live'); }
-    if (dot) { dot.classList.add('idle'); dot.classList.remove('live'); }
+    micHint && micHint.classList.remove('hidden');
+    ledHint && (ledHint.className = 'led idle');
+    ledBar  && (ledBar.className = 'dot idle');
   }
 })();
 </script>

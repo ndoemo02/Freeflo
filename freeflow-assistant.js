@@ -1,5 +1,5 @@
-/** freeflow-assistant.js
- * Łączy Web Speech (ASR) -> Twój backend -> TTS w przeglądarce.
+/** freeflow-assistant.js – auto-bind do starego UI
+ * Łańcuch: WebSpeech -> backend -> TTS (przeglądarka)
  * Backend: https://freeflow-backend-vercel.vercel.app/api/assistant-text
  */
 (() => {
@@ -10,18 +10,37 @@
     ids: { mic: 'micBtn', dot: 'statusDot', text: 'transcript' }
   };
 
-  const $id = (id) => document.getElementById(id);
-  const micBtn = $id(CFG.ids.mic);
-  const dot    = $id(CFG.ids.dot);
-  const input  = $id(CFG.ids.text);
-
-  if (!micBtn || !dot || !input) {
-    console.warn('[FreeFlow] Brak któregoś z elementów #micBtn / #statusDot / #transcript');
+  // --- AUTOBIND: znajdź elementy po treści/klasach i nadaj ID, jeśli ich brak
+  function autoBind() {
+    // 1) Mic button: „Dotknij ... mów”
+    if (!document.getElementById(CFG.ids.mic)) {
+      const micCand = [...document.querySelectorAll('button,div,span,a')]
+        .find(el => /dotknij.*m(ó|o)w/i.test(el.textContent || ''));
+      if (micCand) micCand.id = CFG.ids.mic;
+    }
+    // 2) Zielona kropka w pasku transkrypcji
+    if (!document.getElementById(CFG.ids.dot)) {
+      const dotCand = document.querySelector('.dot, .status-dot, .indicator, [role="status"]');
+      if (dotCand) dotCand.id = CFG.ids.dot;
+    }
+    // 3) Pole transkrypcji (input/textarea z placeholderem)
+    if (!document.getElementById(CFG.ids.text)) {
+      const txtCand =
+        document.querySelector('input[placeholder*="Transkrypcja"],textarea[placeholder*="Transkrypcja"]') ||
+        document.querySelector('input[type="text"].search-input, .transcript input, .transcript textarea') ||
+        document.querySelector('input[type="text"], textarea');
+      if (txtCand) txtCand.id = CFG.ids.text;
+    }
   }
+  document.addEventListener('DOMContentLoaded', autoBind);
 
+  // --- Helpers
+  const $id = (id) => document.getElementById(id);
   const setState = (s) => {
-    const m = { idle:'#2ecc71', listen:'#f1c40f', think:'#3498db', err:'#e74c3c' };
-    if (dot) dot.style.background = m[s] || m.idle;
+    const dot = $id(CFG.ids.dot);
+    const micBtn = $id(CFG.ids.mic);
+    const colors = { idle:'#2ecc71', listen:'#f1c40f', think:'#3498db', err:'#e74c3c' };
+    if (dot) dot.style.background = colors[s] || colors.idle;
     if (micBtn) {
       micBtn.style.transition = 'transform .18s ease';
       micBtn.style.transform  = (s === 'listen') ? 'scale(1.05)' : 'scale(1)';
@@ -29,13 +48,14 @@
     }
   };
 
-  // --- ASR (Android Chrome = webkit*)
+  // --- ASR (SpeechRecognition)
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, listening = false;
 
   function startListen() {
-    if (!SR) { console.warn('Brak SpeechRecognition'); return; }
+    if (!SR) { console.warn('[FreeFlow] Brak SpeechRecognition'); return; }
     if (listening) return;
+    const input = $id(CFG.ids.text);
     rec = new SR();
     rec.lang = CFG.lang; rec.interimResults = true; rec.continuous = false;
     let finalText = '';
@@ -65,7 +85,6 @@
 
     rec.start();
   }
-
   function stopListen(){ if (rec && listening) rec.stop(); }
 
   async function ask(text) {
@@ -94,16 +113,21 @@
     } catch(e){ console.warn('TTS error', e); }
   }
 
-  if (micBtn) micBtn.addEventListener('click', () => listening ? stopListen() : startListen());
-  if (input)  input.addEventListener('keydown', async (e)=>{
-    if (e.key==='Enter' && !e.shiftKey){
-      e.preventDefault();
-      const t=(input.value||'').trim(); if(!t) return;
-      setState('think');
-      try { const r=await ask(t); input.value=r; speak(r); setState('idle'); }
-      catch{ setState('err'); }
-    }
-  });
-
-  setState('idle');
+  // Podpięcie zdarzeń po pełnym zbudowaniu DOM + autobind
+  function wire() {
+    const micBtn = $id(CFG.ids.mic);
+    const input  = $id(CFG.ids.text);
+    if (micBtn) micBtn.addEventListener('click', () => listening ? stopListen() : startListen());
+    if (input)  input.addEventListener('keydown', async (e)=>{
+      if (e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        const t=(input.value||'').trim(); if(!t) return;
+        setState('think');
+        try { const r=await ask(t); input.value=r; speak(r); setState('idle'); }
+        catch{ setState('err'); }
+      }
+    });
+    setState('idle');
+  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(wire, 0));
 })();

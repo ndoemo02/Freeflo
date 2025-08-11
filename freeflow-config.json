@@ -1,0 +1,24 @@
+{
+  "title": "Złóż zamówienie",
+  "subtitle": "Taxi, posiłek, a może nocleg?",
+  "cartCount": 0,
+  "voice": {
+    "sessionMs": 20000
+  },
+  "menu": ["Jedzenie", "Taxi", "Hotel"],
+  "theme": {
+    "--brand": "#ff7a1a",
+    "--accent": "#15ffb6",
+    "--bg-1": "#0c0f12",
+    "--bg-2": "#12161b",
+    "--text-1": "rgba(255,255,255,.92)",
+    "--text-2": "rgba(255,255,255,.64)",
+    "--radius": "18px",
+    "--logo-scale": "1.0"
+  },
+  "flags": {
+    "showCart": true,
+    "showMenu": true,
+    "pulseLogo": true
+  }
+}

@@ -2,158 +2,221 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow – Voice Button Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FreeFlow — Voice to order</title>
+<link rel="preload" as="image" href="Freeflow-logo.png">
 <style>
   :root{
-    --bg:#0b0f14; --text:#e7edf6;
-    --brand1:#ff7a1a; --brand2:#ff3c00; --glow:#ff7a1a;
-    --size: 240px;
+    --bg:#0b0f12; --panel:#12171c; --muted:#93a0ad;
+    --text:#e8eef5; --accent:#ff7a1a; --glow:#ff6a00;
   }
   *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; display:grid; place-items:center; gap:22px;
-    background: radial-gradient(1200px 800px at 50% -10%, #111928 0%, #0a0e14 30%, var(--bg) 60%);
-    color:var(--text); font:500 18px/1.35 Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-    text-align:center; padding:22px;
-  }
-  h1{margin:0; font-weight:800; font-size:48px; letter-spacing:.3px;
-     color:var(--brand1); text-shadow:0 8px 24px rgba(255,122,26,.18)}
-  h2{margin:6px 0 18px; font-weight:700; font-size:32px}
-  p.lead{margin:0 0 10px; opacity:.75}
-  /* PRZYCISK */
-  .mic-btn{
-    position:relative; width:var(--size); height:var(--size);
-    border:none; border-radius:999px; cursor:pointer; isolation:isolate;
-    background: radial-gradient(60% 60% at 35% 30%, #1b2635 0%, #0d131c 70%) padding-box,
-                conic-gradient(from 0deg, #ffb86b, #ff7a1a, #ff3c00, #ff7a1a, #ffb86b) border-box;
+  html,body{height:100%;background:radial-gradient(1200px 600px at 50% -200px,#12171c 0%,#0b0f12 55%),var(--bg);margin:0;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:20px 16px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:clamp(26px,4.4vw,38px)}
+  .brand .dot{color:var(--accent)}
+  .top-actions{display:flex;gap:10px}
+  .btn-icon{background:#0f1419;border:1px solid #1f2933;color:#cde; padding:10px 12px;border-radius:14px;display:inline-flex;align-items:center;gap:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+  .cart-dot{background:var(--accent);color:#000;border-radius:999px;font-weight:700;font-size:12px;padding:2px 7px}
+  h1{font-size:clamp(30px,7.6vw,56px);line-height:1.05;margin:.2rem 0}
+  .sub{color:#c0cad5;margin:6px 0 22px;font-size:clamp(15px,2.9vw,20px)}
+
+  /* === LOGO AS BUTTON === */
+  .hero{display:grid;place-items:center;margin:6px 0 14px}
+  #micBtn{
+    width:min(82vw,520px); aspect-ratio:1/1; border:0;
+    background:#000 center/contain no-repeat url("Freeflow-logo.png");
+    border-radius:999px; cursor:pointer; position:relative;
+    transition:transform .2s ease, filter .2s ease;
     box-shadow:
-      inset 0 6px 18px rgba(255,255,255,.08),
-      inset 0 -12px 28px rgba(0,0,0,.5),
-      0 14px 28px rgba(0,0,0,.55),
-      0 0 22px 6px rgba(255,122,26,.25);
-    outline:none; -webkit-tap-highlight-color:transparent; overflow:hidden;
+      0 0 0 1px rgba(255,255,255,.06),
+      0 18px 60px rgba(0,0,0,.55);
   }
-  .mic-btn::after{
-    content:""; position:absolute; inset:16%;
-    background:url("./Freeflow-logo.png") center/contain no-repeat; /* <-- Twój plik */
-    filter: drop-shadow(0 6px 18px rgba(255,122,26,.35));
-    transition: transform .25s ease;
+  #micBtn:hover{transform:translateY(-1px); filter:saturate(1.05)}
+  #micBtn:active{transform:translateY(1px) scale(.995)}
+
+  /* listening glow */
+  .listening{
+    animation:pulse 1.6s ease-in-out infinite;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,.06),
+      0 28px 90px rgba(255,106,0,.25),
+      0 0 44px 8px rgba(255,106,0,.35);
+    filter:saturate(1.15);
   }
-  .mic-btn::before{
-    content:""; position:absolute; inset:-35%;
-    background: radial-gradient(60% 60% at 50% 50%, rgba(255,122,26,.28), transparent 60%);
-    filter: blur(24px); z-index:-1; transition: opacity .3s ease;
+  @keyframes pulse{
+    0%{outline:0 solid rgba(255,106,0,.0)}
+    50%{outline:10px solid rgba(255,106,0,.12)}
+    100%{outline:0 solid rgba(255,106,0,.0)}
   }
-  .rings{ pointer-events:none; position:absolute; inset:0; border-radius:50% }
-  .rings::before, .rings::after{
-    content:""; position:absolute; inset:6%; border-radius:50%;
-    border:2px solid rgba(255,122,26,.45);
-    filter: blur(.3px) drop-shadow(0 0 8px rgba(255,122,26,.35));
-    animation: ring 2.6s ease-out infinite;
+
+  /* transcript lane under logo */
+  .transcript{
+    width:min(82vw,520px); margin:14px auto 8px;
+    background:linear-gradient(180deg,#151b22,#13181e);
+    border:1px solid #232c36; color:#dfe7ef;
+    border-radius:16px; min-height:56px; padding:12px 14px;
+    box-shadow:0 8px 26px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.03);
+    display:flex; align-items:center; gap:10px;
   }
-  .rings::after{ inset:14%; animation-delay:1.3s; opacity:.7}
-  @keyframes ring{
-    0%{transform:scale(.85); opacity:.85}
-    70%{transform:scale(1.25); opacity:.08}
-    100%{transform:scale(1.4); opacity:0}
+  .dot{
+    width:12px; height:12px;border-radius:50%;
+    background:#6b7c8f; flex:0 0 auto;
+    box-shadow:0 0 0 0 rgba(255,122,26,0);
+    transition:background .25s ease, box-shadow .25s ease;
   }
-  .mic-btn.listening::after{ animation:spin 2.4s linear infinite }
-  @keyframes spin{ to{ transform:rotate(360deg) } }
-  .mic-btn:active{ transform: translateY(1px) scale(.99) }
-  .mic-btn:hover::after{ transform:scale(1.02) }
-  .mic-btn:hover::before{ opacity:1 }
-  .hint{ margin-top:10px; font-size:14px; color:#ffbfa0; opacity:.8; animation: breathe 3.2s ease-in-out infinite }
-  @keyframes breathe{ 0%,100%{opacity:.6} 50%{opacity:.98} }
-  .log{
-    width:min(720px, 100%); text-align:left; margin-top:8px;
-    background:#0d131b; border:1px solid rgba(255,255,255,.06);
-    box-shadow:0 6px 26px rgba(0,0,0,.45); border-radius:16px; padding:16px;
+  .dot.live{
+    background:var(--accent);
+    box-shadow:0 0 0 6px rgba(255,122,26,.16), 0 0 22px 4px rgba(255,122,26,.35);
   }
-  .bubble{
-    display:inline-block; margin:8px 0; padding:12px 16px; border-radius:14px;
-    background:#111a25; color:#dfe7f3; border:1px solid rgba(255,255,255,.06);
-  }
-  .me{ background:#0f1620; opacity:.9 }
-  .as{ background:#14202d; border-color:rgba(255,122,26,.25) }
-  @media (max-width:420px){ h1{font-size:40px} h2{font-size:28px} :root{--size:210px} }
-  @media (prefers-reduced-motion:reduce){
-    .rings,.mic-btn.listening::after,.hint{animation:none}
-  }
+  #asr{flex:1; font-size:18px; line-height:1.35; letter-spacing:.1px}
+  #hint{color:#93a0ad}
+
+  /* quick actions */
+  .chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:16px 0 10px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:18px;
+    background:#11161b;border:1px solid #23303a;color:#d9e3ec}
+  .chip svg{opacity:.9}
+
+  /* footer note */
+  .note{color:#8191a2; font-size:13px; text-align:center; margin-top:18px}
 </style>
 </head>
 <body>
-  <header>
-    <h1>FreeFlow</h1>
-    <h2>Złóż zamówienie</h2>
-    <p class="lead">Taxi, posiłek, a może nocleg?</p>
-  </header>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="dot">Free</span>Flow <span style="font-weight:500;font-size:16px;margin-left:10px;color:#9fb0c2">Voice to order</span></div>
+      <div class="top-actions">
+        <button class="btn-icon" aria-label="Menu" id="menuBtn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#cfe2f3" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn-icon" aria-label="Koszyk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-1.5 9H7.5L6 6Z" stroke="#cfe2f3" stroke-width="2" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="#cfe2f3"/><circle cx="17.5" cy="19.5" r="1.5" fill="#cfe2f3"/></svg>
+          <span class="cart-dot">0</span>
+        </button>
+      </div>
+    </header>
 
-  <button class="mic-btn" id="mic" aria-pressed="false" aria-label="Naciśnij, aby mówić">
-    <span class="rings" aria-hidden="true"></span>
-  </button>
-  <div class="hint" id="hint">Naciśnij i mów: „dwie pizze pepperoni”, „zamów taxi…”, „hotel w Krakowie…”</div>
+    <h1>Złóż zamówienie</h1>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
 
-  <section class="log" id="log" aria-live="polite" aria-atomic="true">
-    <div class="bubble as">Witaj! Kliknij przycisk i powiedz, czego potrzebujesz.</div>
-  </section>
+    <!-- LOGO BUTTON -->
+    <section class="hero">
+      <button id="micBtn" aria-label="Mów teraz"></button>
+    </section>
+
+    <!-- TRANSCRIPT UNDER LOGO -->
+    <div class="transcript" id="transcriptBox" aria-live="polite" aria-atomic="true">
+      <span class="dot" id="dot"></span>
+      <div id="asr"><span id="hint">Dotknij logo i mów…</span></div>
+    </div>
+
+    <!-- Quick category chips -->
+    <div class="chips">
+      <div class="chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M6 7h12M8 17h8" stroke="#ffca7a" stroke-width="2" stroke-linecap="round"/></svg> Jedzenie
+      </div>
+      <div class="chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 17h18l-3-6h-5l-3 6Z" stroke="#ffca7a" stroke-width="2" stroke-linejoin="round"/></svg> Taxi
+      </div>
+      <div class="chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 20V9l8-5 8 5v11H4Z" stroke="#ffca7a" stroke-width="2" stroke-linejoin="round"/></svg> Hotel
+      </div>
+    </div>
+
+    <p class="note">Demo: Web Speech API (rozpoznawanie + mowa). Najlepiej działa w Chrome.</p>
+  </div>
 
 <script>
 (() => {
-  const mic = document.getElementById('mic');
-  const log = document.getElementById('log');
-  const hint = document.getElementById('hint');
+  const micBtn = document.getElementById('micBtn');
+  const asrEl  = document.getElementById('asr');
+  const hintEl = document.getElementById('hint');
+  const dot    = document.getElementById('dot');
+  const transcriptBox = document.getElementById('transcriptBox');
 
-  const speak = (txt) => {
-    try{
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = 'pl-PL';
-      u.rate = 1.02; u.pitch = 1.0;
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
-    }catch(e){}
-  };
-  const add = (txt, who='as') => {
-    const b = document.createElement('div');
-    b.className = `bubble ${who}`; b.textContent = txt;
-    log.appendChild(b); log.scrollTop = log.scrollHeight;
-  };
+  // Web Speech
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const synth = window.speechSynthesis;
+  let rec, listening = false, finalText = '';
 
-  let rec, listening = false;
-  const supportsASR = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-
-  const start = () => {
-    if(!supportsASR){ add('Twoja przeglądarka nie wspiera rozpoznawania mowy.', 'as'); return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    rec = new SR(); rec.lang = 'pl-PL'; rec.interimResults = false; rec.continuous = false;
-    rec.onstart = () => { listening = true; mic.classList.add('listening'); mic.setAttribute('aria-pressed','true'); hint.textContent='Słucham…' };
-    rec.onresult = (e) => {
-      const txt = (e.results[0] && e.results[0][0] && e.results[0][0].transcript) || '';
-      add('Ty: ' + txt, 'me'); respond(txt.toLowerCase());
-    };
-    rec.onerror = (e) => add('Błąd mikrofonu: ' + e.error, 'as');
-    rec.onend = () => { listening = false; mic.classList.remove('listening'); mic.setAttribute('aria-pressed','false'); hint.textContent='Naciśnij i mów…' };
-    rec.start();
-  };
-  const stop = () => { try{ rec && rec.stop(); }catch(e){} };
-
-  function respond(t){
-    let ans = 'Jasne, zapisałem.';
-    if(t.includes('pizza') || t.includes('pizzę') || t.includes('pizze')){
-      ans = 'Zamówienie na pizzę zanotowane. Jaki rozmiar i ile sztuk?';
-    } else if(t.includes('taxi')){
-      ans = 'Zamawiam taxi. Podaj adres startu i cel podróży.';
-    } else if(t.includes('hotel')){
-      ans = 'Szukam hotelu. Podaj miasto i daty przyjazdu oraz wyjazdu.';
-    } else if(t.includes('anuluj') || t.includes('stop')){
-      ans = 'Anulowano. Powiedz, gdy będziesz gotowy.';
-    } else if(t.trim()===''){
-      ans = 'Nie dosłyszałem. Powtórz proszę.';
-    }
-    add('Asystent: ' + ans, 'as'); speak(ans);
+  function speak(text){
+    if(!synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'pl-PL'; u.rate=1; u.pitch=1; u.volume=1;
+    synth.cancel(); synth.speak(u);
   }
 
-  mic.addEventListener('click', () => listening ? stop() : start());
+  function ensureSR(){
+    if(rec) return true;
+    if(!SR){ asrEl.textContent = 'Twoja przeglądarka nie wspiera rozpoznawania mowy.'; return false; }
+    rec = new SR();
+    rec.lang = 'pl-PL';
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    rec.onstart = () => {
+      listening = true;
+      micBtn.classList.add('listening');
+      dot.classList.add('live');
+      hintEl && hintEl.remove();
+      asrEl.innerHTML = '<em>Nasłuchuję… mów proszę.</em>';
+    };
+
+    rec.onresult = (ev) => {
+      let interim = '';
+      for(const res of ev.results){
+        const txt = res[0].transcript;
+        if(res.isFinal){ finalText += txt + ' '; }
+        else{ interim += txt; }
+      }
+      asrEl.textContent = (finalText + interim).trim();
+    };
+
+    rec.onerror = (e) => {
+      asrEl.textContent = 'Błąd: ' + e.error;
+    };
+
+    rec.onend = () => {
+      micBtn.classList.remove('listening');
+      dot.classList.remove('live');
+      listening = false;
+
+      const heard = asrEl.textContent.trim();
+      if(heard){
+        // proste odpowiedzi demo
+        let reply = '';
+        const lower = heard.toLowerCase();
+        if(lower.includes('pizza') || lower.includes('pepperoni')){
+          reply = 'Zamawiam dwie pizze pepperoni. Czy dodać sos?';
+        }else if(lower.includes('taxi')){
+          reply = 'Zamawiam taxi. Podaj proszę adres odbioru.';
+        }else if(lower.includes('hotel') || lower.includes('nocleg')){
+          reply = 'Szukam hotelu. Jakie daty przyjazdu i wyjazdu?';
+        }else{
+          reply = 'Rozumiem. Zaraz to ogarnę.';
+        }
+        setTimeout(() => speak(reply), 200);
+      }else{
+        asrEl.innerHTML = '<span id="hint">Dotknij logo i mów…</span>';
+      }
+      finalText = '';
+    };
+    return true;
+  }
+
+  micBtn.addEventListener('click', () => {
+    if(!ensureSR()) return;
+    if(listening){ try{ rec.stop(); }catch{} return; }
+    finalText = '';
+    asrEl.textContent = '';
+    rec.start();
+  });
+
+  // pozwól zakończyć nasłuch po drugiej pauzie/kliknięciu w transkrypcję
+  transcriptBox.addEventListener('click', () => { if(listening) try{ rec.stop(); }catch{} });
+
 })();
 </script>
 </body>

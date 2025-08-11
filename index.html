@@ -1,216 +1,145 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<title>FreeFlow Voice</title>
-<style>
-  body { font-family: sans-serif; background: #111; color: #fff; text-align: center; }
-  #logoBtn { width: 120px; height: 120px; border-radius: 50%; background: #222; border: none; cursor: pointer; margin: 20px auto; display: block; }
-  #logoBtn.pulse { animation: pulse 1.5s infinite; }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(0, 255, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
-  }
-  #transcript { margin-top: 10px; min-height: 30px; font-size: 1.2em; }
-</style>
+  <meta charset="UTF-8" />
+  <title>FreeFlow Voice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; background:#111; color:#fff; text-align:center; margin:0; padding:32px; }
+    #micBtn { width:120px; height:120px; border-radius:50%; background:#222; border:none; cursor:pointer; margin:20px auto; display:block; font-size:48px; }
+    #micBtn.pulse { animation:pulse 1.5s infinite; }
+    @keyframes pulse {
+      0% { box-shadow:0 0 0 0 rgba(0,255,0,.7); }
+      70% { box-shadow:0 0 0 15px rgba(0,255,0,0); }
+      100% { box-shadow:0 0 0 0 rgba(0,255,0,0); }
+    }
+    #statusDot { width:10px; height:10px; border-radius:50%; background:#2ecc71; display:inline-block; margin-right:8px; vertical-align:middle; }
+    #transcript { margin-top:12px; min-height:30px; font-size:1.1rem; opacity:.95; }
+  </style>
 </head>
 <body>
 
-<h1>🎤 FreeFlow Voice Assistant</h1>
+  <h1>🎤 FreeFlow Voice Assistant</h1>
 
-<button id="logoBtn">🎤</button>
-<div id="transcript">Naciśnij, aby mówić...</div>
+  <!-- ma mieć ID 'micBtn' (ułatwia podpięcie) -->
+  <button id="micBtn" aria-label="Mów">🎤</button>
 
-<script>
-const API_BASE = "https://twoj-projekt.vercel.app/api/chat";
-let recognizing = false;
-let recognition;
+  <div>
+    <span id="statusDot"></span>
+    <span id="transcript">Dotknij, aby mówić…</span>
+  </div>
 
-if ('webkitSpeechRecognition' in window) {
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = 'pl-PL';
-  recognition.interimResults = true;
-  recognition.continuous = false;
+  <!-- Player do base64 MP3 (musi być PRZED zamknięciem body) -->
+  <audio id="ttsPlayer" preload="auto"></audio>
 
-  recognition.onstart = () => {
-    recognizing = true;
-    document.getElementById("logoBtn").classList.add("pulse");
-    document.getElementById("transcript").innerText = "... słucham ...";
-  };
-
-  recognition.onresult = (event) => {
-    let finalTranscript = "";
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript;
-      } else {
-        document.getElementById("transcript").innerText = transcript;
-      }
-    }
-    if (finalTranscript) {
-      document.getElementById("transcript").innerText = finalTranscript;
-      askAssistant(finalTranscript);
-    }
-  };
-
-  recognition.onend = () => {
-    recognizing = false;
-    document.getElementById("logoBtn").classList.remove("pulse");
-  };
-}
-
-document.getElementById("logoBtn").addEventListener("click", () => {
-  if (recognizing) {
-    recognition.stop();
-    return;
-  }
-  recognition.start();
-});
-
-async function askAssistant(userText) {
-  const res = await fetch(API_BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages: [{ role: "user", content: userText }],
-      system: "Jesteś pomocnym asystentem głosowym FreeFlow, odpowiadasz krótko i konkretnie po polsku.",
-      temperature: 0.4
-    })
-  });
-
-  const data = await res.json();
-  if (data.success) {
-    speak(data.reply);
-  } else {
-    speak("Wystąpił błąd serwera");
-  }
-}
-
-function speak(text) {
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "pl-PL";
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utter);
-}
-</script>
-<!-- W index.html, tuż PRZED zamknięciem </body> -->
-<script src="./freeflow-assistant.js"></script>
-  
-</body>
-  <audio id="ttsAudio" preload="auto"></audio>
   <script>
   // === KONFIG ===
   const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
 
-  // elementy UI (podmień selektory jeśli masz inne)
-  const micBtn = document.querySelector('#micBtn') || document.querySelector('.logo-btn') || document.querySelector('button');
-  const transcriptBox = document.querySelector('#transcript') || document.querySelector('.transcript') || null;
+  // elementy UI
+  const micBtn = document.getElementById('micBtn');
+  const transcriptBox = document.getElementById('transcript');
+  const statusDot = document.getElementById('statusDot');
   const player = document.getElementById('ttsPlayer');
 
-  // Prosty helper do aktualizacji transkrypcji/logu
-  function showText(where, text) {
-    if (!where) return;
-    where.textContent = text;
+  // status UI
+  function setState(s){
+    const colors = { idle:'#2ecc71', listen:'#f1c40f', think:'#3498db', err:'#e74c3c' };
+    statusDot.style.background = colors[s] || colors.idle;
+    micBtn.classList.toggle('pulse', s==='listen');
+    micBtn.dataset.state = s;
   }
+  function showText(t){ transcriptBox.textContent = t; }
 
-  // Odtwarzanie MP3 z base64
-  async function playBase64Mp3(base64) {
-    try {
-      // policy: audio musi wystartować po GESTURE — kliknięcie w micBtn wystarczy
-      // tworzymy URL data: z base64
-      const src = `data:audio/mpeg;base64,${base64}`;
-      player.src = src;
+  // TTS
+  async function playBase64Mp3(base64){
+    try{
+      player.src = `data:audio/mpeg;base64,${base64}`;
       await player.play();
-    } catch (err) {
-      console.error('Audio play error:', err);
-      // fallback do web Speech
-      // (często pomaga jednorazowy gest: kliknij przycisk jeszcze raz)
+      return true;
+    }catch(e){
+      console.warn('Audio play error', e);
       return false;
     }
-    return true;
   }
-
-  // Fallback jeśli backend nie zwróci audio lub autoplay się wywali
-  function speakWithWebSpeech(text, lang = 'pl-PL') {
-    try {
+  function speakFallback(text, lang='pl-PL'){
+    try{
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
-      window.speechSynthesis.cancel(); // czyścimy kolejkę
-      window.speechSynthesis.speak(u);
-    } catch (e) {
-      console.warn('speechSynthesis fallback failed:', e);
-    }
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }catch(e){ console.warn('speechSynthesis failed', e); }
   }
 
-  // Wyślij tekst do backendu i zagraj odpowiedź
-  async function sendToAssistant(userText) {
-    try {
+  // Backend call
+  async function sendToAssistant(userText){
+    try{
+      setState('think');
       const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({ text: userText })
       });
-
       const data = await res.json();
-      if (!data.success) {
-        console.warn('Assistant error:', data);
-        speakWithWebSpeech('Wystąpił błąd po stronie serwera.');
+
+      if(!data.success){
+        setState('err'); showText('Błąd serwera'); speakFallback('Wystąpił błąd po stronie serwera.');
         return;
       }
 
-      // Tekst asystenta
-      const answer = data.assistantText || 'Nie mam teraz odpowiedzi.';
-      showText(transcriptBox, answer);
+      const answer = data.assistantText || 'Hmmm…';
+      showText(answer);
 
-      // Jeśli przyszło audio — spróbuj odtworzyć
-      if (data.audioBase64) {
+      if (data.audioBase64){
         const ok = await playBase64Mp3(data.audioBase64);
-        if (!ok) speakWithWebSpeech(answer); // fallback jeśli autoplay się wywalił
+        if(!ok) speakFallback(answer);
       } else {
-        // Brak audio w odpowiedzi — fallback
-        speakWithWebSpeech(answer);
+        speakFallback(answer);
       }
-    } catch (err) {
-      console.error('Network/parse error:', err);
-      speakWithWebSpeech('Nie udało się połączyć z serwerem.');
+      setState('idle');
+    }catch(err){
+      console.error(err);
+      setState('err'); showText('Problem z połączeniem'); speakFallback('Nie udało się połączyć z serwerem.');
     }
   }
 
-  // === Minimalny tryb: rozpoznaj mową (Web Speech) → wyślij do backendu ===
-  // Jeśli masz już swój rozpoznawacz – wywołuj tylko sendToAssistant(transkrypcja)
-  function startDictation() {
+  // ASR (Web Speech)
+  function startDictation(){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.');
-      return;
-    }
+    if(!SR){ alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.'); return; }
 
     const rec = new SR();
     rec.lang = 'pl-PL';
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.maxAlternatives = 1;
 
-    rec.onstart = () => showText(transcriptBox, 'Słucham…');
-    rec.onerror = (e) => showText(transcriptBox, 'Błąd rozpoznawania: ' + (e.error || 'nieznany'));
-    rec.onresult = (e) => {
-      const txt = e.results[0][0].transcript.trim();
-      showText(transcriptBox, txt);
-      sendToAssistant(txt);
+    rec.onstart = ()=>{ setState('listen'); showText('Słucham…'); };
+    rec.onerror = e => { setState('err'); showText('Błąd rozpoznawania'); console.warn(e); };
+    rec.onresult = e => {
+      let final = '', interim = '';
+      for (let i=e.resultIndex;i<e.results.length;i++){
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t + ' ';
+        else interim += t;
+      }
+      showText((final || interim).trim());
     };
-    rec.onend = () => { /* można dodać auto-restart, ale na razie ręcznie */ };
+    rec.onend = ()=>{
+      const userText = transcriptBox.textContent.trim();
+      if (userText) sendToAssistant(userText);
+      else setState('idle');
+    };
 
     rec.start();
   }
 
-  // Podpinka pod przycisk (kliknięcie = gest dla autoplay)
-  if (micBtn) {
-    micBtn.addEventListener('click', () => {
-      // zatrzymaj ewentualną mowę z poprzedniej odpowiedzi
-      try { window.speechSynthesis.cancel(); player.pause(); } catch {}
-      startDictation();
-    });
-  }
-</script>
+  // klik = gest dla autoplay
+  micBtn.addEventListener('click', ()=>{
+    try{ speechSynthesis.cancel(); player.pause(); }catch{}
+    startDictation();
+  });
+
+  setState('idle');
+  </script>
+</body>
 </html>

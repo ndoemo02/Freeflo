@@ -21,19 +21,17 @@ body{
 }
 
 /* layout */
-.wrap{max-width:1180px; padding:32px 22px 120px; margin:0 auto}
+.wrap{max-width:1180px; padding:28px 18px 120px; margin:0 auto}
 
 /* header */
-.top{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-}
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px}
 .brand{display:flex; align-items:baseline; gap:14px}
 .logo{
   font-weight:900; letter-spacing:.4px;
   font-size:clamp(26px,4.8vw,38px);
   color:var(--accent);
 }
-.tag{color:#a9b5c1; font-size:14px; opacity:.8}
+.tag{color:#a9b5c1; font-size:14px; opacity:.85}
 .actions{display:flex; align-items:center; gap:10px}
 .icon-btn{
   display:inline-flex; align-items:center; justify-content:center;
@@ -43,6 +41,7 @@ body{
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.04),
               0 10px 30px rgba(0,0,0,.35);
 }
+.icon-btn svg{opacity:.9}
 .badge{
   position:absolute; top:-8px; right:-8px; width:26px; height:26px;
   border-radius:50%; background:var(--accent);
@@ -54,17 +53,17 @@ h1{
   font-size: clamp(34px, 6.2vw, 64px);
   line-height: 1.06; margin: 14px 0 8px;
 }
-.sub{margin:0 0 28px; color:var(--muted); font-size:clamp(16px,2.4vw,21px)}
+.sub{margin:0 0 24px; color:var(--muted); font-size:clamp(16px,2.4vw,21px)}
 
 /* hero / mic button */
-.hero{display:grid; place-items:center; margin:20px 0 22px}
+.hero{display:grid; place-items:center; margin:8px 0 16px}
 .mic-wrap{width:min(88vw,600px)}
 #micBtn{
   width:100%; aspect-ratio:1/1; border:0; border-radius:999px; cursor:pointer;
   background:#000 center/contain no-repeat url("Freeflow-logo.png");
   box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 24px 80px rgba(0,0,0,.55);
   transition:transform .25s ease, box-shadow .25s ease, filter .25s ease;
-  position:relative; overflow:hidden;
+  position:relative; overflow:hidden; touch-action:manipulation;
 }
 #micBtn:hover{transform:translateY(-2px); filter:saturate(1.06)}
 #micBtn.recording{
@@ -86,16 +85,16 @@ h1{
 }
 @keyframes ring{to{transform:rotate(360deg)}}
 
-/* in-button badge / hint when idle/recording */
+/* in-button hint */
 .mic-badge{
   position:absolute; left:50%; bottom:8%;
   transform:translateX(-50%);
-  background:rgba(18,23,28,.8); border:1px solid #25313b;
+  background:rgba(18,23,28,.82); border:1px solid #25313b;
   display:inline-flex; align-items:center; gap:10px;
-  padding:12px 16px; border-radius:28px; font-size:16px; color:#d9e2ec;
+  padding:11px 15px; border-radius:28px; font-size:15px; color:#d9e2ec;
   box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
-.led{width:11px;height:11px;border-radius:50%}
+.led{width:10px;height:10px;border-radius:50%}
 .led.idle{background:#8aa5b7}
 .led.live{background:#34d399}
 
@@ -111,7 +110,7 @@ h1{
 }
 
 /* chips */
-.chips{display:flex; justify-content:center; gap:14px; margin:22px 0 6px; flex-wrap:wrap}
+.chips{display:flex; justify-content:center; gap:14px; margin:18px 0 6px; flex-wrap:wrap}
 .chip{
   display:inline-flex; align-items:center; gap:10px;
   padding:12px 16px; border-radius:22px; font-size:15px; color:#dbe6ef;
@@ -125,7 +124,7 @@ h1{
   position:fixed; top:74px; right:18px; width:260px; padding:12px;
   border-radius:16px; background:linear-gradient(180deg,#161c22,#0f1419);
   border:1px solid #24303a; box-shadow:0 18px 60px rgba(0,0,0,.45);
-  display:none;
+  display:none; z-index:20;
 }
 #menuPanel a{display:block; padding:10px 12px; color:#dbe6ef; text-decoration:none; border-radius:10px}
 #menuPanel a:hover{background:#1a2128}
@@ -140,7 +139,6 @@ h1{
       </div>
       <div class="actions">
         <button class="icon-btn" id="menuBtn" aria-label="Menu">
-          <!-- hamburger -->
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="#cfe0f2" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
         <button class="icon-btn" aria-label="Koszyk">
@@ -153,6 +151,7 @@ h1{
     <h1>Złóż zamówienie</h1>
     <p class="sub">Taxi, posiłek, a może nocleg?</p>
 
+    <!-- LOGO = PRZYCISK -->
     <div class="hero">
       <div class="mic-wrap">
         <button id="micBtn" aria-label="Naciśnij i mów">
@@ -162,11 +161,13 @@ h1{
       </div>
     </div>
 
+    <!-- TRANSKRYPCJA POD LOGO -->
     <div class="transcript" id="transcriptBox">
       <span class="led idle" id="liveDot"></span>
       <div id="transcriptText">Transkrypcja pojawi się tutaj…</div>
     </div>
 
+    <!-- CHIPSY -->
     <div class="chips" id="chips">
       <button class="chip active" data-cat="food">🍽️ Jedzenie</button>
       <button class="chip" data-cat="taxi">🚕 Taxi</button>
@@ -174,7 +175,7 @@ h1{
     </div>
   </div>
 
-  <!-- menu panel -->
+  <!-- MENU -->
   <nav id="menuPanel" role="menu" aria-label="Menu">
     <a href="#" role="menuitem">Historia zamówień</a>
     <a href="#" role="menuitem">Ustawienia</a>
@@ -182,12 +183,12 @@ h1{
   </nav>
 
 <script>
-/* --- MENU --- */
+/* ===== MENU ===== */
 const menuBtn = document.getElementById('menuBtn');
 const panel = document.getElementById('menuPanel');
 menuBtn.addEventListener('click', e=>{
   e.stopPropagation();
-  panel.style.display = panel.style.display==='block' ? 'none' : 'block';
+  panel.style.display = (panel.style.display==='block') ? 'none' : 'block';
 });
 document.addEventListener('click', e=>{
   if(panel.style.display==='block' && !panel.contains(e.target) && e.target!==menuBtn){
@@ -195,35 +196,41 @@ document.addEventListener('click', e=>{
   }
 });
 
-/* --- KATEGORIE --- */
+/* ===== CHIPSY ===== */
 document.getElementById('chips').addEventListener('click', (e)=>{
-  if(e.target.closest('.chip')){
-    [...document.querySelectorAll('.chip')].forEach(c=>c.classList.remove('active'));
-    e.target.closest('.chip').classList.add('active');
-  }
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  [...document.querySelectorAll('.chip')].forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
 });
 
-/* --- WEB SPEECH API (demo) --- */
+/* ===== MIKROFON / WEB SPEECH API ===== */
 const micBtn = document.getElementById('micBtn');
 const micHint = document.getElementById('micHint');
 const liveDot = document.getElementById('liveDot');
 const transcriptText = document.getElementById('transcriptText');
 
-let rec, listening=false;
+let rec = null;
+let listening = false;
 
-function ensureRecognizer(){
+function makeRecognizer(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ transcriptText.textContent = 'Twoja przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome/Edge.'; return null; }
+  if(!SR){
+    transcriptText.textContent = 'Twoja przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome lub Edge.';
+    return null;
+  }
   const r = new SR();
   r.lang = 'pl-PL';
   r.interimResults = true;
-  r.continuous = false;
+  r.continuous = false; // jedna wypowiedź
+  r.maxAlternatives = 1;
   return r;
 }
 
-function start(){
+function startListen(){
   if(listening) return;
-  rec = ensureRecognizer(); if(!rec) return;
+  rec = makeRecognizer(); if(!rec) return;
+
   listening = true;
   micBtn.classList.add('recording');
   micHint.innerHTML = '<span class="led live"></span><span>Słucham… mów teraz</span>';
@@ -239,24 +246,27 @@ function start(){
       (final ? '<strong>'+final.trim()+'</strong> ' : '') +
       (interim ? '<span style="opacity:.7">'+interim.trim()+'</span>' : '');
   };
-  rec.onerror = ()=>stop();
-  rec.onend = ()=>stop();
-  rec.start();
+  rec.onerror = (e)=>{ stopListen(); };
+  rec.onend = ()=>{ stopListen(); };
+
+  try{ rec.start(); }catch{ stopListen(); }
 }
-function stop(){
+
+function stopListen(){
   if(!listening) return;
-  listening=false;
-  try{rec && rec.stop()}catch{}
+  listening = false;
+  try{ rec && rec.stop(); }catch{}
   micBtn.classList.remove('recording');
   micHint.innerHTML = '<span class="led idle"></span><span>Dotknij, aby zamówić</span>';
   liveDot.classList.add('idle'); liveDot.classList.remove('live');
 }
 
-micBtn.addEventListener('pointerdown', start);
-micBtn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); start(); }});
-/* opcjonalnie: klik drugi raz, by wymusić stop */
-micBtn.addEventListener('pointerup', ()=>{ /* zostaw auto-stop z onend */ });
-
+micBtn.addEventListener('click', ()=>{
+  if(listening) stopListen(); else startListen();
+});
+micBtn.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===' '){ e.preventDefault(); if(listening) stopListen(); else startListen(); }
+});
 </script>
 </body>
 </html>

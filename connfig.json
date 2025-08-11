@@ -1,0 +1,19 @@
+{
+  "theme": {
+    "colors": {
+      "--ff-bg": "#0b0f14",
+      "--ff-fg": "#e6edf3",
+      "--ff-accent": "#ff6a00",
+      "--ff-card": "rgba(255,255,255,0.06)"
+    },
+    "logo": {
+      "backplate": "none",    // "none" | "light" | "dark"
+      "pulse": true           // puls przy logo
+    }
+  },
+  "copy": {
+    "brand": "FreeFlow",
+    "title": "Złóż zamówienie",
+    "subtitle": "Taxi, posiłek, a może nocleg?"
+  }
+}

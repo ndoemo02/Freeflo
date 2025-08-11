@@ -1,198 +1,262 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>FreeFlow — Voice to order</title>
-<link rel="preload" as="image" href="Freeflow-logo.png">
+<meta name="theme-color" content="#0b0f12" />
 <style>
-  :root{--bg:#0b0f12;--panel:#12171c;--muted:#93a0ad;--text:#e8eef5;--accent:#ff7a1a}
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;color:var(--text);
-    background:radial-gradient(1200px 600px at 50% -200px,#12171c 0%,#0b0f12 55%),var(--bg);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-  .wrap{max-width:980px;margin:0 auto;padding:20px 16px 90px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:clamp(26px,4.4vw,38px)}
-  .brand .em{color:var(--accent)}
-  .top-actions{display:flex;gap:10px}
-  .btn-icon{background:#0f1419;border:1px solid #1f2933;color:#cde;padding:10px 12px;border-radius:14px;display:inline-flex;align-items:center;gap:10px}
-  .cart-dot{background:var(--accent);color:#000;border-radius:999px;font-weight:700;font-size:12px;padding:2px 7px}
-  h1{font-size:clamp(30px,7.6vw,56px);line-height:1.05;margin:.6rem 0 .2rem}
-  .sub{color:#c0cad5;margin:0 0 18px;font-size:clamp(15px,2.9vw,20px)}
+:root{
+  --bg:#0b0f12; --panel:#12171c; --panel2:#0f1419;
+  --muted:#93a0ad; --text:#e8eef5; --accent:#ff7a1a; --accent2:#ffae55;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--text);
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  background:
+    radial-gradient(1400px 800px at 50% -260px,#12171c 0%,#0b0f12 60%),
+    var(--bg);
+}
 
-  /* ====== LOGO = PRZYCISK ====== */
-  .hero{display:grid;place-items:center;margin:6px 0 10px}
-  .mic-wrap{position:relative;width:min(82vw,520px)}
-  #micBtn{
-    width:100%; aspect-ratio:1/1; border:0; cursor:pointer; border-radius:999px;
-    background:#000 center/contain no-repeat url("Freeflow-logo.png");
-    transition:transform .2s ease, filter .2s ease;
-    box-shadow:0 0 0 1px rgba(255,255,255,.06),0 18px 60px rgba(0,0,0,.55);
-  }
-  #micBtn:hover{transform:translateY(-1px); filter:saturate(1.05)}
-  #micBtn:active{transform:translateY(1px) scale(.995)}
-  .listening{
-    animation:pulse 1.6s ease-in-out infinite;
-    box-shadow:0 0 0 2px rgba(255,255,255,.06),0 28px 90px rgba(255,106,0,.25),0 0 44px 8px rgba(255,106,0,.35);
-    filter:saturate(1.15);
-  }
-  @keyframes pulse{0%{outline:0 solid rgba(255,106,0,0)}50%{outline:10px solid rgba(255,106,0,.12)}100%{outline:0 solid rgba(255,106,0,0)}}
+/* layout */
+.wrap{max-width:1180px; padding:32px 22px 120px; margin:0 auto}
 
-  /* badge na logo (idle) */
-  .mic-badge{
-    position:absolute; left:50%; bottom:10%;
-    transform:translateX(-50%); display:flex; align-items:center; gap:10px;
-    background:linear-gradient(180deg,#151b22,#13181e);
-    border:1px solid #232c36; border-radius:16px; padding:10px 14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03);
-    color:#dfe7ef; font-weight:600;
-  }
-  .led{width:12px;height:12px;border-radius:50%;background:#6b7c8f}
-  .led.live{background:var(--accent);box-shadow:0 0 0 6px rgba(255,122,26,.16),0 0 22px 4px rgba(255,122,26,.35)}
+/* header */
+.top{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.brand{display:flex; align-items:baseline; gap:14px}
+.logo{
+  font-weight:900; letter-spacing:.4px;
+  font-size:clamp(26px,4.8vw,38px);
+  color:var(--accent);
+}
+.tag{color:#a9b5c1; font-size:14px; opacity:.8}
+.actions{display:flex; align-items:center; gap:10px}
+.icon-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:48px; height:48px; border-radius:14px; border:1px solid #232c34;
+  background:linear-gradient(180deg,#161c22, #0e1419);
+  color:#d7e0ea; position:relative;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04),
+              0 10px 30px rgba(0,0,0,.35);
+}
+.badge{
+  position:absolute; top:-8px; right:-8px; width:26px; height:26px;
+  border-radius:50%; background:var(--accent);
+  color:#111; font-weight:800; display:grid; place-items:center; font-size:13px;
+}
 
-  /* transkrypcja pod logo */
-  .transcript{
-    width:min(82vw,520px); margin:12px auto 10px;
-    background:linear-gradient(180deg,#151b22,#13181e);
-    border:1px solid #232c36;border-radius:16px; min-height:56px; padding:12px 14px;
-    box-shadow:0 8px 26px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.03);
-    display:none; align-items:center; gap:10px; color:#dfe7ef;
-  }
-  .transcript.show{display:flex}
-  #asr{flex:1; font-size:18px; line-height:1.35; letter-spacing:.1px}
-  #hint{color:#93a0ad}
+/* titles */
+h1{
+  font-size: clamp(34px, 6.2vw, 64px);
+  line-height: 1.06; margin: 14px 0 8px;
+}
+.sub{margin:0 0 28px; color:var(--muted); font-size:clamp(16px,2.4vw,21px)}
 
-  /* chips */
-  .chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:16px 0 10px}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:18px;background:#11161b;border:1px solid #23303a;color:#d9e3ec}
+/* hero / mic button */
+.hero{display:grid; place-items:center; margin:20px 0 22px}
+.mic-wrap{width:min(88vw,600px)}
+#micBtn{
+  width:100%; aspect-ratio:1/1; border:0; border-radius:999px; cursor:pointer;
+  background:#000 center/contain no-repeat url("Freeflow-logo.png");
+  box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 24px 80px rgba(0,0,0,.55);
+  transition:transform .25s ease, box-shadow .25s ease, filter .25s ease;
+  position:relative; overflow:hidden;
+}
+#micBtn:hover{transform:translateY(-2px); filter:saturate(1.06)}
+#micBtn.recording{
+  animation:pulse 1.4s ease-in-out infinite;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),
+             0 0 0 12px rgba(255,122,26,.08),
+             0 28px 120px rgba(255,122,26,.35);
+}
+@keyframes pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.02)}
+}
+.ring{
+  position:absolute; inset:6%; border-radius:50%;
+  border:2px dashed rgba(255,255,255,.08);
+  filter:blur(.2px);
+  animation:ring 6s linear infinite;
+  pointer-events:none;
+}
+@keyframes ring{to{transform:rotate(360deg)}}
 
-  /* drawer menu */
-  #backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s}
-  #backdrop.show{opacity:1;pointer-events:auto}
-  #menuDrawer{position:fixed;top:0;right:-320px;width:min(86vw,320px);height:100%;background:#0f1419;border-left:1px solid #1f2933;box-shadow:-20px 0 60px rgba(0,0,0,.5);transition:right .25s;padding:18px;display:flex;flex-direction:column;gap:8px;z-index:50}
-  #menuDrawer.open{right:0}
-  .menu-title{font-weight:800;font-size:20px;margin:6px 2px 10px}
-  .menu-item{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:12px;color:#dfe7ef;text-decoration:none;border:1px solid #1e2832;background:#111820}
-  .menu-item:hover{background:#14202a}
+/* in-button badge / hint when idle/recording */
+.mic-badge{
+  position:absolute; left:50%; bottom:8%;
+  transform:translateX(-50%);
+  background:rgba(18,23,28,.8); border:1px solid #25313b;
+  display:inline-flex; align-items:center; gap:10px;
+  padding:12px 16px; border-radius:28px; font-size:16px; color:#d9e2ec;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.led{width:11px;height:11px;border-radius:50%}
+.led.idle{background:#8aa5b7}
+.led.live{background:#34d399}
+
+/* transcript */
+.transcript{
+  width:min(88vw,600px);
+  margin:18px auto 14px;
+  min-height:64px; padding:14px 16px;
+  border-radius:16px; border:1px solid #25313b;
+  background:linear-gradient(180deg,#12171c,#0f1419);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 10px 30px rgba(0,0,0,.25);
+  display:flex; align-items:center; gap:12px; color:#e8eef5; font-size:18px;
+}
+
+/* chips */
+.chips{display:flex; justify-content:center; gap:14px; margin:22px 0 6px; flex-wrap:wrap}
+.chip{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:12px 16px; border-radius:22px; font-size:15px; color:#dbe6ef;
+  background:linear-gradient(180deg,#161c22,#0f1419); border:1px solid #24303a;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.chip.active{border-color:#ff9838; color:#ff9838}
+
+/* menu panel (dummy) */
+#menuPanel{
+  position:fixed; top:74px; right:18px; width:260px; padding:12px;
+  border-radius:16px; background:linear-gradient(180deg,#161c22,#0f1419);
+  border:1px solid #24303a; box-shadow:0 18px 60px rgba(0,0,0,.45);
+  display:none;
+}
+#menuPanel a{display:block; padding:10px 12px; color:#dbe6ef; text-decoration:none; border-radius:10px}
+#menuPanel a:hover{background:#1a2128}
 </style>
 </head>
 <body>
-  <div id="backdrop"></div>
-  <aside id="menuDrawer" aria-label="Menu boczne" aria-hidden="true">
-    <div class="menu-title">Menu</div>
-    <a class="menu-item" href="#">Przegląd</a>
-    <a class="menu-item" href="#">Zamówienia</a>
-    <a class="menu-item" href="#">Ustawienia</a>
-    <a class="menu-item" href="#">Pomoc</a>
-  </aside>
-
   <div class="wrap">
-    <header>
-      <div class="brand"><span class="em">Free</span>Flow
-        <span style="font-weight:500;font-size:16px;margin-left:10px;color:#9fb0c2">Voice to order</span>
+    <header class="top">
+      <div class="brand">
+        <div class="logo">FreeFlow</div>
+        <div class="tag">Voice to order</div>
       </div>
-      <div class="top-actions">
-        <button class="btn-icon" aria-label="Menu" id="menuBtn">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#cfe2f3" stroke-width="2" stroke-linecap="round"/></svg>
+      <div class="actions">
+        <button class="icon-btn" id="menuBtn" aria-label="Menu">
+          <!-- hamburger -->
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="#cfe0f2" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
-        <button class="btn-icon" aria-label="Koszyk">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-1.5 9H7.5L6 6Z" stroke="#cfe2f3" stroke-width="2" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="#cfe2f3"/><circle cx="17.5" cy="19.5" r="1.5" fill="#cfe2f3"/></svg>
-          <span class="cart-dot">0</span>
+        <button class="icon-btn" aria-label="Koszyk">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-1.5 9h-12zM6 6l-2 0M9 21h0M18 21h0" stroke="#cfe0f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="badge" id="cartCount">0</span>
         </button>
       </div>
     </header>
 
     <h1>Złóż zamówienie</h1>
-    <div class="sub">Taxi, posiłek, a może nocleg?</div>
+    <p class="sub">Taxi, posiłek, a może nocleg?</p>
 
-    <section class="hero">
+    <div class="hero">
       <div class="mic-wrap">
-        <button id="micBtn" aria-label="Mów teraz"></button>
-        <div class="mic-badge" id="micBadge">
-          <span class="led" id="ledIdle"></span> Dotknij, aby zamówić
-        </div>
+        <button id="micBtn" aria-label="Naciśnij i mów">
+          <div class="ring" aria-hidden="true"></div>
+          <div class="mic-badge" id="micHint"><span class="led idle"></span><span>Dotknij, aby zamówić</span></div>
+        </button>
       </div>
-    </section>
-
-    <div class="transcript" id="transcriptBox" aria-live="polite" aria-atomic="true">
-      <span class="led live" id="ledLive"></span>
-      <div id="asr"><span id="hint">Nasłuchuję…</span></div>
     </div>
 
-    <div class="chips">
-      <div class="chip">🍽️ Jedzenie</div>
-      <div class="chip">🚕 Taxi</div>
-      <div class="chip">🏨 Hotel</div>
+    <div class="transcript" id="transcriptBox">
+      <span class="led idle" id="liveDot"></span>
+      <div id="transcriptText">Transkrypcja pojawi się tutaj…</div>
+    </div>
+
+    <div class="chips" id="chips">
+      <button class="chip active" data-cat="food">🍽️ Jedzenie</button>
+      <button class="chip" data-cat="taxi">🚕 Taxi</button>
+      <button class="chip" data-cat="hotel">🏨 Hotel</button>
     </div>
   </div>
 
+  <!-- menu panel -->
+  <nav id="menuPanel" role="menu" aria-label="Menu">
+    <a href="#" role="menuitem">Historia zamówień</a>
+    <a href="#" role="menuitem">Ustawienia</a>
+    <a href="#" role="menuitem">Pomoc</a>
+  </nav>
+
 <script>
-(()=> {
-  // Drawer
-  const menuBtn=document.getElementById('menuBtn');
-  const drawer=document.getElementById('menuDrawer');
-  const backdrop=document.getElementById('backdrop');
-  const openDrawer=()=>{drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');backdrop.classList.add('show')}
-  const closeDrawer=()=>{drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');backdrop.classList.remove('show')}
-  menuBtn.addEventListener('click',openDrawer);backdrop.addEventListener('click',closeDrawer);
-  window.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
-
-  // Voice
-  const micBtn=document.getElementById('micBtn');
-  const badge=document.getElementById('micBadge');
-  const transcript=document.getElementById('transcriptBox');
-  const asrEl=document.getElementById('asr');
-
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const synth=window.speechSynthesis;
-  let rec,listening=false,finalText='';
-
-  function speak(txt){ if(!synth) return; const u=new SpeechSynthesisUtterance(txt); u.lang='pl-PL'; synth.cancel(); synth.speak(u); }
-
-  function ensureSR(){
-    if(rec) return true;
-    if(!SR){ asrEl.textContent='Twoja przeglądarka nie wspiera rozpoznawania mowy.'; return false; }
-    rec=new SR(); rec.lang='pl-PL'; rec.interimResults=true; rec.continuous=false;
-
-    rec.onstart=()=>{
-      listening=true;
-      micBtn.classList.add('listening');
-      badge.style.display='none';          // chowa pigułkę na logo
-      transcript.classList.add('show');    // pokazuje ramkę pod logo
-      asrEl.innerHTML='<em>Nasłuchuję… mów proszę.</em>';
-    };
-    rec.onresult=(ev)=>{
-      let interim=''; for(const r of ev.results){ const t=r[0].transcript; if(r.isFinal){ finalText+=t+' '; } else { interim+=t; } }
-      asrEl.textContent=(finalText+interim).trim();
-    };
-    rec.onerror=e=>{ asrEl.textContent='Błąd: '+e.error; };
-    rec.onend=()=>{
-      listening=false;
-      micBtn.classList.remove('listening');
-      const heard=asrEl.textContent.trim();
-      if(!heard){ transcript.classList.remove('show'); badge.style.display='flex'; asrEl.innerHTML='<span id="hint">Nasłuchuję…</span>'; }
-      else{
-        // szybka odpowiedź demo
-        const low=heard.toLowerCase(); let reply='';
-        if(low.includes('pizza')) reply='Zamawiam pizzę. Dodać sos?';
-        else if(low.includes('taxi')) reply='Zamawiam taxi. Podaj adres odbioru.';
-        else if(low.includes('hotel')||low.includes('nocleg')) reply='Szukam hotelu — jakie daty?';
-        else reply='Rozumiem. Zaraz to ogarnę.';
-        speak(reply);
-      }
-      finalText='';
-    };
-    return true;
+/* --- MENU --- */
+const menuBtn = document.getElementById('menuBtn');
+const panel = document.getElementById('menuPanel');
+menuBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  panel.style.display = panel.style.display==='block' ? 'none' : 'block';
+});
+document.addEventListener('click', e=>{
+  if(panel.style.display==='block' && !panel.contains(e.target) && e.target!==menuBtn){
+    panel.style.display='none';
   }
+});
 
-  micBtn.addEventListener('click',()=>{
-    if(!ensureSR()) return;
-    if(listening){ try{rec.stop()}catch{}; return; }
-    finalText=''; asrEl.textContent=''; rec.start();
-  });
+/* --- KATEGORIE --- */
+document.getElementById('chips').addEventListener('click', (e)=>{
+  if(e.target.closest('.chip')){
+    [...document.querySelectorAll('.chip')].forEach(c=>c.classList.remove('active'));
+    e.target.closest('.chip').classList.add('active');
+  }
+});
 
-})();
+/* --- WEB SPEECH API (demo) --- */
+const micBtn = document.getElementById('micBtn');
+const micHint = document.getElementById('micHint');
+const liveDot = document.getElementById('liveDot');
+const transcriptText = document.getElementById('transcriptText');
+
+let rec, listening=false;
+
+function ensureRecognizer(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ transcriptText.textContent = 'Twoja przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome/Edge.'; return null; }
+  const r = new SR();
+  r.lang = 'pl-PL';
+  r.interimResults = true;
+  r.continuous = false;
+  return r;
+}
+
+function start(){
+  if(listening) return;
+  rec = ensureRecognizer(); if(!rec) return;
+  listening = true;
+  micBtn.classList.add('recording');
+  micHint.innerHTML = '<span class="led live"></span><span>Słucham… mów teraz</span>';
+  liveDot.classList.remove('idle'); liveDot.classList.add('live');
+  transcriptText.textContent = '';
+
+  rec.onresult = (ev)=>{
+    let final='', interim='';
+    for(const res of ev.results){
+      (res.isFinal ? final : interim) += res[0].transcript + ' ';
+    }
+    transcriptText.innerHTML =
+      (final ? '<strong>'+final.trim()+'</strong> ' : '') +
+      (interim ? '<span style="opacity:.7">'+interim.trim()+'</span>' : '');
+  };
+  rec.onerror = ()=>stop();
+  rec.onend = ()=>stop();
+  rec.start();
+}
+function stop(){
+  if(!listening) return;
+  listening=false;
+  try{rec && rec.stop()}catch{}
+  micBtn.classList.remove('recording');
+  micHint.innerHTML = '<span class="led idle"></span><span>Dotknij, aby zamówić</span>';
+  liveDot.classList.add('idle'); liveDot.classList.remove('live');
+}
+
+micBtn.addEventListener('pointerdown', start);
+micBtn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); start(); }});
+/* opcjonalnie: klik drugi raz, by wymusić stop */
+micBtn.addEventListener('pointerup', ()=>{ /* zostaw auto-stop z onend */ });
+
 </script>
 </body>
 </html>

@@ -1,208 +1,105 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FreeFlow – UI Lab</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow — UI Lab</title>
 <style>
 :root{
-  --bg:#0b0f14; --bg2:#121821; --text:#e8eef6; --muted:#9fb0c5;
-  --brand:#ff7a1a; --brand2:#ffb36b; --pill:#1b232f; --ring:#2a384a;
-  --glow:0 0 40px rgba(255,122,26,.25),0 0 120px rgba(255,122,26,.12);
+  --bg:#0b0f12; --panel:#12171c; --muted:#93a0ad; --text:#e8eef5; --accent:#ff7a1a;
 }
-*{box-sizing:border-box} html,body{height:100%} body{
-  margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; color:var(--text);
-  background: radial-gradient(1200px 600px at 50% -10%, #1a232f 0%, var(--bg) 55%) no-repeat fixed;
+*{box-sizing:border-box}
+body{
+  margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  background: radial-gradient(1400px 800px at 50% -260px,#12171c 0%,#0b0f12 60%), var(--bg);
 }
-.wrapper{max-width:980px;margin:0 auto;padding:20px 18px 80px}
-.header{display:flex;align-items:center;justify-content:space-between;margin:8px 0 6px}
-.brand{display:flex;gap:10px;align-items:baseline}
-.brand .logo{font-weight:800;font-size:34px;letter-spacing:.4px;color:var(--brand);text-shadow:0 0 0 #000}
-.badgeRow{display:flex;gap:10px}
-.iconBtn{position:relative;display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:linear-gradient(180deg,#0f141c,#121821);box-shadow:inset 0 0 0 1px #1e2835, 0 6px 20px rgba(0,0,0,.35)}
-.iconBtn svg{opacity:.95}
-.counter{position:absolute;top:-6px;right:-6px;background:var(--brand);color:#000;font-weight:800;border-radius:999px;padding:4px 8px;font-size:12px;box-shadow:var(--glow)}
-.h1{font-size:46px;line-height:1.06;margin:8px 0 4px}
-.sub{color:var(--muted);font-size:20px;margin-bottom:18px}
-.stage{position:relative;margin:18px 0 12px}
-.ring{position:absolute;inset:0;border-radius:50%;border:2px dashed #2b3544;opacity:.55;pointer-events:none;transform:scale(.98)}
-.hero{position:relative;display:grid;place-items:center;margin:auto;width:min(520px,88vw);aspect-ratio:1;border-radius:50%;
-  background:radial-gradient(60% 60% at 50% 40%, #1c2330 0%, #0f141c 62%, #0b0f14 100%);
-  box-shadow:inset 0 0 0 1px #202a37, 0 30px 120px rgba(0,0,0,.45);}
-.hero img{width:82%;height:82%;object-fit:contain;filter:drop-shadow(0 20px 40px rgba(0,0,0,.35))}
-.tap{position:absolute;bottom:14px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#121a25,#0f141c);
-  border:1px solid #1f2a37;color:var(--muted);padding:12px 16px;border-radius:16px}
-.blink{width:10px;height:10px;border-radius:999px;background:#84ffa9;box-shadow:0 0 0 0 rgba(132,255,169,.6);animation:ping 2s infinite}
-@keyframes ping{0%{box-shadow:0 0 0 0 rgba(132,255,169,.55)} 70%{box-shadow:0 0 0 16px rgba(132,255,169,0)} 100%{box-shadow:0 0 0 0 rgba(132,255,169,0)}}
-.actions{display:flex;gap:14px;justify-content:center;margin:22px 0 8px;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:10px;background:var(--pill);border:1px solid #233144;color:#d6e2f2;padding:14px 18px;border-radius:18px}
-.chip .ico{width:22px;height:22px;opacity:.88}
-.transcriptA, .transcriptB, .transcriptC{
-  position:absolute;background:linear-gradient(180deg,#0f151e,#0d1219);border:1px solid #1f2a37;color:#dbe6f6;
-  border-radius:14px;padding:10px 14px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
-.transcriptA{bottom:110px;left:50%;transform:translateX(-50%);max-width:78%;text-align:center}
-.transcriptB{position:relative; margin:10px auto 0; max-width:660px}
-.transcriptC{position:static;margin:10px 0 0 0}
-.hintRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:10px 0 20px}
-.hint{padding:10px 14px;border-radius:14px;background:#0e141c;border:1px solid #1c2735;color:#cfe0f7}
-.footerTabs{position:sticky;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;padding:12px;background:linear-gradient(180deg,transparent,#0b0f14 35%,#0b0f14)}
-.tab{width:56px;height:40px;border-radius:12px;border:1px solid #213043;background:#0e151e;color:#9fb0c5}
-.tab.active{background:linear-gradient(180deg,#ff8a34,#ff7a1a);color:#000;font-weight:800;border:none;box-shadow:var(--glow)}
-.menuPulse{animation:menuPulse 2s infinite}
-@keyframes menuPulse{0%{box-shadow:0 0 0 0 rgba(255,122,26,.45)}70%{box-shadow:0 0 0 14px rgba(255,122,26,0)}100%{box-shadow:0 0 0 0 rgba(255,122,26,0)}}
-@media (min-width:1024px){.wrapper{max-width:1120px}.h1{font-size:56px}.hero{width:min(620px,78vh)}}
+h2{font-size:22px; margin:0 0 18px; color:#dbe6ef}
+.header{max-width:1200px; margin:24px auto 8px; padding:0 16px; display:flex; align-items:baseline; gap:16px}
+.header .logo{color:var(--accent); font-weight:900; letter-spacing:.4px; font-size:28px}
+.note{color:#9fb0be}
+
+.lab{max-width:1200px;margin:24px auto 60px;padding:0 16px;border-top:1px dashed #26313b}
+.hero{display:grid; place-items:center; margin:18px 0}
+.mic-wrap{width:min(90vw,660px)}
+.demo-mic{
+  width:100%; aspect-ratio:1/1; border:0; border-radius:999px;
+  background:#000 center/contain no-repeat url("Freeflow-logo.png");
+  box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 24px 80px rgba(0,0,0,.55);
+}
+.transcript{
+  width:min(92vw,680px);
+  min-height:64px; padding:14px 16px; margin:16px auto 12px;
+  border-radius:16px; border:1px solid #25313b;
+  background:linear-gradient(180deg,#12171c,#0f1419);
+  display:flex; align-items:center; gap:12px; font-size:18px;
+}
+.led{width:11px;height:11px;border-radius:50%; background:#34d399}
+.chips{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin:22px 0 6px}
+.chip{padding:12px 16px; border-radius:22px; background:linear-gradient(180deg,#161c22,#0f1419); border:1px solid #24303a}
 </style>
 </head>
 <body>
-  <div class="wrapper">
-
-    <div class="header">
-      <div class="brand">
-        <div class="logo">FreeFlow</div>
-        <div style="color:var(--muted);font-weight:600">Voice to order</div>
-      </div>
-      <div class="badgeRow">
-        <button class="iconBtn menuPulse" id="btnMenu" title="Menu">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="#cfe0f7"><rect x="4" y="6" width="16" height="2" rx="1"/><rect x="4" y="11" width="16" height="2" rx="1"/><rect x="4" y="16" width="16" height="2" rx="1"/></svg>
-        </button>
-        <button class="iconBtn" id="btnCart" title="Koszyk">
-          <span class="counter" id="cartCount">0</span>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="#cfe0f7"><path d="M7 4h-2l-1 2v2h2l3.6 7.59-1.35 2.45A1 1 0 0 0 9 20h10v-2H10.42l.93-1.68H18a1 1 0 0 0 .92-.61l3-7A1 1 0 0 0 21 6H7Zm2.31 2H19.8l-2.14 5H11.2L9.31 6Z"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <h1 class="h1">Złóż zamówienie</h1>
-    <div class="sub">Taxi, posiłek, a może nocleg?</div>
-
-    <section class="stage">
-      <div class="ring"></div>
-
-      <div class="hero" id="hero">
-        <img src="Freeflow-logo.png" alt="FreeFlow logo" id="logo">
-        <button class="tap" id="btnMic"><span class="blink"></span><span id="tapText">Dotknij, aby zamówić</span></button>
-
-        <!-- Wariant A – dymek na logo -->
-        <div class="transcriptA" id="txA" hidden>…</div>
-      </div>
-
-      <!-- Wariant B – pasek pod logo -->
-      <div class="transcriptB" id="txB" hidden>…</div>
-
-      <!-- Wariant C – pasek nad logo (tu pod nagłówkiem) -->
-      <div class="transcriptC" id="txC" hidden>…</div>
-
-    </section>
-
-    <div class="actions">
-      <button class="chip"><svg class="ico" viewBox="0 0 24 24" fill="#ffb36b"><path d="M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z"/></svg> Jedzenie</button>
-      <button class="chip"><svg class="ico" viewBox="0 0 24 24" fill="#ffb36b"><path d="M5 17h14l-1-5H6zM6 9h12l-1-3H7z"/></svg> Taxi</button>
-      <button class="chip"><svg class="ico" viewBox="0 0 24 24" fill="#ffb36b"><path d="M4 10l8-6 8 6v8a2 2 0 0 1-2 2h-3v-6H9v6H6a2 2 0 0 1-2-2z"/></svg> Hotel</button>
-    </div>
-
-    <div class="hintRow">
-      <div class="hint">„dwie pizze pepperoni”</div>
-      <div class="hint">„zamów taxi na Dworzec”</div>
-      <div class="hint">„hotel w Krakowie od piątku na 2 noce”</div>
-    </div>
-
-    <div class="footerTabs">
-      <button class="tab active" data-variant="A">A</button>
-      <button class="tab" data-variant="B">B</button>
-      <button class="tab" data-variant="C">C</button>
-    </div>
-
+  <div class="header">
+    <div class="logo">FreeFlow</div>
+    <div class="note">UI LAB — warianty 12A–12D (luźniejsze)</div>
   </div>
 
-<script>
-(() => {
-  const $ = s => document.querySelector(s);
-  const txA = $('#txA'), txB = $('#txB'), txC = $('#txC');
-  const btnMic = $('#btnMic'), tapText = $('#tapText');
-  const tabs = document.querySelectorAll('.tab');
-  let variant = 'A';
-  let listening = false;
-  let mockTimer = null;
+  <!-- 12A -->
+  <section class="lab" data-variant="12A">
+    <h2>12A — Wide & airy</h2>
+    <style>
+      [data-variant="12A"] .mic-wrap{width:min(92vw,680px)}
+      [data-variant="12A"] .transcript{width:min(92vw,680px);margin:22px auto 18px}
+      [data-variant="12A"] .chips{margin:26px 0 10px}
+    </style>
+    <div class="hero"><div class="mic-wrap"><button class="demo-mic" aria-label="Mic"></button></div></div>
+    <div class="transcript"><span class="led"></span><div>Podgląd głosu…</div></div>
+    <div class="chips"><div class="chip">🍽️ Jedzenie</div><div class="chip">🚕 Taxi</div><div class="chip">🏨 Hotel</div></div>
+  </section>
 
-  function showVariant(v){
-    variant = v;
-    txA.hidden = v!=='A';
-    txB.hidden = v!=='B';
-    txC.hidden = v!=='C';
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.variant===v));
-  }
-  tabs.forEach(t => t.addEventListener('click',()=>showVariant(t.dataset.variant)));
-  showVariant('A');
+  <!-- 12B -->
+  <section class="lab" data-variant="12B">
+    <h2>12B — Compact top, big mic</h2>
+    <style>
+      [data-variant="12B"] .mic-wrap{width:min(86vw,620px)}
+      [data-variant="12B"] .transcript{width:min(76vw,540px)}
+    </style>
+    <div class="hero"><div class="mic-wrap"><button class="demo-mic"></button></div></div>
+    <div class="transcript"><span class="led"></span><div>„Proszę o dwie pizze…”</div></div>
+    <div class="chips"><div class="chip">🍽️</div><div class="chip">🚕</div><div class="chip">🏨</div></div>
+  </section>
 
-  function setTranscript(text){
-    if(variant==='A') txA.textContent = text;
-    if(variant==='B') txB.textContent = text;
-    if(variant==='C') txC.textContent = text;
-  }
-
-  function startMockStream(){
-    const samples = [
-      'Słucham… mów co zamawiasz.',
-      '„dwie pizze pepperoni i napoje”',
-      '„taksówka na Dworzec o 22:10”'
-    ];
-    let i=0;
-    setTranscript('');
-    mockTimer = setInterval(()=>{
-      const cur = samples[i%3];
-      const n = Math.min(cur.length, (txA.textContent.length||0)+3);
-      setTranscript(cur.slice(0,n));
-      if(n===cur.length) i++;
-    }, 120);
-  }
-  function stopMockStream(){
-    clearInterval(mockTimer); mockTimer=null;
-  }
-
-  btnMic.addEventListener('click', ()=>{
-    listening = !listening;
-    if(listening){
-      tapText.textContent = 'Nagrywam…';
-      btnMic.style.boxShadow = '0 0 0 8px rgba(255,122,26,.08), 0 0 0 0 rgba(255,122,26,.0)';
-      startMockStream();
-      // Jeśli chcesz realny Web Speech:
-      // tryStartWebSpeech();
-    }else{
-      tapText.textContent = 'Dotknij, aby zamówić';
-      btnMic.style.boxShadow = 'none';
-      stopMockStream();
-      setTranscript(''); // po zakończeniu możesz zostawić ostatni tekst – jeśli wolisz, usuń tę linię
-    }
-  });
-
-  // — Opcjonalnie podłącz Web Speech gdy dostępny —
-  function tryStartWebSpeech(){
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR) return;
-    const rec = new SR();
-    rec.lang = 'pl-PL';
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onresult = (e)=>{
-      let txt = '';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        txt += e.results[i][0].transcript;
+  <!-- 12C -->
+  <section class="lab" data-variant="12C">
+    <h2>12C — Two-column (desktop)</h2>
+    <style>
+      [data-variant="12C"] .grid{display:grid;gap:26px;align-items:start}
+      @media (min-width:1000px){
+        [data-variant="12C"] .grid{grid-template-columns: 1.1fr .9fr}
+        [data-variant="12C"] .transcript{margin:0}
       }
-      setTranscript(txt.trim());
-    }
-    rec.onend = ()=>{ listening=false; tapText.textContent='Dotknij, aby zamówić'; };
-    rec.start();
-  }
+      [data-variant="12C"] .mic-wrap{width:min(60vw,540px);margin-inline:auto}
+    </style>
+    <div class="grid">
+      <div class="hero"><div class="mic-wrap"><button class="demo-mic"></button></div></div>
+      <div>
+        <div class="transcript"><span class="led"></span><div>„Taxi na Dworzec, poproszę.”</div></div>
+        <div class="chips" style="justify-content:flex-start"><div class="chip">🍽️ Jedzenie</div><div class="chip">🚕 Taxi</div><div class="chip">🏨 Hotel</div></div>
+      </div>
+    </div>
+  </section>
 
-  // demo: koszyk klik
-  $('#btnCart').addEventListener('click', ()=>{
-    const b = $('#cartCount');
-    b.textContent = String((+b.textContent||0)+1);
-  });
-
-})();
-</script>
+  <!-- 12D -->
+  <section class="lab" data-variant="12D">
+    <h2>12D — Badge-first (większy oddech)</h2>
+    <style>
+      [data-variant="12D"] .mic-wrap{width:min(90vw,660px)}
+      [data-variant="12D"] .transcript{width:min(88vw,640px);margin:16px auto 28px}
+      [data-variant="12D"] .chips{gap:18px;margin:30px 0 6px}
+    </style>
+    <div class="hero"><div class="mic-wrap"><button class="demo-mic"></button></div></div>
+    <div class="transcript"><span class="led"></span><div>„Hotel w Krakowie od piątku na 2 noce.”</div></div>
+    <div class="chips"><div class="chip">🍽️ Jedzenie</div><div class="chip">🚕 Taxi</div><div class="chip">🏨 Hotel</div></div>
+  </section>
 </body>
 </html>

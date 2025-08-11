@@ -4,103 +4,108 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FreeFlow — Voice to order</title>
 <meta name="theme-color" content="#0b0f12">
-<!-- WCZEŚNIE ZDEFINIOWANE FALLBACKI (gdyby główny skrypt nie ruszył) -->
+
+<!-- Wczesne fallbacki + puls potwierdzenia -->
 <script>
-  window.FF_VER = 'v7';
-  window.FF_state = { listening:false };
-  window.FF_toggleMenu = function(ev){
-    try{
-      ev && ev.stopPropagation();
-      var p = document.getElementById('menuPanel');
-      if(!p) return;
-      p.style.display = (p.style.display==='block') ? 'none' : 'block';
+  window.FF_VER='v8'; window.FF_state={listening:false};
+  window.FF_pulse=function(){
+    try{ navigator.vibrate && navigator.vibrate(20); }catch(e){}
+    var b=document.getElementById('micBtn'); if(!b) return;
+    b.classList.add('confirm'); setTimeout(()=>b.classList.remove('confirm'), 420);
+  };
+  window.FF_toggleMenu=function(ev){
+    try{ ev&&ev.stopPropagation(); var p=document.getElementById('menuPanel'); if(!p) return;
+      p.style.display=(p.style.display==='block')?'none':'block';
     }catch(e){}
   };
-  window.FF_toggleMic = function(){
+  window.FF_toggleMic=function(){
+    window.FF_pulse();
     try{
-      // natychmiastowy feedback
-      try{ navigator.vibrate && navigator.vibrate(30); }catch(e){}
-      var btn = document.getElementById('micBtn');
-      var hint= document.getElementById('micHint');
-      var ledH= document.getElementById('ledHint');
-      var ledB= document.getElementById('ledBar');
-      window.FF_state.listening = !window.FF_state.listening;
+      var btn=document.getElementById('micBtn'), hint=document.getElementById('micHint'),
+          ledH=document.getElementById('ledHint'), ledB=document.getElementById('ledBar');
+      window.FF_state.listening=!window.FF_state.listening;
       if(btn) btn.classList.toggle('recording', window.FF_state.listening);
       if(hint) hint.classList.toggle('hidden', window.FF_state.listening);
-      if(ledH) ledH.className = 'led ' + (window.FF_state.listening?'live':'idle');
-      if(ledB) ledB.className = 'dot ' + (window.FF_state.listening?'live':'idle');
-
-      // jeśli główny skrypt już załadowany, użyj właściwych funkcji
+      if(ledH) ledH.className='led '+(window.FF_state.listening?'live':'idle');
+      if(ledB) ledB.className='dot '+(window.FF_state.listening?'live':'idle');
       if(window.FF_start && window.FF_stop){
         window.FF_state.listening ? window.FF_start() : window.FF_stop();
       }
     }catch(e){}
   };
-  window.addEventListener('click', function(ev){
-    var p = document.getElementById('menuPanel');
-    var onBtn = ev.target.closest && ev.target.closest('#menuBtn');
-    if(p && p.style.display==='block' && !p.contains(ev.target) && !onBtn){
-      p.style.display='none';
-    }
-  }, {passive:true});
+  window.addEventListener('click',function(ev){
+    var p=document.getElementById('menuPanel'); var onBtn=ev.target.closest && ev.target.closest('#menuBtn');
+    if(p && p.style.display==='block' && !p.contains(ev.target) && !onBtn){ p.style.display='none'; }
+  },{passive:true});
 </script>
+
 <style>
-  :root{--bg:#0b0f12;--panel:#141b22;--text:#e8eef5;--muted:#a6b1bb;--accent:#ff7a1a}
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;color:var(--text);
-       background:radial-gradient(1200px 800px at 50% -10%,#182029 0%,#0b0f12 55%) fixed}
-  .wrap{max-width:980px;margin:0 auto;padding:24px 18px 90px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .brand{display:flex;gap:10px;align-items:baseline}
-  .brand h1{margin:0;font-weight:900;letter-spacing:.5px;font-size:34px;color:var(--accent)}
-  .tag{color:var(--muted);font-size:14px}
-  .ver{opacity:.6;font-size:12px;margin-left:6px}
-  .actions{display:flex;gap:10px}
-  .icon-btn{position:relative;width:52px;height:52px;border-radius:16px;border:1px solid #1e2630;
-            background:linear-gradient(180deg,#192028,#11161b);color:#cfd7df;display:grid;place-items:center}
-  .icon-btn svg{width:24px;height:24px;pointer-events:none}
-  .badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;
-         background:var(--accent);color:#111;font-weight:800;display:grid;place-items:center;font-size:13px}
-  h2{font-size:46px;line-height:1.08;margin:14px 0 6px}
-  .subtitle{color:var(--muted);margin:0 0 18px;font-size:18px}
+:root{--bg:#0b0f12;--panel:#141b22;--text:#e8eef5;--muted:#a6b1bb;--accent:#ff7a1a}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;color:var(--text);
+     background:radial-gradient(1200px 800px at 50% -10%,#182029 0%,#0b0f12 55%) fixed}
+.wrap{max-width:980px;margin:0 auto;padding:24px 18px 90px}
 
-  .logo-wrap{position:relative;display:grid;place-items:center;margin:8px 0 12px}
-  #micBtn{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;
-          width:min(86vw,600px);aspect-ratio:1/1;display:grid;place-items:center;border-radius:999px;
-          position:relative;outline:none;touch-action:manipulation;pointer-events:auto;
-          box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 80px rgba(0,0,0,.55);
-          transition:transform .2s ease,filter .2s ease,box-shadow .2s ease}
-  #micBtn.recording{animation:micPulse 1.4s ease-in-out infinite;
-                    box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 0 12px rgba(255,122,26,.08),
-                               0 28px 120px rgba(255,122,26,.35)}
-  @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
-  #micBtn img,#micBtn .hint{pointer-events:none} /* nic nie przechwytuje dotyku */
-  #micImg{width:100%;height:100%;object-fit:cover;border-radius:999px;display:block}
-  .hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-        background:linear-gradient(180deg,#1a2128,#10161c);
-        border:1px solid #26303a;border-radius:16px;padding:10px 14px;color:#cfe3f5;
-        display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
-  .hint.hidden{display:none}
-  .led{width:10px;height:10px;border-radius:999px}
-  .led.idle{background:#6b7b88}
-  .led.live{background:#4cff6b;box-shadow:0 0 16px rgba(76,255,107,.65)}
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;gap:10px;align-items:baseline}
+.brand h1{margin:0;font-weight:900;letter-spacing:.5px;font-size:34px;color:var(--accent)}
+.tag{color:var(--muted);font-size:14px}
+.ver{opacity:.6;font-size:12px;margin-left:6px}
+.actions{display:flex;gap:10px}
+.icon-btn{position:relative;width:52px;height:52px;border-radius:16px;border:1px solid #1e2630;
+          background:linear-gradient(180deg,#192028,#11161b);color:#cfd7df;display:grid;place-items:center}
+.icon-btn svg{width:24px;height:24px;pointer-events:none}
+.badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;
+       background:var(--accent);color:#111;font-weight:800;display:grid;place-items:center;font-size:13px}
 
-  .transc{margin:12px auto 18px;width:min(86vw,600px);border-radius:18px;background:linear-gradient(180deg,#151b22,#0f1419);
-          border:1px solid #22303a;padding:16px 18px;color:#cfe3f5;min-height:64px;display:flex;gap:12px;align-items:flex-start;line-height:1.45;font-size:18px}
-  .transc .dot{width:10px;height:10px;border-radius:999px;margin-top:6px}
-  .dot.idle{background:#6b7b88}.dot.live{background:#4cff6b;box-shadow:0 0 14px rgba(76,255,107,.55)}
-  .transc p{margin:0;word-wrap:break-word}
+/* titles */
+h2{font-size:46px;line-height:1.08;margin:14px 0 6px}
+.subtitle{color:var(--muted);margin:0 0 18px;font-size:18px}
 
-  .chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-  .chip{display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:18px;border:1px solid #1f2832;
-        background:linear-gradient(180deg,#171e26,#10161c);color:#dbe6f2}
-  .chip.active{border-color:rgba(255,122,26,.6);box-shadow:0 6px 18px rgba(255,122,26,.15)}
-  .chip svg{width:18px;height:18px;color:var(--accent)}
+/* Logo = przycisk */
+.logo-wrap{position:relative;display:grid;place-items:center;margin:8px 0 12px}
+#micBtn{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;
+        width:min(86vw,600px);aspect-ratio:1/1;display:grid;place-items:center;border-radius:999px;
+        position:relative;outline:none;touch-action:manipulation;pointer-events:auto;
+        box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 80px rgba(0,0,0,.55);
+        transition:transform .2s ease,filter .2s ease,box-shadow .2s ease}
+#micBtn img,#micBtn .hint{pointer-events:none}
+#micImg{width:100%;height:100%;object-fit:cover;border-radius:999px;display:block}
+#micBtn.recording{animation:micPulse 1.4s ease-in-out infinite;
+                  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 0 12px rgba(255,122,26,.08),
+                             0 28px 120px rgba(255,122,26,.35)}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+/* PULS potwierdzenia na tap */
+#micBtn.confirm{animation:confirm 0.42s ease-out}
+@keyframes confirm{0%{box-shadow:0 0 0 0 rgba(255,122,26,.55)}100%{box-shadow:0 0 0 36px rgba(255,122,26,0)}}
 
-  #menuPanel{display:none;position:fixed;top:72px;right:18px;z-index:9999;width:280px;border-radius:16px;padding:14px;
-             background:linear-gradient(180deg,#1a2128,#11161b);border:1px solid #26303a;box-shadow:0 12px 36px rgba(0,0,0,.5)}
-  #menuPanel a{display:block;padding:10px 8px;color:#dfe8f3;text-decoration:none;border-radius:10px}
-  #menuPanel a:hover{background:#0f1419}
+/* Hint */
+.hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+      background:linear-gradient(180deg,#1a2128,#10161c);border:1px solid #26303a;border-radius:16px;
+      padding:10px 14px;color:#cfe3f5;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.hint.hidden{display:none}
+.led{width:10px;height:10px;border-radius:999px}.led.idle{background:#6b7b88}.led.live{background:#4cff6b;box-shadow:0 0 16px rgba(76,255,107,.65)}
+
+/* Transkrypcja */
+.transc{margin:12px auto 18px;width:min(86vw,600px);border-radius:18px;background:linear-gradient(180deg,#151b22,#0f1419);
+        border:1px solid #22303a;padding:16px 18px;color:#cfe3f5;min-height:64px;display:flex;gap:12px;align-items:flex-start;line-height:1.45;font-size:18px}
+.transc .dot{width:10px;height:10px;border-radius:999px;margin-top:6px}
+.dot.idle{background:#6b7b88}.dot.live{background:#4cff6b;box-shadow:0 0 14px rgba(76,255,107,.55)}
+.transc p{margin:0;word-wrap:break-word}
+
+/* Chips */
+.chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.chip{display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:18px;border:1px solid #1f2832;
+      background:linear-gradient(180deg,#171e26,#10161c);color:#dbe6f2}
+.chip.active{border-color:rgba(255,122,26,.6);box-shadow:0 6px 18px rgba(255,122,26,.15)}
+.chip svg{width:18px;height:18px;color:var(--accent)}
+
+/* Menu panel */
+#menuPanel{display:none;position:fixed;top:72px;right:18px;z-index:9999;width:280px;border-radius:16px;padding:14px;
+           background:linear-gradient(180deg,#1a2128,#11161b);border:1px solid #26303a;box-shadow:0 12px 36px rgba(0,0,0,.5)}
+#menuPanel a{display:block;padding:10px 8px;color:#dfe8f3;text-decoration:none;border-radius:10px}
+#menuPanel a:hover{background:#0f1419}
 </style>
 </head>
 <body>
@@ -127,15 +132,13 @@
     </header>
 
     <div id="menuPanel" role="menu" aria-label="Menu">
-      <a href="#">Zamówienia</a>
-      <a href="#">Ulubione</a>
-      <a href="#">Ustawienia</a>
-      <a href="#">Pomoc</a>
+      <a href="#">Zamówienia</a><a href="#">Ulubione</a><a href="#">Ustawienia</a><a href="#">Pomoc</a>
     </div>
 
     <h2>Złóż zamówienie</h2>
     <p class="subtitle">Taxi, posiłek, a może nocleg?</p>
 
+    <!-- LOGO = PRZYCISK -->
     <div class="logo-wrap">
       <button id="micBtn" aria-label="Nagraj polecenie"
               onclick="FF_toggleMic()" ontouchstart="FF_toggleMic()">
@@ -147,85 +150,115 @@
       </button>
     </div>
 
+    <!-- TRANSKRYPCJA -->
     <div class="transc" aria-live="polite" aria-atomic="true">
       <span id="ledBar" class="dot idle"></span>
       <p id="transcriptText">Transkrypcja pojawi się tutaj…</p>
     </div>
 
+    <!-- KATEGORIE -->
     <div id="chips" class="chips" role="tablist">
       <button class="chip active" role="tab" aria-selected="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 12h16M8 12V4m8 8V4M6 20h12" stroke-linecap="round"/>
-        </svg> Jedzenie
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M8 12V4m8 8V4M6 20h12" stroke-linecap="round"/></svg> Jedzenie
       </button>
       <button class="chip" role="tab" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 12h18l-2 6H5zM7 12l2-4h6l2 4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg> Taxi
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18l-2 6H5zM7 12l2-4h6l2 4" stroke-linecap="round" stroke-linejoin="round"/></svg> Taxi
       </button>
       <button class="chip" role="tab" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg> Hotel
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8" stroke-linecap="round" stroke-linejoin="round"/></svg> Hotel
       </button>
     </div>
   </div>
 
 <script>
 (function(){
-  // wersja na ekranie
-  var v=document.getElementById('ver'); if(v) v.textContent = '('+ (window.FF_VER||'?') +')';
+  // wersja
+  var v=document.getElementById('ver'); if(v) v.textContent='('+ (window.FF_VER||'?') +')';
 
-  // dodatkowe nasłuchy (gdy jest JS)
-  var menuBtn=document.getElementById('menuBtn');
-  if(menuBtn) menuBtn.addEventListener('click', function(e){ e.stopPropagation(); window.FF_toggleMenu(e); }, {passive:false});
-  document.addEventListener('click', function(e){ window.FF_toggleMenu && window.FF_toggleMenu({ stopPropagation:()=>{} }); }, {passive:true});
-
-  // chips
+  // Chips
   var chips=document.getElementById('chips');
-  if(chips) chips.addEventListener('click', function(e){
+  if(chips) chips.addEventListener('click',function(e){
     var chip=e.target.closest('.chip'); if(!chip) return;
     [].forEach.call(chips.querySelectorAll('.chip'), c=>{c.classList.remove('active'); c.setAttribute('aria-selected','false');});
     chip.classList.add('active'); chip.setAttribute('aria-selected','true');
-  }, {passive:true});
+  },{passive:true});
 
-  // Web Speech API
+  // ===== Rozpoznawanie mowy + fallback demo =====
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec=null, txEl=document.getElementById('transcriptText');
+  let rec=null, txEl=document.getElementById('transcriptText'), mockTimer=null;
 
-  if(!SR && txEl){
-    txEl.textContent = 'Użyj Chrome/Edge – brak wsparcia dla rozpoznawania mowy.';
+  async function ensureMicPermission(){
+    try{
+      if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+        await navigator.mediaDevices.getUserMedia({audio:true});
+        return true;
+      }
+    }catch(e){ return false; }
+    return true;
+  }
+  function startMockListen(ms=5000){
+    stopMockListen();
+    window.FF_state.listening=true;
+    let step=0;
+    mockTimer=setInterval(()=>{
+      if(!txEl) return;
+      const dots='.'.repeat((step%3)+1);
+      txEl.innerHTML='<em>Słucham (demo)</em>'+dots;
+      step++;
+    },300);
+    setTimeout(stopMockListen, ms);
+  }
+  function stopMockListen(){
+    if(mockTimer){ clearInterval(mockTimer); mockTimer=null; }
   }
 
-  window.FF_start = function(){
-    if(!SR){ return; }
+  window.FF_start = async function(){
+    // animacja potwierdzenia już zrobił FF_toggleMic
+    // spróbuj uzyskać uprawnienie do mikrofonu (wywoła systemowy prompt)
+    await ensureMicPermission();
+
+    if(!SR){
+      // fallback: sam puls + pasek działa; tekst: demo
+      startMockListen(4000);
+      return;
+    }
     rec = new SR();
     rec.lang='pl-PL'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=1;
+
     rec.onresult=function(ev){
       let final='',interim='';
       for(const res of ev.results){ (res.isFinal?final:interim)+=res[0].transcript+' '; }
       if(txEl){
-        txEl.innerHTML = (final?'<strong>'+final.trim()+'</strong> ':'') + (interim?'<span style="opacity:.7">'+interim.trim()+'</span>':'');
+        txEl.innerHTML = (final?'<strong>'+final.trim()+'</strong> ':'') +
+                         (interim?'<span style="opacity:.7)">'+interim.trim()+'</span>':'');
       }
     };
-    rec.onerror=function(){ window.FF_stop(); };
-    rec.onend=function(){ window.FF_stop(); };
-    try{ rec.start(); }catch{ window.FF_stop(); }
+    rec.onerror=function(e){
+      // Xiaomi/Chrome często zwraca 'not-allowed' / 'no-speech' → przełącz na demo
+      startMockListen(4000);
+    };
+    rec.onend=function(){
+      window.FF_stop();
+    };
+    try{ rec.start(); }catch(e){ startMockListen(4000); }
   };
+
   window.FF_stop = function(){
     try{ rec && rec.stop(); }catch{}
+    stopMockListen();
     window.FF_state.listening=false;
-    var btn=document.getElementById('micBtn'), hint=document.getElementById('micHint'), lh=document.getElementById('ledHint'), lb=document.getElementById('ledBar');
+    var btn=document.getElementById('micBtn'), hint=document.getElementById('micHint'),
+        lh=document.getElementById('ledHint'), lb=document.getElementById('ledBar');
     if(btn) btn.classList.remove('recording');
     if(hint) hint.classList.remove('hidden');
     if(lh) lh.className='led idle';
     if(lb) lb.className='dot idle';
   };
 
-  // dodatkowy fallback touch
+  // Dodatkowy touch fallback (gdyby inline atrybut został zignorowany)
   var micBtn=document.getElementById('micBtn');
   if(micBtn){
-    const fire=function(e){ e.stopPropagation(); window.FF_toggleMic(); };
+    const fire=(e)=>{ e.stopPropagation(); window.FF_toggleMic(); };
     micBtn.addEventListener('click', fire, {passive:false});
     micBtn.addEventListener('touchstart', fire, {passive:false});
   }

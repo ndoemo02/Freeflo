@@ -1,168 +1,100 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFlow</title>
-  <style>
-    :root{
-      /* wartości domyślne – zostaną nadpisane z config.json */
-      --ff-bg:#0b0f14;
-      --ff-fg:#e6edf3;
-      --ff-accent:#ff6a00;
-      --ff-card:rgba(255,255,255,0.06);
-    }
-    html,body{height:100%}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-      background: radial-gradient(1200px 800px at 50% -20%, rgba(255,106,0,.08), transparent 60%), var(--ff-bg);
-      color:var(--ff-fg);
-      display:flex; align-items:flex-start; justify-content:center;
-    }
-    .shell{width:min(960px,92vw); padding:20px 16px 64px}
-    .brand{font-size:28px; font-weight:700; letter-spacing:.5px}
-    .hdr{margin:16px 0 10px; font-size:44px; line-height:1.1}
-    .sub{opacity:.75; margin-bottom:22px}
-    .logo-wrap{
-      position:relative; display:grid; place-items:center; margin:24px auto;
-      width:min(560px,88vw); aspect-ratio:1/1; border-radius:50%;
-      transition:filter .25s ease, transform .25s ease;
-    }
-    .logo-wrap.backplate-light{ background:#fff; }
-    .logo-wrap.backplate-dark{ background:#0b0f14; box-shadow: inset 0 0 0 2px rgba(255,255,255,.06); }
-    .logo{width:86%; height:auto; user-select:none; pointer-events:none;}
-    .pulse{ animation:pulse 1500ms ease-in-out infinite; }
-    @keyframes pulse{
-      0%{ filter:drop-shadow(0 0 0 rgba(255,106,0,.0)); transform:scale(1) }
-      50%{ filter:drop-shadow(0 0 24px rgba(255,106,0,.45)); transform:scale(1.02) }
-      100%{ filter:drop-shadow(0 0 0 rgba(255,106,0,.0)); transform:scale(1) }
-    }
-    .card{
-      border-radius:18px; background:var(--ff-card); backdrop-filter: blur(8px);
-      padding:14px 16px; border:1px solid rgba(255,255,255,.07);
-    }
-    .cta{
-      position:absolute; bottom:8%; left:50%; transform:translateX(-50%);
-      min-width:260px; text-align:center;
-      background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.08);
-      color:#fff; padding:10px 14px; border-radius:14px; font-weight:600;
-      display:flex; gap:10px; align-items:center; justify-content:center;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-      pointer-events:none;  /* sama grafika jest przyciskiem */
-    }
-    .dot{width:10px; height:10px; border-radius:50%; background:#ff3b30; box-shadow:0 0 14px rgba(255,59,48,.6)}
-    .transcript{margin:8px 0 18px; font-size:16px}
-    .grid{display:flex; gap:12px; flex-wrap:wrap}
-    .pill{
-      display:inline-flex; align-items:center; gap:10px; padding:12px 16px;
-      border-radius:14px; background:var(--ff-card); border:1px solid rgba(255,255,255,.07);
-    }
-    .pill .ico{width:18px; height:18px; border-radius:4px; background:var(--ff-accent); opacity:.9}
-    .hint{opacity:.55; font-size:12px; margin-top:18px}
-    button.reset{
-      all:unset; cursor:pointer;
-      display:inline-flex; align-items:center; gap:8px;
-      background:var(--ff-card); border:1px solid rgba(255,255,255,.08);
-      padding:10px 12px; border-radius:12px; margin-left:8px; font-size:14px
-    }
-  </style>
+<meta charset="UTF-8">
+<title>FreeFlow Voice</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #fff; text-align: center; }
+  #logoBtn { width: 120px; height: 120px; border-radius: 50%; background: #222; border: none; cursor: pointer; margin: 20px auto; display: block; }
+  #logoBtn.pulse { animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(0, 255, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
+  }
+  #transcript { margin-top: 10px; min-height: 30px; font-size: 1.2em; }
+</style>
 </head>
 <body>
-  <main class="shell">
-    <div class="brand" id="brand">FreeFlow</div>
-    <h1 class="hdr" id="title">Złóż zamówienie</h1>
-    <div class="sub" id="subtitle">Taxi, posiłek, a może nocleg?</div>
 
-    <!-- PRZYCISK = CAŁE LOGO -->
-    <div class="logo-wrap backplate-dark" id="logoWrap" role="button" aria-label="Naciśnij, aby mówić">
-      <img id="logo" class="logo" src="Freeflow-logo.png" alt="FreeFlow logo" />
-      <div class="cta card" id="cta"><span class="dot" id="recDot"></span> Dotknij logo i mów…</div>
-    </div>
+<h1>🎤 FreeFlow Voice Assistant</h1>
 
-    <div class="card transcript">
-      <span class="dot" id="statusDot" style="margin-right:8px; background:#2ecc71;"></span>
-      <span id="transcriptText">Transkrypcja pojawi się tutaj…</span>
-      <button class="reset" id="clearBtn" title="Wyczyść transcript">Wyczyść</button>
-    </div>
+<button id="logoBtn">🎤</button>
+<div id="transcript">Naciśnij, aby mówić...</div>
 
-    <div class="grid">
-      <div class="pill"><span class="ico"></span>Jedzenie</div>
-      <div class="pill"><span class="ico"></span>Taxi</div>
-      <div class="pill"><span class="ico"></span>Hotel</div>
-    </div>
+<script>
+const API_BASE = "https://twoj-projekt.vercel.app/api/chat";
+let recognizing = false;
+let recognition;
 
-    <div class="hint">UI ładuje kolory i teksty z <code>config.json</code>. Zmień tam wartości i odśwież stronę (czasem wymagany twardy refresh: przytrzymaj ⟳).</div>
-  </main>
+if ('webkitSpeechRecognition' in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = 'pl-PL';
+  recognition.interimResults = true;
+  recognition.continuous = false;
 
-  <script>
-    // --- 1) Loader konfiguracji ---
-    async function loadConfig(){
-      try{
-        const res = await fetch('config.json', {cache:'no-store'});
-        const cfg = await res.json();
+  recognition.onstart = () => {
+    recognizing = true;
+    document.getElementById("logoBtn").classList.add("pulse");
+    document.getElementById("transcript").innerText = "... słucham ...";
+  };
 
-        // Kolory → CSS variables
-        if (cfg.theme?.colors){
-          Object.entries(cfg.theme.colors).forEach(([k,v])=>{
-            document.documentElement.style.setProperty(k, v);
-          });
-        }
-        // Teksty
-        if (cfg.copy){
-          if (cfg.copy.brand)   document.getElementById('brand').textContent   = cfg.copy.brand;
-          if (cfg.copy.title)   document.getElementById('title').textContent   = cfg.copy.title;
-          if (cfg.copy.subtitle)document.getElementById('subtitle').textContent= cfg.copy.subtitle;
-        }
-        // Logo backplate / pulse
-        const wrap = document.getElementById('logoWrap');
-        wrap.classList.remove('backplate-light','backplate-dark');
-        const mode = cfg.theme?.logo?.backplate || 'none';
-        if (mode === 'light') wrap.classList.add('backplate-light');
-        if (mode === 'dark')  wrap.classList.add('backplate-dark');
-        if (cfg.theme?.logo?.pulse) wrap.classList.add('pulse'); else wrap.classList.remove('pulse');
-      }catch(e){
-        console.warn('Nie udało się wczytać config.json', e);
+  recognition.onresult = (event) => {
+    let finalTranscript = "";
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        document.getElementById("transcript").innerText = transcript;
       }
     }
-
-    // --- 2) Prosty „przycisk” nagrywania na logo (bez rozpoznawania – tylko sygnał UI) ---
-    let listening = false, fakeTimer = null;
-    const logoWrap   = document.getElementById('logoWrap');
-    const recDot     = document.getElementById('recDot');
-    const statusDot  = document.getElementById('statusDot');
-    const cta        = document.getElementById('cta');
-    const transcript = document.getElementById('transcriptText');
-    const clearBtn   = document.getElementById('clearBtn');
-
-    function setListening(on){
-      listening = on;
-      if (on){
-        cta.textContent = 'Słucham… mów śmiało';
-        recDot.style.background = '#ff3b30';
-        statusDot.style.background = '#ff3b30';
-        logoWrap.classList.add('pulse');
-
-        // pokazowe „udawane” wpisy (żeby było widać zmianę stanu)
-        clearTimeout(fakeTimer);
-        fakeTimer = setTimeout(()=>{ transcript.textContent = 'Przykład: „zamów taxi na Dworzec”'; }, 900);
-      }else{
-        cta.innerHTML = '<span class="dot"></span> Dotknij logo i mów…';
-        statusDot.style.background = '#2ecc71';
-        logoWrap.classList.remove('pulse');
-        clearTimeout(fakeTimer);
-      }
+    if (finalTranscript) {
+      document.getElementById("transcript").innerText = finalTranscript;
+      askAssistant(finalTranscript);
     }
+  };
 
-    logoWrap.addEventListener('click', ()=>{
-      setListening(!listening);
-    });
+  recognition.onend = () => {
+    recognizing = false;
+    document.getElementById("logoBtn").classList.remove("pulse");
+  };
+}
 
-    clearBtn.addEventListener('click', ()=>{
-      transcript.textContent = 'Transkrypcja pojawi się tutaj…';
-    });
+document.getElementById("logoBtn").addEventListener("click", () => {
+  if (recognizing) {
+    recognition.stop();
+    return;
+  }
+  recognition.start();
+});
 
-    // Start
-    loadConfig();
-  </script>
+async function askAssistant(userText) {
+  const res = await fetch(API_BASE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: userText }],
+      system: "Jesteś pomocnym asystentem głosowym FreeFlow, odpowiadasz krótko i konkretnie po polsku.",
+      temperature: 0.4
+    })
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    speak(data.reply);
+  } else {
+    speak("Wystąpił błąd serwera");
+  }
+}
+
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "pl-PL";
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utter);
+}
+</script>
+
 </body>
 </html>

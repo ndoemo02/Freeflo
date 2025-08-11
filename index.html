@@ -98,4 +98,117 @@ function speak(text) {
 
 </body>
   <audio id="ttsAudio" preload="auto"></audio>
+  <script>
+  // === KONFIG ===
+  const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
+
+  // elementy UI (podmień selektory jeśli masz inne)
+  const micBtn = document.querySelector('#micBtn') || document.querySelector('.logo-btn') || document.querySelector('button');
+  const transcriptBox = document.querySelector('#transcript') || document.querySelector('.transcript') || null;
+  const player = document.getElementById('ttsPlayer');
+
+  // Prosty helper do aktualizacji transkrypcji/logu
+  function showText(where, text) {
+    if (!where) return;
+    where.textContent = text;
+  }
+
+  // Odtwarzanie MP3 z base64
+  async function playBase64Mp3(base64) {
+    try {
+      // policy: audio musi wystartować po GESTURE — kliknięcie w micBtn wystarczy
+      // tworzymy URL data: z base64
+      const src = `data:audio/mpeg;base64,${base64}`;
+      player.src = src;
+      await player.play();
+    } catch (err) {
+      console.error('Audio play error:', err);
+      // fallback do web Speech
+      // (często pomaga jednorazowy gest: kliknij przycisk jeszcze raz)
+      return false;
+    }
+    return true;
+  }
+
+  // Fallback jeśli backend nie zwróci audio lub autoplay się wywali
+  function speakWithWebSpeech(text, lang = 'pl-PL') {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      window.speechSynthesis.cancel(); // czyścimy kolejkę
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      console.warn('speechSynthesis fallback failed:', e);
+    }
+  }
+
+  // Wyślij tekst do backendu i zagraj odpowiedź
+  async function sendToAssistant(userText) {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ text: userText })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        console.warn('Assistant error:', data);
+        speakWithWebSpeech('Wystąpił błąd po stronie serwera.');
+        return;
+      }
+
+      // Tekst asystenta
+      const answer = data.assistantText || 'Nie mam teraz odpowiedzi.';
+      showText(transcriptBox, answer);
+
+      // Jeśli przyszło audio — spróbuj odtworzyć
+      if (data.audioBase64) {
+        const ok = await playBase64Mp3(data.audioBase64);
+        if (!ok) speakWithWebSpeech(answer); // fallback jeśli autoplay się wywalił
+      } else {
+        // Brak audio w odpowiedzi — fallback
+        speakWithWebSpeech(answer);
+      }
+    } catch (err) {
+      console.error('Network/parse error:', err);
+      speakWithWebSpeech('Nie udało się połączyć z serwerem.');
+    }
+  }
+
+  // === Minimalny tryb: rozpoznaj mową (Web Speech) → wyślij do backendu ===
+  // Jeśli masz już swój rozpoznawacz – wywołuj tylko sendToAssistant(transkrypcja)
+  function startDictation() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.');
+      return;
+    }
+
+    const rec = new SR();
+    rec.lang = 'pl-PL';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => showText(transcriptBox, 'Słucham…');
+    rec.onerror = (e) => showText(transcriptBox, 'Błąd rozpoznawania: ' + (e.error || 'nieznany'));
+    rec.onresult = (e) => {
+      const txt = e.results[0][0].transcript.trim();
+      showText(transcriptBox, txt);
+      sendToAssistant(txt);
+    };
+    rec.onend = () => { /* można dodać auto-restart, ale na razie ręcznie */ };
+
+    rec.start();
+  }
+
+  // Podpinka pod przycisk (kliknięcie = gest dla autoplay)
+  if (micBtn) {
+    micBtn.addEventListener('click', () => {
+      // zatrzymaj ewentualną mowę z poprzedniej odpowiedzi
+      try { window.speechSynthesis.cancel(); player.pause(); } catch {}
+      startDictation();
+    });
+  }
+</script>
 </html>

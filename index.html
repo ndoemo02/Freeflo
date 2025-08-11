@@ -2,255 +2,344 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0d1117" />
-  <title>FreeFlow — Voice to order</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FreeFlow – Voice to order</title>
+
+  <!-- Podstawowy styl + Twoje nadpiski z JSON/CSS -->
   <style>
     :root{
-      --bg:#0b0f14;
-      --panel:#131922;
-      --panel-2:#10161e;
-      --text:#e8e8ea;
-      --text-dim:#b8c0cc;
-      --brand:#ff7a1a;
-      --brand-2:#ffb56b;
-      --ok:#00d084;
-      --ring:rgba(255,122,26,.35);
-      --ring-2:rgba(0,208,132,.35);
-      --stroke:rgba(255,255,255,.07);
+      --brand:#ff7a1a; --accent:#15ffb6; --bg-1:#0c0f12; --bg-2:#12161b;
+      --text-1:rgba(255,255,255,.92); --text-2:rgba(255,255,255,.64);
+      --radius:18px; --logo-scale:1;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;background:radial-gradient(80% 60% at 50% 0%, #111826 0%, #0b0f14 60%, #090c10 100%); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;}
-    a{color:var(--brand)}
-    .wrap{max-width:1100px; margin:0 auto; padding:20px 16px 80px}
-
-    /* header */
-    .topbar{display:flex;align-items:center;gap:14px}
-    .brand{font-size:36px;font-weight:800;letter-spacing:.5px}
-    .brand .a{color:var(--brand)}
-    .sub{color:var(--text-dim);font-size:14px;margin-left:6px}
-    .spacer{flex:1}
-    .iconbtn{position:relative; display:inline-grid; place-items:center; width:52px;height:52px;border-radius:14px;border:1px solid var(--stroke); background:linear-gradient(180deg,#151b25,#0f141c); box-shadow: inset 0 0 30px rgba(255,255,255,.02);}
-    .iconbtn svg{width:26px;height:26px;opacity:.9}
-    .badge{position:absolute;top:-6px;right:-6px;background:var(--brand);color:#000;font-weight:800;border-radius:999px;padding:3px 7px;font-size:12px;box-shadow:0 6px 18px rgba(255,122,26,.5)}
-
-    h1{font-size:48px;line-height:1.05;margin:22px 0 8px}
-    .lead{color:var(--text-dim);font-size:20px;margin:0 0 10px}
-
-    /* VOICE button (logo = whole button) */
-    .voice-cta{display:flex;justify-content:center;align-items:center;margin:8px 0 12px}
-    #voiceBtn{position:relative;background:none;border:0;padding:0;border-radius:9999px;cursor:pointer;outline-offset:12px}
-    #voiceBtn img{width:min(75vw,560px);height:auto;display:block;border-radius:50%;pointer-events:none;filter:drop-shadow(0 28px 60px rgba(0,0,0,.55))}
-    #voiceBtn::before{content:"";position:absolute;inset:-12%;border-radius:50%;
-      background: radial-gradient(60% 60% at 50% 50%, rgba(255,122,26,.18), rgba(255,122,26,.06) 55%, transparent 70%);
-      z-index:-1; filter:blur(14px);}
-    .ring{position:absolute;inset:-4%;border-radius:50%;border:2px dashed var(--ring);opacity:.65;animation:idleRing 3.2s ease-in-out infinite;pointer-events:none}
-    @keyframes idleRing{0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(180deg) scale(1.02)} 100%{transform:rotate(360deg) scale(1)}}
-    .pulse{position:absolute;inset:-6%;border-radius:50%;border:2px solid rgba(255,140,0,.45);
-      pointer-events:none;animation:idlePulse 2.4s ease-in-out infinite;opacity:.9;box-shadow:0 0 22px rgba(255,140,0,.18)}
-    @keyframes idlePulse{from{transform:scale(1);opacity:.65} 50%{transform:scale(1.025);opacity:1} to{transform:scale(1);opacity:.65}}
-
-    #voiceHint{position:absolute;left:50%;bottom:6.5%;transform:translateX(-50%);
-      background:rgba(20,20,28,.65);backdrop-filter:blur(8px);padding:.62rem .95rem;border-radius:14px;
-      font-size:1rem;color:#e6e6e6;pointer-events:none;border:1px solid rgba(255,255,255,.06);
-      box-shadow:0 10px 30px rgba(0,0,0,.35)}
-
-    /* when recording */
-    .recording #voiceBtn .pulse{border-color:var(--ok);box-shadow:0 0 24px var(--ring-2), inset 0 0 36px rgba(0,208,132,.25); animation:recPulse 1.1s ease-out infinite}
-    @keyframes recPulse{0%{transform:scale(1);opacity:1} 100%{transform:scale(1.08);opacity:.6}}
-    .recording #voiceHint{color:#dfffe8;border-color:rgba(0,208,132,.4);background:rgba(6,34,24,.6)}
-    .recording #voiceBtn::before{background: radial-gradient(60% 60% at 50% 50%, rgba(0,208,132,.20), rgba(0,208,132,.08) 55%, transparent 70%);}
-
-    /* transcript */
-    .transcript{margin:16px auto 14px;max-width:880px;padding:16px 18px;border-radius:18px;
-      background:linear-gradient(180deg,rgba(18,20,24,.75),rgba(12,14,18,.72));
-      color:var(--text);border:1px solid var(--stroke);box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:18px}
-    .transcript .interim{opacity:.55}
-    .dot{display:inline-block;width:10px;height:10px;border-radius:50%; background:#25d366;box-shadow:0 0 14px rgba(37,211,102,.5);margin-right:10px;vertical-align:-1px}
-    .recording .dot{background:var(--ok);box-shadow:0 0 14px rgba(0,208,132,.7)}
-
-    /* quick actions */
-    .quickbar{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px}
-    .pill{display:flex;align-items:center;gap:10px;border:1px solid var(--stroke);background:linear-gradient(180deg,#141a23,#0f141c);padding:14px 18px;border-radius:16px}
-    .pill svg{width:20px;height:20px;color:var(--brand-2)}
-
-    /* menu drawer */
-    .drawer-back{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:none}
-    .drawer{position:fixed;top:0;left:0;height:100%;width:84%;max-width:360px;background:var(--panel-2);
-      border-right:1px solid var(--stroke);box-shadow: 0 20px 60px rgba(0,0,0,.6); transform:translateX(-100%); transition:.28s ease}
-    .drawer.open{transform:translateX(0)}
-    .drawer-back.show{display:block}
-    .menu-head{display:flex;align-items:center;gap:10px;padding:18px;border-bottom:1px solid var(--stroke);font-weight:700}
-    .menu-body{padding:10px 18px 24px}
-    .menu-item{padding:12px 10px;border-radius:10px}
-    .menu-item:hover{background:#0f131a}
-
-    @media (max-width:500px){
-      h1{font-size:40px}
-      .brand{font-size:30px}
-      #voiceBtn img{width:min(86vw,540px)}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+      color:var(--text-1);
+      background:radial-gradient(1200px 800px at 50% -200px, #1b1f25 0%, var(--bg-1) 40%, var(--bg-2) 100%);
     }
+    a,button{outline:none}
+    .wrap{max-width:980px; margin:0 auto; padding:20px 16px 56px}
+
+    /* Header */
+    .header{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 0 2px}
+    .brand{display:flex; align-items:baseline; gap:10px; font-weight:700; letter-spacing:.3px}
+    .brand .free{color:var(--brand); font-size:32px}
+    .brand .flow{color:var(--text-1); opacity:.9; font-size:32px}
+    .subtitle-mini{color:var(--text-2); font-size:14px; line-height:1.1}
+
+    .hdr-actions{display:flex; gap:10px; align-items:center}
+    .icon-btn{
+      position:relative; display:flex; align-items:center; justify-content:center;
+      width:48px; height:48px; border-radius:16px; background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08); backdrop-filter: blur(4px);
+      box-shadow:0 8px 24px rgba(0,0,0,.35); transition:transform .15s ease, background .15s ease;
+    }
+    .icon-btn:active{transform:scale(.97)}
+    .badge{
+      position:absolute; top:-6px; right:-6px; background:var(--brand); color:#111; font-weight:700;
+      width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+      font-size:12px; box-shadow:0 6px 16px rgba(255,122,26,.4);
+    }
+    .cart{display:var(--show-cart,flex)}
+    .menu{display:var(--show-menu,flex)}
+
+    /* Tytuły */
+    h1{font-size:40px; margin:16px 0 6px}
+    h2{font-size:18px; font-weight:500; color:var(--text-2); margin:0 0 22px}
+
+    /* Logo = przycisk */
+    .logo-zone{display:grid; place-items:center; margin:8px 0 14px}
+    .logo-wrap{
+      position:relative; width:min(88vw,520px); aspect-ratio:1/1; display:grid; place-items:center;
+      border-radius:999px; transform:scale(var(--logo-scale));
+    }
+    #logoButton{
+      position:relative; width:100%; height:100%; border-radius:999px; border:none; padding:0; background:#000;
+      display:block; cursor:pointer; overflow:hidden;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.55);
+    }
+    #logoButton img{width:100%; height:100%; object-fit:cover; display:block}
+
+    /* punktowe kropki na obręczy */
+    .rim{
+      position:absolute; inset:12px; border-radius:999px; pointer-events:none;
+      background: radial-gradient(closest-side, rgba(255,255,255,.06), transparent 60%);
+      mask: radial-gradient(farthest-side, transparent 88%, #000 89%);
+    }
+
+    /* podpowiedź / live transkrypcja na logo */
+    #micHint{
+      position:absolute; bottom:12%; left:50%; transform:translateX(-50%);
+      display:flex; align-items:center; gap:10px;
+      background:rgba(0,0,0,.55); color:var(--text-1);
+      border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 16px;
+      box-shadow:0 12px 36px rgba(0,0,0,.45); backdrop-filter: blur(8px);
+      font-size:16px; min-width:220px; max-width:70%; text-align:center;
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    .led{width:10px; height:10px; border-radius:999px; background:#58ff75; box-shadow:0 0 10px #58ff75}
+
+    /* Transkrypcja w polu pod logo */
+    .transcript{
+      display:flex; align-items:center; gap:12px; border-radius:20px;
+      background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+      padding:16px 18px; margin:10px 0 18px;
+    }
+    .transcript .led{width:12px; height:12px}
+    .transcript p{margin:0; color:var(--text-1); opacity:.9; min-height:1.2em}
+
+    /* chips menu */
+    .chips{display:flex; gap:14px; flex-wrap:wrap}
+    .chip{
+      border:none; padding:12px 18px; border-radius:18px; background:rgba(255,255,255,.06);
+      color:var(--text-1); font-weight:600; letter-spacing:.2px;
+      border:1px solid rgba(255,255,255,.10); box-shadow:0 10px 26px rgba(0,0,0,.35);
+    }
+
+    /* bottom info */
+    .note{color:var(--text-2); font-size:13px; margin-top:20px}
+
+    /* słucham */
+    body.listening .led{background:#ff5e5e; box-shadow:0 0 10px #ff5e5e}
+    body.listening .logo-wrap::after{
+      content:""; position:absolute; inset:-8px; border-radius:999px;
+      box-shadow:0 0 0 0 rgba(255,122,26,.35); animation:pulse 1.9s ease-out infinite;
+    }
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(255,122,26,.35)}
+      70%{box-shadow:0 0 0 28px rgba(255,122,26,0)}
+      100%{box-shadow:0 0 0 0 rgba(255,122,26,0)}
+    }
+
+    /* prosty sheets menu */
+    .sheet{position:fixed; inset:0; display:none}
+    .sheet.open{display:block}
+    .sheet .back{position:absolute; inset:0; background:rgba(0,0,0,.3)}
+    .sheet .panel{
+      position:absolute; top:12px; right:12px; background:rgba(18,22,27,.96); color:var(--text-1);
+      border:1px solid rgba(255,255,255,.08); border-radius:18px; width:220px; padding:12px;
+      box-shadow:0 24px 80px rgba(0,0,0,.55)
+    }
+    .sheet .panel h4{margin:6px 8px 10px; font-size:14px; color:var(--text-2); font-weight:600}
+    .sheet .panel a{display:block; padding:10px 12px; border-radius:12px; color:var(--text-1); text-decoration:none}
+    .sheet .panel a:hover{background:rgba(255,255,255,.06)}
   </style>
+
+  <link rel="stylesheet" href="ui-overrides.css">
 </head>
 <body>
   <div class="wrap">
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="brand"><span class="a">Free</span>Flow</div>
-      <div class="sub">Voice to order</div>
-      <div class="spacer"></div>
-      <button class="iconbtn" id="menuBtn" aria-label="Menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      <button class="iconbtn" aria-label="Koszyk">
-        <span class="badge" id="cartBadge">0</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 6h15l-2 9H8L6 6Z"/><circle cx="9" cy="20" r="1.8"/><circle cx="18" cy="20" r="1.8"/>
-        </svg>
-      </button>
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="free">Free</div><div class="flow">Flow</div>
+      </div>
+      <div class="subtitle-mini">Voice to order</div>
+      <div class="hdr-actions">
+        <button id="menuBtn" class="icon-btn menu" aria-label="Menu" title="Menu">
+          <!-- hamburger -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="6" width="18" height="2" rx="1" fill="white" opacity=".9"/>
+            <rect x="3" y="11" width="18" height="2" rx="1" fill="white" opacity=".9"/>
+            <rect x="3" y="16" width="18" height="2" rx="1" fill="white" opacity=".9"/>
+          </svg>
+        </button>
+        <button class="icon-btn cart" aria-label="Koszyk" title="Koszyk">
+          <!-- cart -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M3 5h2l2.6 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H7" stroke="white" stroke-width="1.6"/>
+            <circle cx="10" cy="20" r="1.6" fill="white"/><circle cx="18" cy="20" r="1.6" fill="white"/>
+          </svg>
+          <span class="badge" data-bind="cartCount">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tytuły -->
+    <h1 data-bind="title">Złóż zamówienie</h1>
+    <h2 data-bind="subtitle">Taxi, posiłek, a może nocleg?</h2>
+
+    <!-- Logo (przycisk) -->
+    <section class="logo-zone">
+      <div class="logo-wrap" id="logoWrap">
+        <button id="logoButton" aria-label="Dotknij logo i mów">
+          <img src="Freeflow-logo.png" alt="FreeFlow logo">
+        </button>
+        <div class="rim"></div>
+
+        <div id="micHint"><span class="led" id="hintLed"></span><span id="hintText">Dotknij logo i mów…</span></div>
+      </div>
+    </section>
+
+    <!-- Transkrypcja -->
+    <div class="transcript" id="transcriptBox">
+      <span class="led" id="led"></span>
+      <p id="transcript">Transkrypcja pojawi się tutaj…</p>
     </div>
 
-    <h1>Złóż zamówienie</h1>
-    <p class="lead">Taxi, posiłek, a może nocleg?</p>
-
-    <!-- Voice button (logo) -->
-    <div class="voice-cta">
-      <button id="voiceBtn" aria-label="Mów teraz">
-        <img src="./Freeflow-logo.png" alt="FreeFlow — naciśnij, aby mówić" />
-        <span class="ring" aria-hidden="true"></span>
-        <span class="pulse" aria-hidden="true"></span>
-        <span id="voiceHint">Dotknij logo i mów…</span>
-      </button>
+    <!-- Menu kategorii -->
+    <div class="chips" data-bind="menu">
+      <button class="chip">Jedzenie</button>
+      <button class="chip">Taxi</button>
+      <button class="chip">Hotel</button>
     </div>
 
-    <!-- Transcript -->
-    <div id="transcript" class="transcript" aria-live="polite">
-      <span class="dot"></span> Transkrypcja pojawi się tutaj…
-    </div>
+    <p class="note">Demo: Web Speech API (rozpoznawanie mowy). Najlepiej działa w Chrome/Edge na Android.</p>
+  </div>
 
-    <!-- Quick actions -->
-    <div class="quickbar">
-      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M6 7v12m12-12v12M4 19h16"/></svg> Jedzenie</div>
-      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16l2-5h14l2 5H3Z"/><path d="M7 16v3m10-3v3"/></svg> Taxi</div>
-      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg> Hotel</div>
+  <!-- Proste sheet menu -->
+  <div class="sheet" id="sheet">
+    <div class="back" id="sheetBack"></div>
+    <div class="panel">
+      <h4>Menu</h4>
+      <a href="#">Moje zamówienia</a>
+      <a href="#">Ustawienia</a>
+      <a href="#">Pomoc</a>
     </div>
   </div>
 
-  <!-- Drawer -->
-  <div class="drawer-back" id="drawerBack"></div>
-  <nav class="drawer" id="drawer" aria-hidden="true">
-    <div class="menu-head">FreeFlow — menu</div>
-    <div class="menu-body">
-      <div class="menu-item">Twoje zamówienia</div>
-      <div class="menu-item">Ustawienia</div>
-      <div class="menu-item">Pomoc</div>
-      <div class="menu-item">O projekcie</div>
-    </div>
-  </nav>
-
+  <!-- Loader konfiguracji (JSON + CSS variables) -->
   <script>
-    // --- menu drawer ---
+  (async function remoteConfig(){
+    function qs(sel){return document.querySelector(sel)}
+    async function fetchJson(url){
+      const r = await fetch(url+'?v='+Date.now()); if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+    }
+    function applyTheme(theme){
+      const root=document.documentElement; (Object.entries(theme||{})).forEach(([k,v])=>root.style.setProperty(k,v));
+    }
+    function applyFlags(flags){
+      document.documentElement.style.setProperty('--show-cart', flags?.showCart?'flex':'none');
+      document.documentElement.style.setProperty('--show-menu', flags?.showMenu?'flex':'none');
+      document.body.classList.toggle('pulsing', !!flags?.pulseLogo);
+    }
+    async function applyConfig(){
+      try{
+        const cfg = await fetchJson('freeflow-config.json');
+        const h1 = qs('[data-bind="title"]'), h2 = qs('[data-bind="subtitle"]');
+        const cart = qs('[data-bind="cartCount"]'), menu = qs('[data-bind="menu"]');
+        if(h1&&cfg.title) h1.textContent=cfg.title;
+        if(h2&&cfg.subtitle) h2.textContent=cfg.subtitle;
+        if(cart && typeof cfg.cartCount==='number') cart.textContent=cfg.cartCount;
+        if(menu && Array.isArray(cfg.menu)){ menu.innerHTML=''; cfg.menu.forEach(l=>{const b=document.createElement('button'); b.className='chip'; b.textContent=l; menu.appendChild(b);});}
+        applyTheme(cfg.theme); applyFlags(cfg.flags);
+        if(cfg.voice?.sessionMs) window.__VOICE_SESSION_MS__ = cfg.voice.sessionMs;
+      }catch(e){console.warn('Config not loaded (ok on first run):', e);}
+    }
+    await applyConfig();
+    setInterval(applyConfig, 8000);
+  })();
+  </script>
+
+  <!-- Rozpoznawanie mowy -->
+  <script>
+  (function(){
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const logoBtn = document.getElementById('logoButton');
+    const led = document.getElementById('led');
+    const hintLed = document.getElementById('hintLed');
+    const hintText = document.getElementById('hintText');
+    const transcriptEl = document.getElementById('transcript');
+    const sheet = document.getElementById('sheet');
     const menuBtn = document.getElementById('menuBtn');
-    const drawer = document.getElementById('drawer');
-    const drawerBack = document.getElementById('drawerBack');
-    function openDrawer(){ drawer.classList.add('open'); drawerBack.classList.add('show'); drawer.setAttribute('aria-hidden','false'); }
-    function closeDrawer(){ drawer.classList.remove('open'); drawerBack.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); }
-    menuBtn.addEventListener('click', openDrawer);
-    drawerBack.addEventListener('click', closeDrawer);
+    const sheetBack = document.getElementById('sheetBack');
 
-    // --- Voice logic (robust for Android/Chrome/Edge) ---
-    (() => {
-      const voiceBtn = document.getElementById('voiceBtn');
-      const voiceHint = document.getElementById('voiceHint');
-      const transcriptEl = document.getElementById('transcript');
+    // Menu
+    menuBtn.addEventListener('click', ()=> sheet.classList.add('open'));
+    sheetBack.addEventListener('click', ()=> sheet.classList.remove('open'));
 
-      let recognition = null;
-      let isRecording = false;
+    // Stan nasłuchu
+    let recog = null, listening = false, stopAt = 0, manualStop = false;
 
-      function setupRecognition() {
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {
-          voiceHint.textContent = 'Brak wsparcia rozpoznawania mowy w tej przeglądarce.';
-          return null;
-        }
-        const r = new SR();
-        r.lang = 'pl-PL';
-        r.interimResults = true;
-        r.continuous = false;
+    function setListening(on){
+      listening = on;
+      document.body.classList.toggle('listening', on);
+      led.style.background = on ? '#ff5e5e' : '#58ff75';
+      led.style.boxShadow = on ? '0 0 10px #ff5e5e' : '0 0 10px #58ff75';
+      hintLed.style.background = led.style.background;
+      hintLed.style.boxShadow = led.style.boxShadow;
+      hintText.textContent = on ? 'Słucham… mów śmiało' : 'Dotknij logo i mów…';
+    }
 
-        r.onstart = () => {
-          isRecording = true;
-          document.body.classList.add('recording');
-          voiceHint.textContent = 'Słucham… mów';
-        };
-        r.onend = () => {
-          isRecording = false;
-          document.body.classList.remove('recording');
-          voiceHint.textContent = 'Dotknij logo i mów…';
-        };
-        r.onresult = (e) => {
-          let interim = '', final = '';
-          for (let i = e.resultIndex; i < e.results.length; i++) {
-            const t = e.results[i][0].transcript;
-            if (e.results[i].isFinal) final += t + ' ';
-            else interim += t;
-          }
-          transcriptEl.innerHTML = '<span class="dot"></span> ' + final + '<span class="interim">' + interim + '</span>';
-        };
-        r.onerror = (e) => {
-          let msg = 'Błąd: ' + e.error;
-          if (e.error === 'not-allowed') msg = 'Dostęp do mikrofonu zablokowany – odblokuj w uprawnieniach przeglądarki.';
-          if (e.error === 'no-speech') msg = 'Nie wykryto mowy. Spróbuj mówić głośniej lub bliżej mikrofonu.';
-          voiceHint.textContent = msg;
-        };
-        return r;
+    function ensureRecognizer(){
+      if(!Recognition) return null;
+      if (recog) return recog;
+      recog = new Recognition();
+      try{
+        recog.lang = 'pl-PL';
+        recog.interimResults = true;
+        recog.continuous = true; // w Chrome Android i tak bywa przerywane — poniżej auto-restart
+      }catch(e){}
+      return recog;
+    }
+
+    function startListening(){
+      const R = ensureRecognizer();
+      if(!R){ transcriptEl.textContent = 'Rozpoznawanie mowy nie jest dostępne w tej przeglądarce.'; return; }
+
+      // Wymuś zapytanie o uprawnienia (czasem Chrome pyta dopiero przy getUserMedia)
+      if (navigator.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{});
       }
 
-      async function ensureMicPermission() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(t => t.stop());
-          return true;
-        } catch (err) {
-          voiceHint.textContent = (err.name === 'NotAllowedError')
-            ? 'Dostęp do mikrofonu zablokowany – zezwól w ustawieniach strony.'
-            : 'Nie mogę użyć mikrofonu: ' + err.name;
-          return false;
+      manualStop = false;
+      const session = window.__VOICE_SESSION_MS__ || 20000;
+      stopAt = Date.now() + session;
+      let finalText = '', interim = '';
+
+      R.onresult = (e)=>{
+        interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++){
+          const txt = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalText += (finalText ? ' ' : '') + txt.trim();
+          else interim += txt;
         }
+        transcriptEl.textContent = finalText || interim || '…';
+      };
+      R.onend = ()=>{
+        if(manualStop){ setListening(false); return; }
+        // Jeśli jeszcze w oknie czasu – uruchom ponownie (Android ucina szybko)
+        if(Date.now() < stopAt - 200){
+          try{ R.start(); }catch(_){}
+        }else{
+          setListening(false);
+        }
+      };
+      R.onerror = (ev)=>{
+        console.warn('Speech error:', ev.error);
+        if(ev.error==='not-allowed' || ev.error==='service-not-allowed'){
+          transcriptEl.textContent = 'Brak dostępu do mikrofonu. Sprawdź uprawnienia przeglądarki.';
+        }
+      };
+
+      try{
+        R.start();
+        setListening(true);
+      }catch(e){
+        // jeśli safari/chrome nie pozwolił, spróbuj jeszcze raz po chwili
+        setTimeout(()=>{ try{R.start(); setListening(true);}catch(_){ } }, 120);
       }
+      // Awaryjne zatrzymanie po czasie
+      setTimeout(()=> stopListening(true), session + 500);
+    }
 
-      async function toggleRecord() {
-        if (!recognition) {
-          recognition = setupRecognition();
-          if (!recognition) return;
-        }
-        if (isRecording) {
-          try { recognition.stop(); } catch(_) {}
-          return;
-        }
-        const ok = await ensureMicPermission();
-        if (!ok) return;
+    function stopListening(fromTimer=false){
+      if(!recog) return;
+      manualStop = !fromTimer;
+      try{ recog.stop(); }catch(_){}
+      setListening(false);
+    }
 
-        try { recognition.start(); }
-        catch (e) {
-          // sporadyczny "already started" — restart
-          try { recognition.stop(); } catch(_) {}
-          setTimeout(() => { try { recognition.start(); } catch(_) {} }, 220);
-        }
-      }
+    // Tap/hold – start/stop
+    // pointerdown: szybciej działa na Android niż click
+    logoBtn.addEventListener('pointerdown', ()=>{
+      if(!listening) startListening();
+      else stopListening();
+    });
 
-      // pełne pokrycie zdarzeń (tap/click/klawiatura)
-      ['click','touchend','pointerup','keydown'].forEach(type => {
-        voiceBtn.addEventListener(type, (ev) => {
-          if (type === 'keydown' && !['Enter',' '].includes(ev.key)) return;
-          ev.preventDefault();
-          toggleRecord();
-        }, { passive: false });
-      });
-    })();
+  })();
   </script>
 </body>
 </html>

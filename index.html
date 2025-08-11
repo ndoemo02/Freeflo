@@ -1,167 +1,256 @@
 <!doctype html>
 <html lang="pl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FreeFlow — Voice to order</title>
-<meta name="theme-color" content="#0b0f12">
-<script>window.FF_VER='v10';window.FF_state={listening:false};</script>
-<style>
-:root{--bg:#0b0f12;--panel:#141b22;--text:#e8eef5;--muted:#a6b1bb;--accent:#ff7a1a}
-*{box-sizing:border-box}html,body{height:100%}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;color:var(--text);background:radial-gradient(1200px 800px at 50% -10%,#182029 0%,#0b0f12 55%) fixed}
-.wrap{max-width:980px;margin:0 auto;padding:24px 18px 90px}
-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{display:flex;gap:10px;align-items:baseline}
-.brand h1{margin:0;font-weight:900;letter-spacing:.5px;font-size:34px;color:var(--accent)}
-.tag{color:var(--muted);font-size:14px}.ver{opacity:.6;font-size:12px;margin-left:6px}
-.actions{display:flex;gap:10px}
-.icon-btn{position:relative;width:52px;height:52px;border-radius:16px;border:1px solid #1e2630;background:linear-gradient(180deg,#192028,#11161b);color:#cfd7df;display:grid;place-items:center}
-.icon-btn svg{width:24px;height:24px}.badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--accent);color:#111;font-weight:800;display:grid;place-items:center;font-size:13px}
-h2{font-size:46px;line-height:1.08;margin:14px 0 6px}.subtitle{color:var(--muted);margin:0 0 18px;font-size:18px}
-.logo-wrap{position:relative;display:grid;place-items:center;margin:8px 0 12px}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>FreeFlow — Voice to order</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#131922;
+      --panel-2:#10161e;
+      --text:#e8e8ea;
+      --text-dim:#b8c0cc;
+      --brand:#ff7a1a;
+      --brand-2:#ffb56b;
+      --ok:#00d084;
+      --ring:rgba(255,122,26,.35);
+      --ring-2:rgba(0,208,132,.35);
+      --stroke:rgba(255,255,255,.07);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(80% 60% at 50% 0%, #111826 0%, #0b0f14 60%, #090c10 100%); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;}
+    a{color:var(--brand)}
+    .wrap{max-width:1100px; margin:0 auto; padding:20px 16px 80px}
 
-/* PRZYCISK-LOGO */
-#micBtn{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;width:min(86vw,600px);aspect-ratio:1/1;display:grid;place-items:center;border-radius:999px;position:relative;outline:none;touch-action:manipulation;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 80px rgba(0,0,0,.55);transition:transform .2s ease,filter .2s ease,box-shadow .2s ease;pointer-events:auto}
-#micBtn *{pointer-events:none} /* tylko przycisk zbiera dotyk */
-#micImg{width:100%;height:100%;object-fit:cover;border-radius:999px;display:block}
-#micBtn.recording{animation:micPulse 1.4s ease-in-out infinite;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 0 12px rgba(255,122,26,.08),0 28px 120px rgba(255,122,26,.35)}
-@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
-#micBtn.confirm{animation:confirm .42s ease-out}
-@keyframes confirm{0%{box-shadow:0 0 0 0 rgba(255,122,26,.55)}100%{box-shadow:0 0 0 36px rgba(255,122,26,0)}}
+    /* header */
+    .topbar{display:flex;align-items:center;gap:14px}
+    .brand{font-size:36px;font-weight:800;letter-spacing:.5px}
+    .brand .a{color:var(--brand)}
+    .sub{color:var(--text-dim);font-size:14px;margin-left:6px}
+    .spacer{flex:1}
+    .iconbtn{position:relative; display:inline-grid; place-items:center; width:52px;height:52px;border-radius:14px;border:1px solid var(--stroke); background:linear-gradient(180deg,#151b25,#0f141c); box-shadow: inset 0 0 30px rgba(255,255,255,.02);}
+    .iconbtn svg{width:26px;height:26px;opacity:.9}
+    .badge{position:absolute;top:-6px;right:-6px;background:var(--brand);color:#000;font-weight:800;border-radius:999px;padding:3px 7px;font-size:12px;box-shadow:0 6px 18px rgba(255,122,26,.5)}
 
-.hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#1a2128,#10161c);border:1px solid #26303a;border-radius:16px;padding:10px 14px;color:#cfe3f5;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
-.hint.hidden{display:none}.led{width:10px;height:10px;border-radius:999px}.led.idle{background:#6b7b88}.led.live{background:#4cff6b;box-shadow:0 0 16px rgba(76,255,107,.65)}
+    h1{font-size:48px;line-height:1.05;margin:22px 0 8px}
+    .lead{color:var(--text-dim);font-size:20px;margin:0 0 10px}
 
-.transc{margin:12px auto 18px;width:min(86vw,600px);border-radius:18px;background:linear-gradient(180deg,#151b22,#0f1419);border:1px solid #22303a;padding:16px 18px;color:#cfe3f5;min-height:64px;display:flex;gap:12px;align-items:flex-start;line-height:1.45;font-size:18px}
-.transc .dot{width:10px;height:10px;border-radius:999px;margin-top:6px}.dot.idle{background:#6b7b88}.dot.live{background:#4cff6b;box-shadow:0 0 14px rgba(76,255,107,.55)} .transc p{margin:0}
+    /* VOICE button (logo = whole button) */
+    .voice-cta{display:flex;justify-content:center;align-items:center;margin:8px 0 12px}
+    #voiceBtn{position:relative;background:none;border:0;padding:0;border-radius:9999px;cursor:pointer;outline-offset:12px}
+    #voiceBtn img{width:min(75vw,560px);height:auto;display:block;border-radius:50%;pointer-events:none;filter:drop-shadow(0 28px 60px rgba(0,0,0,.55))}
+    #voiceBtn::before{content:"";position:absolute;inset:-12%;border-radius:50%;
+      background: radial-gradient(60% 60% at 50% 50%, rgba(255,122,26,.18), rgba(255,122,26,.06) 55%, transparent 70%);
+      z-index:-1; filter:blur(14px);}
+    .ring{position:absolute;inset:-4%;border-radius:50%;border:2px dashed var(--ring);opacity:.65;animation:idleRing 3.2s ease-in-out infinite;pointer-events:none}
+    @keyframes idleRing{0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(180deg) scale(1.02)} 100%{transform:rotate(360deg) scale(1)}}
+    .pulse{position:absolute;inset:-6%;border-radius:50%;border:2px solid rgba(255,140,0,.45);
+      pointer-events:none;animation:idlePulse 2.4s ease-in-out infinite;opacity:.9;box-shadow:0 0 22px rgba(255,140,0,.18)}
+    @keyframes idlePulse{from{transform:scale(1);opacity:.65} 50%{transform:scale(1.025);opacity:1} to{transform:scale(1);opacity:.65}}
 
-.chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-.chip{display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:18px;border:1px solid #1f2832;background:linear-gradient(180deg,#171e26,#10161c);color:#dbe6f2}
-.chip.active{border-color:rgba(255,122,26,.6);box-shadow:0 6px 18px rgba(255,122,26,.15)}
-.chip svg{width:18px;height:18px;color:var(--accent)}
+    #voiceHint{position:absolute;left:50%;bottom:6.5%;transform:translateX(-50%);
+      background:rgba(20,20,28,.65);backdrop-filter:blur(8px);padding:.62rem .95rem;border-radius:14px;
+      font-size:1rem;color:#e6e6e6;pointer-events:none;border:1px solid rgba(255,255,255,.06);
+      box-shadow:0 10px 30px rgba(0,0,0,.35)}
 
-#menuPanel{display:none;position:fixed;top:72px;right:18px;z-index:9999;width:280px;border-radius:16px;padding:14px;background:linear-gradient(180deg,#1a2128,#11161b);border:1px solid #26303a;box-shadow:0 12px 36px rgba(0,0,0,.5)}
-#menuPanel a{display:block;padding:10px 8px;color:#dfe8f3;text-decoration:none;border-radius:10px}
-#menuPanel a:hover{background:#0f1419}
-</style>
+    /* when recording */
+    .recording #voiceBtn .pulse{border-color:var(--ok);box-shadow:0 0 24px var(--ring-2), inset 0 0 36px rgba(0,208,132,.25); animation:recPulse 1.1s ease-out infinite}
+    @keyframes recPulse{0%{transform:scale(1);opacity:1} 100%{transform:scale(1.08);opacity:.6}}
+    .recording #voiceHint{color:#dfffe8;border-color:rgba(0,208,132,.4);background:rgba(6,34,24,.6)}
+    .recording #voiceBtn::before{background: radial-gradient(60% 60% at 50% 50%, rgba(0,208,132,.20), rgba(0,208,132,.08) 55%, transparent 70%);}
+
+    /* transcript */
+    .transcript{margin:16px auto 14px;max-width:880px;padding:16px 18px;border-radius:18px;
+      background:linear-gradient(180deg,rgba(18,20,24,.75),rgba(12,14,18,.72));
+      color:var(--text);border:1px solid var(--stroke);box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:18px}
+    .transcript .interim{opacity:.55}
+    .dot{display:inline-block;width:10px;height:10px;border-radius:50%; background:#25d366;box-shadow:0 0 14px rgba(37,211,102,.5);margin-right:10px;vertical-align:-1px}
+    .recording .dot{background:var(--ok);box-shadow:0 0 14px rgba(0,208,132,.7)}
+
+    /* quick actions */
+    .quickbar{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+    .pill{display:flex;align-items:center;gap:10px;border:1px solid var(--stroke);background:linear-gradient(180deg,#141a23,#0f141c);padding:14px 18px;border-radius:16px}
+    .pill svg{width:20px;height:20px;color:var(--brand-2)}
+
+    /* menu drawer */
+    .drawer-back{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:none}
+    .drawer{position:fixed;top:0;left:0;height:100%;width:84%;max-width:360px;background:var(--panel-2);
+      border-right:1px solid var(--stroke);box-shadow: 0 20px 60px rgba(0,0,0,.6); transform:translateX(-100%); transition:.28s ease}
+    .drawer.open{transform:translateX(0)}
+    .drawer-back.show{display:block}
+    .menu-head{display:flex;align-items:center;gap:10px;padding:18px;border-bottom:1px solid var(--stroke);font-weight:700}
+    .menu-body{padding:10px 18px 24px}
+    .menu-item{padding:12px 10px;border-radius:10px}
+    .menu-item:hover{background:#0f131a}
+
+    @media (max-width:500px){
+      h1{font-size:40px}
+      .brand{font-size:30px}
+      #voiceBtn img{width:min(86vw,540px)}
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">
-      <h1>FreeFlow</h1><div class="tag">Voice to order <span class="ver" id="ver"></span></div>
-    </div>
-    <div class="actions">
-      <button id="menuBtn" class="icon-btn" aria-label="Menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+  <div class="wrap">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="brand"><span class="a">Free</span>Flow</div>
+      <div class="sub">Voice to order</div>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="menuBtn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
       </button>
-      <button class="icon-btn" aria-label="Koszyk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12zM6 6l-2-2M9 22a1 1 0 1 0 0-2m8 2a1 1 0 1 0 0-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="badge">0</span>
+      <button class="iconbtn" aria-label="Koszyk">
+        <span class="badge" id="cartBadge">0</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 6h15l-2 9H8L6 6Z"/><circle cx="9" cy="20" r="1.8"/><circle cx="18" cy="20" r="1.8"/>
+        </svg>
       </button>
     </div>
-  </header>
 
-  <div id="menuPanel" role="menu" aria-label="Menu">
-    <a href="#">Zamówienia</a><a href="#">Ulubione</a><a href="#">Ustawienia</a><a href="#">Pomoc</a>
+    <h1>Złóż zamówienie</h1>
+    <p class="lead">Taxi, posiłek, a może nocleg?</p>
+
+    <!-- Voice button (logo) -->
+    <div class="voice-cta">
+      <button id="voiceBtn" aria-label="Mów teraz">
+        <img src="./Freeflow-logo.png" alt="FreeFlow — naciśnij, aby mówić" />
+        <span class="ring" aria-hidden="true"></span>
+        <span class="pulse" aria-hidden="true"></span>
+        <span id="voiceHint">Dotknij logo i mów…</span>
+      </button>
+    </div>
+
+    <!-- Transcript -->
+    <div id="transcript" class="transcript" aria-live="polite">
+      <span class="dot"></span> Transkrypcja pojawi się tutaj…
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quickbar">
+      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M6 7v12m12-12v12M4 19h16"/></svg> Jedzenie</div>
+      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16l2-5h14l2 5H3Z"/><path d="M7 16v3m10-3v3"/></svg> Taxi</div>
+      <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg> Hotel</div>
+    </div>
   </div>
 
-  <h2>Złóż zamówienie</h2>
-  <p class="subtitle">Taxi, posiłek, a może nocleg?</p>
+  <!-- Drawer -->
+  <div class="drawer-back" id="drawerBack"></div>
+  <nav class="drawer" id="drawer" aria-hidden="true">
+    <div class="menu-head">FreeFlow — menu</div>
+    <div class="menu-body">
+      <div class="menu-item">Twoje zamówienia</div>
+      <div class="menu-item">Ustawienia</div>
+      <div class="menu-item">Pomoc</div>
+      <div class="menu-item">O projekcie</div>
+    </div>
+  </nav>
 
-  <div class="logo-wrap">
-    <button id="micBtn" aria-label="Nagraj polecenie">
-      <img id="micImg" src="Freeflow-logo.png" alt="FreeFlow — mikrofon">
-      <div id="micHint" class="hint"><span id="ledHint" class="led idle"></span><span>Dotknij, aby zamówić</span></div>
-    </button>
-  </div>
+  <script>
+    // --- menu drawer ---
+    const menuBtn = document.getElementById('menuBtn');
+    const drawer = document.getElementById('drawer');
+    const drawerBack = document.getElementById('drawerBack');
+    function openDrawer(){ drawer.classList.add('open'); drawerBack.classList.add('show'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); drawerBack.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); }
+    menuBtn.addEventListener('click', openDrawer);
+    drawerBack.addEventListener('click', closeDrawer);
 
-  <div class="transc" aria-live="polite" aria-atomic="true">
-    <span id="ledBar" class="dot idle"></span>
-    <p id="transcriptText">Transkrypcja pojawi się tutaj…</p>
-  </div>
+    // --- Voice logic (robust for Android/Chrome/Edge) ---
+    (() => {
+      const voiceBtn = document.getElementById('voiceBtn');
+      const voiceHint = document.getElementById('voiceHint');
+      const transcriptEl = document.getElementById('transcript');
 
-  <div id="chips" class="chips" role="tablist">
-    <button class="chip active" role="tab" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M8 12V4m8 8V4M6 20h12" stroke-linecap="round"/></svg> Jedzenie
-    </button>
-    <button class="chip" role="tab" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18l-2 6H5zM7 12l2-4h6l2 4" stroke-linecap="round" stroke-linejoin="round"/></svg> Taxi
-    </button>
-    <button class="chip" role="tab" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8" stroke-linecap="round" stroke-linejoin="round"/></svg> Hotel
-    </button>
-  </div>
-</div>
+      let recognition = null;
+      let isRecording = false;
 
-<script>
-(function(){
-  const ver=document.getElementById('ver'); if(ver) ver.textContent='('+(window.FF_VER||'?')+')';
+      function setupRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          voiceHint.textContent = 'Brak wsparcia rozpoznawania mowy w tej przeglądarce.';
+          return null;
+        }
+        const r = new SR();
+        r.lang = 'pl-PL';
+        r.interimResults = true;
+        r.continuous = false;
 
-  // Menu
-  const menuBtn=document.getElementById('menuBtn'), panel=document.getElementById('menuPanel');
-  if(menuBtn) menuBtn.addEventListener('click',(e)=>{e.stopPropagation();panel.style.display=(panel.style.display==='block')?'none':'block';});
-  window.addEventListener('click',e=>{ if(panel && panel.style.display==='block' && !panel.contains(e.target) && !e.target.closest('#menuBtn')) panel.style.display='none';},{passive:true});
+        r.onstart = () => {
+          isRecording = true;
+          document.body.classList.add('recording');
+          voiceHint.textContent = 'Słucham… mów';
+        };
+        r.onend = () => {
+          isRecording = false;
+          document.body.classList.remove('recording');
+          voiceHint.textContent = 'Dotknij logo i mów…';
+        };
+        r.onresult = (e) => {
+          let interim = '', final = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) final += t + ' ';
+            else interim += t;
+          }
+          transcriptEl.innerHTML = '<span class="dot"></span> ' + final + '<span class="interim">' + interim + '</span>';
+        };
+        r.onerror = (e) => {
+          let msg = 'Błąd: ' + e.error;
+          if (e.error === 'not-allowed') msg = 'Dostęp do mikrofonu zablokowany – odblokuj w uprawnieniach przeglądarki.';
+          if (e.error === 'no-speech') msg = 'Nie wykryto mowy. Spróbuj mówić głośniej lub bliżej mikrofonu.';
+          voiceHint.textContent = msg;
+        };
+        return r;
+      }
 
-  // Chips
-  const chips=document.getElementById('chips');
-  if(chips) chips.addEventListener('click',e=>{
-    const chip=e.target.closest('.chip'); if(!chip) return;
-    chips.querySelectorAll('.chip').forEach(c=>{c.classList.remove('active');c.setAttribute('aria-selected','false');});
-    chip.classList.add('active'); chip.setAttribute('aria-selected','true');
-  },{passive:true});
+      async function ensureMicPermission() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+          return true;
+        } catch (err) {
+          voiceHint.textContent = (err.name === 'NotAllowedError')
+            ? 'Dostęp do mikrofonu zablokowany – zezwól w ustawieniach strony.'
+            : 'Nie mogę użyć mikrofonu: ' + err.name;
+          return false;
+        }
+      }
 
-  // ASR
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec=null, mock=null;
-  const tx=document.getElementById('transcriptText');
-  const ledH=document.getElementById('ledHint'), ledB=document.getElementById('ledBar');
-  const micBtn=document.getElementById('micBtn'), micHint=document.getElementById('micHint');
+      async function toggleRecord() {
+        if (!recognition) {
+          recognition = setupRecognition();
+          if (!recognition) return;
+        }
+        if (isRecording) {
+          try { recognition.stop(); } catch(_) {}
+          return;
+        }
+        const ok = await ensureMicPermission();
+        if (!ok) return;
 
-  function setLive(on){
-    micBtn.classList.toggle('recording', on);
-    micHint.classList.toggle('hidden', on);
-    ledH.className='led '+(on?'live':'idle');
-    ledB.className='dot '+(on?'live':'idle');
-  }
-  function pulse(){ try{navigator.vibrate&&navigator.vibrate(20)}catch(e){} micBtn.classList.add('confirm'); setTimeout(()=>micBtn.classList.remove('confirm'),420); }
+        try { recognition.start(); }
+        catch (e) {
+          // sporadyczny "already started" — restart
+          try { recognition.stop(); } catch(_) {}
+          setTimeout(() => { try { recognition.start(); } catch(_) {} }, 220);
+        }
+      }
 
-  async function ensureMic(){ try{ if(navigator.mediaDevices?.getUserMedia){ await navigator.mediaDevices.getUserMedia({audio:true}); } }catch(e){} }
-
-  function startMock(ms=4000){
-    clearInterval(mock); tx.innerHTML='<em>Słucham (demo)…</em>'; setLive(true);
-    mock=setTimeout(()=>{ setLive(false); tx.textContent='(demo) koniec nasłuchu'; }, ms);
-  }
-  function stopAll(){ try{rec&&rec.stop()}catch{} clearTimeout(mock); mock=null; setLive(false); }
-
-  async function startReal(){
-    await ensureMic();
-    if(!SR){ startMock(4000); return; }
-    rec=new SR(); rec.lang='pl-PL'; rec.interimResults=true; rec.continuous=false;
-    rec.onstart=()=>{ tx.textContent='Słucham…'; setLive(true); };
-    rec.onresult=(ev)=>{
-      let final='', interim='';
-      for(const r of ev.results){ (r.isFinal?final:interim)+=r[0].transcript+' '; }
-      tx.innerHTML=(final?('<strong>'+final.trim()+'</strong> '):'')+(interim?('<span style="opacity:.7">'+interim.trim()+'</span>'):'');
-    };
-    rec.onerror=()=>{ startMock(4000); };
-    rec.onend=()=>{ setLive(false); if(!tx.textContent.trim()) tx.textContent='(brak głosu)'; };
-    try{ rec.start(); }catch(e){ startMock(4000); }
-  }
-
-  // BEZBŁĘDNY BIND: click + touchend + pointerup z blokadą duplikatów
-  if(micBtn){
-    let last=0;
-    const handler=(e)=>{ e.preventDefault(); const now=Date.now(); if(now-last<280) return; last=now;
-      pulse();
-      if(micBtn.classList.contains('recording')){ stopAll(); return; }
-      tx.textContent='Słucham…'; startReal();
-    };
-    micBtn.addEventListener('click',     handler,{passive:false});
-    micBtn.addEventListener('touchend',  handler,{passive:false});
-    micBtn.addEventListener('pointerup', handler,{passive:false});
-  }
-})();
-</script>
+      // pełne pokrycie zdarzeń (tap/click/klawiatura)
+      ['click','touchend','pointerup','keydown'].forEach(type => {
+        voiceBtn.addEventListener(type, (ev) => {
+          if (type === 'keydown' && !['Enter',' '].includes(ev.key)) return;
+          ev.preventDefault();
+          toggleRecord();
+        }, { passive: false });
+      });
+    })();
+  </script>
 </body>
 </html>

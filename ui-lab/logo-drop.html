@@ -1,57 +1,42 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drop Logo Animation</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: url('assets/background.jpg') no-repeat center center/cover;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drop Logo Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: url('assets/background.jpg') no-repeat center center/cover;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
 
-    .logo {
-      position: absolute;
-      top: -200px;
-      width: 150px;
-      animation: drop 1.5s ease-in forwards;
-    }
+        .logo {
+            position: absolute;
+            top: -200px;
+            width: 150px;
+            height: auto;
+            animation: drop 2.5s ease-out forwards, bounce 1s ease-in-out 2.5s infinite;
+        }
 
-    @keyframes drop {
-      0% { transform: translateY(-200px) scale(1); }
-      70% { transform: translateY(calc(100vh - 250px)) scale(1); }
-      85% { transform: translateY(calc(100vh - 230px)) scale(1.05); }
-      100% { transform: translateY(calc(100vh - 250px)) scale(1); }
-    }
+        @keyframes drop {
+            0% { top: -200px; opacity: 0; transform: scale(0.8); }
+            70% { top: 50%; opacity: 1; transform: scale(1.05); }
+            100% { top: 50%; transform: scale(1); }
+        }
 
-    .content {
-      opacity: 0;
-      animation: fadeIn 1s ease forwards;
-      animation-delay: 1.6s;
-      position: absolute;
-      bottom: 50px;
-      text-align: center;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
-  </style>
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+    </style>
 </head>
 <body>
-  <img src="assets/logo.png" alt="Logo" class="logo">
-  
-  <div class="content">
-    <h1>FreeFlow Voice Ordering</h1>
-    <p>Kliknij logo, aby rozpocząć zamówienie głosowe</p>
-  </div>
+    <img src="assets/mic_logo.png" alt="Logo" class="logo">
 </body>
 </html>

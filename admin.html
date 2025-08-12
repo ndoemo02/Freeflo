@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow • Panel</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto; background:#0b0f14; color:#e9eef6; margin:0}
+  .wrap{max-width:980px; margin:20px auto; padding:16px}
+  table{width:100%; border-collapse:collapse}
+  th,td{border-bottom:1px solid #243044; padding:10px; text-align:left; font-size:14px}
+  th{color:#93a1b4}
+</style>
+<body>
+  <div class="wrap">
+    <h2>📦 Zamówienia (admin)</h2>
+    <div style="margin:8px 0">
+      <input id="token" placeholder="ADMIN_TOKEN" style="width:260px">
+      <button id="load">Odśwież</button>
+    </div>
+    <table>
+      <thead><tr><th>czas</th><th>id</th><th>typ</th><th>pozycje / trasa</th><th>status</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+<script>
+const API = 'https://freeflow-backend-vercel.vercel.app/api/admin-orders';
+async function load(){
+  const t = document.getElementById('token').value.trim();
+  const res = await fetch(API, { headers: { 'Authorization':'Bearer '+t }});
+  const {orders=[]} = await res.json();
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = orders.map(o=>`
+    <tr>
+      <td>${new Date(o.timestamp||o.time||Date.now()).toLocaleString()}</td>
+      <td>${o.orderId||'-'}</td>
+      <td>${o.type}</td>
+      <td>${
+        o.items ? o.items.map(i=>`${i.qty||1}x ${i.name}`).join(', ')
+        : [o.pickup, o.dropoff].filter(Boolean).join(' → ')
+      }</td>
+      <td>${o.status||'received'}</td>
+    </tr>
+  `).join('');
+}
+document.getElementById('load').addEventListener('click', load);
+</script>
+</body>
+</html>

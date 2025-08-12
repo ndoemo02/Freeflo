@@ -1,0 +1,89 @@
+/* ===== FreeFlow Neon Glass Theme ===== */
+
+/* Tło sceniczne + delikatna animacja */
+:root{
+  --ff-orange: #ff6a00;
+  --ff-red:    #ff3b2e;
+  --ff-pink:   #ff006a;
+  --ff-violet: #7a3bff;
+  --glass-bg: rgba(255,255,255,0.06);
+  --glass-br: 18px;
+  --glass-bdr: 1px solid rgba(255,255,255,0.16);
+  --shadow-1: 0 10px 30px rgba(0,0,0,0.45);
+  --shadow-2: 0 20px 60px rgba(0,0,0,0.55);
+}
+
+@keyframes gradientMove {
+  0%   { background-position: 0% 50% }
+  50%  { background-position: 100% 50% }
+  100% { background-position: 0% 50% }
+}
+
+body {
+  background: #0d0f12;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* warstwa animowanego gradientu */
+body::before{
+  content:"";
+  position: fixed; inset: -20%;
+  z-index: -2;
+  background: radial-gradient(60% 60% at 20% 20%, #1a1f2b 0%, transparent 60%),
+              radial-gradient(50% 50% at 80% 30%, rgba(255,106,0,.12) 0%, transparent 60%),
+              linear-gradient(120deg, #0f1116, #0b0d11);
+}
+
+body::after{
+  content:"";
+  position: fixed; inset:-50%;
+  z-index: -3;
+  background: linear-gradient(270deg, var(--ff-orange), var(--ff-pink), var(--ff-violet));
+  background-size: 600% 600%;
+  filter: blur(120px) opacity(.15);
+  animation: gradientMove 14s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce){
+  body::after{ animation: none }
+}
+
+/* ===== Glass / Cards / Kontenery ===== */
+
+.glass {
+  background: var(--glass-bg);
+  border: var(--glass-bdr);
+  border-radius: var(--glass-br);
+  box-shadow: var(--shadow-1);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.glass-strong {
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: var(--shadow-2);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+/* ===== Teksty neonowe / “szklane litery” ===== */
+
+.neon-text {
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0,0,0,.6),
+    0 0 8px rgba(255,106,0,.55),
+    0 0 22px rgba(255,59,46,.45);
+}
+.subtle-glow {
+  text-shadow:
+    0 1px 2px rgba(0,0,0,.6),
+    0 0 10px rgba(122,59,255,.35);
+}
+
+/* ===== Przyciski “pigułki” ===== */
+
+.pills {
+  display

@@ -1,244 +1,183 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FreeFlow – Voice to order</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow • Voice to order</title>
+  <link rel="icon" href="./Freeflow-logo.png" />
   <style>
     :root{
-      --bg1:#0f1115; --bg2:#0a0c10; --card:#141821; --muted:#9aa3af;
-      --fg:#e5e7eb; --accent:#ff7a18; --accent2:#ff4d00; --ring:#13d38e;
+      --bg:#0b0f14;
+      --panel:#121821;
+      --panel2:#16202c;
+      --text:#e9eef6;
+      --muted:#93a1b4;
+      --brand:#ff7a00;
+      --glow:#ff7a00aa;
+      --ring:#2a3545;
     }
-    *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color:var(--fg);
-      background: radial-gradient(1200px 600px at 50% -200px, #1a2233 0%, var(--bg1) 45%, var(--bg2) 100%);
+      margin:0; font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 800px at 50% -20%, #182131 0%, #0d141d 50%, var(--bg) 100%);
+      color:var(--text);
     }
-    .wrap{max-width:1040px;margin:0 auto;padding:24px 16px 64px}
-    header{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px
+
+    /* top bar */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 18px; position:sticky; top:0; z-index:20;
+      background: linear-gradient(180deg, rgba(13,20,29,.9), rgba(13,20,29,.65), rgba(13,20,29,0));
+      backdrop-filter: blur(6px);
     }
-    .brand{display:flex;align-items:center;gap:10px}
-    .logo{
-      width:34px;height:34px;border-radius:10px;background:#1d2430 url('./Freeflow-logo.png') center/cover no-repeat;
-      box-shadow:0 0 0 2px #222 inset, 0 10px 30px rgba(0,0,0,.4);
+    .brand{
+      display:flex; align-items:center; gap:10px; font-weight:800; font-size:26px;
     }
-    .wordmark{font-weight:800;font-size:28px;letter-spacing:.2px}
-    .wordmark .free{color:var(--accent)}
-    .wordmark .flow{color:#fff;opacity:.95}
-    .top-actions{display:flex;gap:10px}
-    .icon-btn{
-      width:46px;height:46px;border-radius:14px;border:1px solid #232835;background:#121621;
-      display:grid;place-items:center;color:#cbd5e1;cursor:pointer;position:relative;
-      box-shadow:0 8px 30px rgba(0,0,0,.35);
+    .brand img{width:36px; height:36px; border-radius:8px}
+    .brand .accent{color:var(--brand)}
+    .claim{font-size:12px; color:var(--muted); margin-top:-6px}
+    .actions{display:flex; gap:10px}
+    .iconbtn{
+      width:44px; height:44px; border-radius:12px; border:1px solid #243044;
+      background: linear-gradient(180deg,#17202d,#111722);
+      color:#cfe2ff; display:grid; place-items:center; cursor:pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
     }
-    .icon-btn:active{transform:translateY(1px)}
-    .badge{position:absolute;top:-6px;right:-6px;background:var(--accent);
-      color:#111;padding:3px 6px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 2px 12px rgba(255,122,24,.5)}
-    h1{
-      font-size:42px;line-height:1.05;margin:18px 0 6px;font-weight:800;letter-spacing:.2px
+    .badge{
+      position:absolute; margin-top:-28px; margin-left:26px;
+      background:var(--brand); color:#111; font-weight:700; font-size:12px;
+      width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+      box-shadow:0 0 16px var(--glow);
     }
-    .subtitle{color:var(--muted);font-size:20px;margin-bottom:18px}
+
+    /* hero */
+    .wrap{max-width:980px; margin:0 auto; padding: 10px 16px 40px}
+    h1{font-size:42px; line-height:1.05; margin:8px 0 6px}
+    .sub{color:var(--muted); margin-bottom:18px}
+
     .hero{
-      margin:10px auto 18px;width:min(95%,820px);aspect-ratio:1/1;border-radius:999px;
-      background:radial-gradient(circle at 50% 45%, #1f2635 0%, #10131a 60%, #0b0e13 100%);
-      display:grid;place-items:center;position:relative;box-shadow:0 20px 80px rgba(0,0,0,.55), inset 0 0 0 1px #23283a;
+      margin:14px auto 18px; width:min(92vw,640px); aspect-ratio:1/1;
+      border-radius:50%;
+      background: radial-gradient(60% 60% at 50% 45%, #1f2937 0%, #0f1722 55%, #0b1018 100%);
+      border:1px solid var(--ring);
+      display:grid; place-items:center; position:relative;
+      box-shadow: inset 0 0 120px #000a, 0 40px 120px #000a;
     }
-    .hero::before{
-      content:""; position:absolute; inset:22px; border-radius:999px;
-      background:radial-gradient(closest-side, rgba(255,122,24,.18), transparent 60%),
-                  radial-gradient(farthest-side, rgba(255,77,0,.18), transparent 70%);
-      filter:blur(6px);
+    .hero .logo{
+      width:76%; max-width:520px; filter: drop-shadow(0 8px 26px rgba(0,0,0,.45));
+      user-select:none; pointer-events:none;
     }
-    .logo-mic{
-      width:min(78%,540px); aspect-ratio:1/1; border-radius:999px;
-      background: url('./Freeflow-logo.png') center/contain no-repeat;
-      filter: drop-shadow(0 18px 60px rgba(255,122,24,.25));
+    #micBtn{
+      position:absolute; bottom:9%; left:50%; transform: translateX(-50%);
+      padding:14px 18px; border-radius:18px; cursor:pointer; border:1px solid #2a3548;
+      background: rgba(20,27,38,.8); color:var(--text); font-size:22px;
+      display:flex; align-items:center; gap:10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(0,255,128,0);
+      transition: box-shadow .25s ease, transform .15s ease;
     }
-    .speak-cta{
-      position:absolute;left:50%;bottom:32px;transform:translateX(-50%);
-      background: linear-gradient(180deg,#171b24,#121621); color:#e6edf7; border:1px solid #23283a;
-      border-radius:18px;padding:16px 22px;font-size:18px;box-shadow:0 10px 30px rgba(0,0,0,.45);
-      display:flex;align-items:center;gap:10px;cursor:pointer;
+    #micBtn:hover{ transform: translateX(-50%) scale(1.02); }
+    #micBtn.recording{
+      animation: pulse 1.6s infinite;
+      border-color:#22d37f77;
+      box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 26px #22d37f44;
     }
-    .led{width:10px;height:10px;border-radius:50%;background:#3b3f46;box-shadow:0 0 0 2px #0a0c10 inset}
-    .led.on{background:var(--ring); box-shadow:0 0 10px 2px rgba(19,211,142,.55)}
-    .pill{
-      margin:12px auto 0;max-width:900px;background:#111520;border:1px solid #23283a;border-radius:18px;
-      padding:16px 18px;color:#cbd5e1; font-size:20px; min-height:28px; display:flex;align-items:center;gap:12px
-    }
-    .quick{
-      display:flex;flex-wrap:wrap;gap:18px;margin-top:18px
-    }
-    .quick button{
-      border:none;color:#e6edf7;background:linear-gradient(180deg,#171b24,#121621);
-      border:1px solid #23283a;border-radius:18px;padding:14px 18px;min-width:140px;font-size:18px;cursor:pointer;
-      box-shadow:0 8px 28px rgba(0,0,0,.35)
-    }
-    .quick button:active{transform:translateY(1px)}
-    /* mic button hit area */
-    #micBtn{position:absolute;inset:0;border:0;background:transparent;cursor:pointer}
-    /* pulse when listening */
-    .listening .speak-cta .led{animation:pulse 1.2s infinite}
     @keyframes pulse{
-      0%{box-shadow:0 0 0 0 rgba(19,211,142,.6)}
-      70%{box-shadow:0 0 0 16px rgba(19,211,142,0)}
-      100%{box-shadow:0 0 0 0 rgba(19,211,142,0)}
+      0%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,.55); }
+      70%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 16px rgba(34,211,127,0); }
+      100%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,0); }
     }
-    @media (max-width:640px){
-      h1{font-size:34px}
-      .subtitle{font-size:18px}
+
+    /* transcript bubble */
+    .bubble{
+      margin:18px auto 0; max-width:900px; padding:18px 16px; min-height:40px;
+      background: linear-gradient(180deg,#111824,#0e1520); border:1px solid #243044;
+      border-radius:18px; color:var(--text); font-size:18px;
+      box-shadow: inset 0 0 24px #0008, 0 8px 40px #000a;
+    }
+
+    /* bottom buttons (równe) */
+    .bottom-buttons{
+      display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:16px;
+    }
+    .bottom-buttons button{
+      flex:1 1 calc(33.333% - 12px); max-width:180px; min-width:120px; height:56px;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      font-size:18px; border-radius:14px;
+      background: linear-gradient(180deg,#161e2a,#101723);
+      color:#e8eefb; border:1px solid #243044; cursor:pointer;
+      box-shadow: 0 10px 32px rgba(0,0,0,.35);
+      transition: transform .15s ease, background .2s ease;
+    }
+    .bottom-buttons button:hover{ transform: translateY(-1px); background: #182233; }
+    .bottom-buttons .primary{ outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset, 0 10px 32px #000; }
+
+    @media (max-width:480px){
+      h1{font-size:36px}
+      .bottom-buttons button{height:52px; font-size:16px; min-width:110px}
+      #micBtn{font-size:20px}
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div>
       <div class="brand">
-        <div class="logo"></div>
-        <div class="wordmark"><span class="free">Free</span><span class="flow">Flow</span><div style="font-size:12px;color:#9aa3af;margin-top:-2px">Voice to order</div></div>
+        <img src="./Freeflow-logo.png" alt="logo"/>
+        <span class="accent">Free</span>Flow
       </div>
-      <div class="top-actions">
-        <button class="icon-btn" aria-label="Menu" id="btnMenu">
-          <!-- menu icon -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="#d1d5db" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-        <button class="icon-btn" aria-label="Koszyk" id="btnCart">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 6h2l3.6 9.59A2 2 0 0 0 10.5 17h6.9a2 2 0 0 0 1.9-1.37L22 8H6" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span class="badge" id="cartCount">0</span>
-        </button>
+      <div class="claim">Voice to order</div>
+    </div>
+    <div class="actions">
+      <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
+      <div style="position:relative">
+        <button class="iconbtn" id="cartBtn" aria-label="Koszyk">🛒</button>
+        <div class="badge" id="cartBadge">0</div>
       </div>
-    </header>
+    </div>
+  </header>
 
+  <main class="wrap">
     <h1>Złóż zamówienie</h1>
-    <div class="subtitle">Taxi, posiłek, a może nocleg?</div>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
 
-    <section class="hero" id="hero">
-      <div class="logo-mic"></div>
-      <!-- Niewidoczny przycisk – zapewnia gest użytkownika dla audio -->
-      <button id="micBtn" aria-label="Mów do FreeFlow"></button>
-      <div class="speak-cta" id="cta">
-        <div class="led" id="led"></div>
-        <div>Dotknij logo i mów…</div>
-      </div>
+    <!-- Hero z logo + mic -->
+    <section class="hero">
+      <img class="logo" src="./Freeflow-logo.png" alt="FreeFlow" />
+      <button id="micBtn" type="button">🎤 Dotknij logo i mów…</button>
     </section>
 
-    <div class="pill" id="transcript"><span style="opacity:.7">Transkrypcja pojawi się tutaj…</span></div>
+    <!-- Transkrypcja / odpowiedzi -->
+    <div id="transcript" class="bubble">Transkrypcja pojawi się tutaj…</div>
 
-    <div class="quick">
-      <button id="q-food">🍽️ Jedzenie</button>
-      <button id="q-taxi">🚕 Taxi</button>
-      <button id="q-hotel">🏠 Hotel</button>
+    <!-- Przyciski skrótów -->
+    <div class="bottom-buttons" style="margin-bottom:36px">
+      <button class="primary" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
+      <button data-quick="Taxi">🚕 <span>Taxi</span></button>
+      <button data-quick="Hotel">🏠 <span>Hotel</span></button>
     </div>
-  </div>
+  </main>
 
-  <!-- odtwarzacz TTS -->
+  <!-- Audio do TTS -->
   <audio id="ttsPlayer" preload="auto"></audio>
 
+  <!-- Logika asystenta -->
+  <script src="./freeflow-assistant.js"></script>
   <script>
-    // === KONFIG ===
-    const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
+    // proste „makiety” menu/koszyka – na później podepniemy realny stan
+    const badge = document.getElementById('cartBadge');
+    const cartBtn = document.getElementById('cartBtn');
+    cartBtn.addEventListener('click',()=> alert('Koszyk (coming soon)'));
+    document.getElementById('menuBtn').addEventListener('click',()=> alert('Menu (coming soon)'));
 
-    const micBtn = document.getElementById('micBtn');
-    const hero   = document.getElementById('hero');
-    const led    = document.getElementById('led');
-    const transcriptBox = document.getElementById('transcript');
-    const player = document.getElementById('ttsPlayer');
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let rec = null;
-
-    function uiListening(on){
-      led.classList.toggle('on', on);
-      hero.classList.toggle('listening', on);
-      document.getElementById('cta').firstElementChild?.classList.toggle('on', on);
-    }
-    function show(text){
-      transcriptBox.textContent = text;
-    }
-
-    async function playBase64Mp3(b64){
-      try{
-        player.src = `data:audio/mpeg;base64,${b64}`;
-        await player.play();
-        return true;
-      }catch(e){
-        return false;
-      }
-    }
-    function speakFallback(text){
-      try{
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'pl-PL';
-        speechSynthesis.cancel();
-        speechSynthesis.speak(u);
-      }catch{}
-    }
-
-    async function sendToAssistant(userText){
-      try{
-        const res = await fetch(API_URL, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ text:userText })
-        });
-        const data = await res.json();
-
-        const answer = data?.assistantText || 'OK.';
-        show(answer);
-
-        if(data?.audioBase64){
-          const ok = await playBase64Mp3(data.audioBase64);
-          if(!ok) speakFallback(answer);
-        }else{
-          speakFallback(answer);
-        }
-      }catch(err){
-        show('Błąd połączenia z serwerem.');
-        speakFallback('Błąd połączenia z serwerem.');
-      }
-    }
-
-    function startASR(){
-      if(!SR){
-        show('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.');
-        return;
-      }
-      if(rec){ try{ rec.abort(); }catch{} }
-      rec = new SR();
-      rec.lang = 'pl-PL';
-      rec.interimResults = true;
-      rec.maxAlternatives = 1;
-
-      rec.onstart = ()=>{ uiListening(true); show('Słucham…'); };
-      rec.onresult = (e)=>{
-        let final = '';
-        for(let i=e.resultIndex;i<e.results.length;i++){
-          const txt = e.results[i][0].transcript;
-          if(e.results[i].isFinal){ final += txt; } else { show(txt); }
-        }
-        if(final.trim()) sendToAssistant(final.trim());
-      };
-      rec.onerror = (e)=>{ show('Błąd rozpoznawania: '+(e.error||'nieznany')); uiListening(false); };
-      rec.onend = ()=>{ uiListening(false); };
-
-      rec.start();
-    }
-
-    // gest użytkownika = pozwolenie na audio
-    micBtn.addEventListener('click', ()=>{
-      try{ speechSynthesis.cancel(); player.pause(); }catch{}
-      startASR();
+    // quick actions → wysyłamy gotowe prompt’y do asystenta
+    document.querySelectorAll('[data-quick]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const t = btn.dataset.quick;
+        sendToAssistant?.(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`); // funkcja z freeflow-assistant.js
+      });
     });
-
-    // szybkie podpowiedzi
-    document.getElementById('q-food').onclick  = ()=> sendToAssistant('Zamów jedzenie, pizza margherita dla jednej osoby.');
-    document.getElementById('q-taxi').onclick  = ()=> sendToAssistant('Zamów taxi spod obecnej lokalizacji do centrum.');
-    document.getElementById('q-hotel').onclick = ()=> sendToAssistant('Znajdź hotel w okolicy na jedną noc, budżet 250 zł.');
   </script>
 </body>
 </html>

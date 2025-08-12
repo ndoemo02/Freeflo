@@ -178,6 +178,31 @@
         sendToAssistant?.(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`); // funkcja z freeflow-assistant.js
       });
     });
+  </script> 
+  <script type="module">
+  import { addToCart, getCart, cartCount, clearCart } from './cart.js';
+
+  const badge = document.getElementById('cartBadge');
+  function renderBadge(){ badge.textContent = cartCount(); }
+  renderBadge();
+  window.addEventListener('cart:update', renderBadge);
+
+  // Przykładowe podpięcia pod szybkie przyciski:
+  document.querySelector('[data-quick="Jedzenie"]')
+    .addEventListener('click', ()=> addToCart({type:'food', name:'Zestaw dnia'}));
+  document.querySelector('[data-quick="Taxi"]')
+    .addEventListener('click', ()=> addToCart({type:'taxi', name:'Kurs standard'}));
+  document.querySelector('[data-quick="Hotel"]')
+    .addEventListener('click', ()=> addToCart({type:'hotel', name:'Pokój 1 noc'}));
+
+  // Tymczasowy koszyk (modal zastąpimy później)
+  document.getElementById('cartBtn').addEventListener('click', ()=>{
+    const items = getCart();
+    alert(items.length ? items.map(i=>`• ${i.type} – ${i.name}`).join('\n') : 'Koszyk jest pusty');
+  });
+
+  // Eksport dla asystenta (głos)
+  window.FreeFlowCart = { addToCart, clearCart, getCart };
   </script>
 </body>
 </html>

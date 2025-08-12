@@ -1,196 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow — UI Lab (kropla + mic)</title>
-<style>
-  :root{
-    --bg:#0b0f14;
-    --text:#e9eef6;
-    --ring:#273246;
-    --brand:#ff7a00;
-    --brand-soft:#ff7a00aa;
-  }
-  html,body{height:100%}
-  body{
-    margin:0; background:
-      radial-gradient(1200px 800px at 50% -20%, #182131 0%, #0d141d 55%, var(--bg) 100%);
-    color:var(--text); font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial;
-    display:grid; place-items:center;
-  }
-  .wrap{width:min(92vw, 900px); padding:18px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow • UI‑Lab (drop logo)</title>
+  <style>
+    :root { --w: 160px; }
 
-  /* ---------- INTRO OVERLAY ---------- */
-  .intro{
-    position:fixed; inset:0; z-index:50; display:grid; place-items:center;
-    background: radial-gradient(1000px 700px at 50% -10%, #141B2A 0%, #0D141D 55%, #0B0F14 100%);
-    transition: opacity .35s ease;
-  }
-  .intro.hide{ opacity:0; pointer-events:none; }
+    html,body{height:100%}
+    body{
+      margin:0; padding:0; overflow:hidden;
+      background:#0b0f14 url('./assets/background.jpg') center/cover no-repeat fixed;
+      display:flex; justify-content:center; align-items:flex-start;
+      font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+    }
 
-  .stage{
-    position:relative; width:min(86vw, 560px); aspect-ratio:1/1;
-    border-radius:28px;
-  }
+    /* kontener testowy, żeby było jasne że to lab */
+    .badge {
+      position: fixed; top:12px; left:12px;
+      font-size:12px; letter-spacing:.3px; color:#cbd5e1;
+      background: rgba(15,22,35,.66);
+      border:1px solid #293449; border-radius:10px;
+      padding:6px 10px;
+      backdrop-filter: blur(6px);
+    }
 
-  /* Neonowy „fotolook” w tle SVG – podmień URL na swój obraz (WebP/PNG z restauracją) */
-  .photo{
-    position:absolute; inset:0; border-radius:28px; overflow:hidden;
-    background:
-      radial-gradient(60% 60% at 50% 45%, rgba(10,12,18,.9) 0%, rgba(10,12,18,.6) 55%, rgba(10,12,18,.2) 100%),
-      url('../assets/restaurant-bg.webp') center/cover no-repeat; /* << podmień */
-    filter: saturate(1.15) brightness(1.04);
-  }
+    .logo {
+      position:absolute;
+      top:-220px; left:50%; transform:translateX(-50%) scale(.92);
+      width:var(--w); height:auto;
+      filter: drop-shadow(0 12px 28px rgba(0,0,0,.45));
+      animation:
+        drop 2.6s cubic-bezier(.2,.9,.2,1) forwards,
+        sway 2.2s ease-in-out 2.6s infinite;
+      will-change: transform, top;
+    }
 
-  /* SVG logo (ostre + lekkie) */
-  .svg-wrap{
-    position:absolute; inset:0; display:grid; place-items:center;
-    filter: drop-shadow(0 18px 50px rgba(0,0,0,.45));
-    transform: translateY(-42vh) scale(1.18);
-    opacity:0;
-    animation: dropIn .8s cubic-bezier(.2,.8,.2,1) forwards .05s;
-  }
-  @keyframes dropIn{
-    0%{ transform: translateY(-42vh) scale(1.18); opacity:0 }
-    70%{ transform: translateY(0) scale(1.00);  opacity:1 }
-    100%{transform: translateY(0) scale(1.00);  opacity:1 }
-  }
+    /* spadanie z miękkim wyhamowaniem */
+    @keyframes drop{
+      0%   { top:-220px; opacity:0; transform:translateX(-50%) scale(.92) }
+      70%  { top:52%;   opacity:1; transform:translateX(-50%) scale(1.06) }
+      88%  { top:49%;                transform:translateX(-50%) scale(.995) }
+      100% { top:50%;                transform:translateX(-50%) scale(1) }
+    }
 
-  svg{ width:84%; height:auto; display:block }
-  .disc { fill: url(#g); stroke:#2A3548; stroke-width:2 }
-  .mic-body{ fill:#ff8c38 }
-  .mic-ring{ fill:#ffc999 }
-  .mic-stem{ fill:#ffe2c0 }
-  .waves path{ stroke:#ff9a3e; stroke-width:3; fill:none; opacity:.95; transform-origin:256px 210px; animation: wave 1.6s ease-in-out infinite }
-  .waves path:nth-child(2){ opacity:.7; animation-delay:.12s }
-  .waves path:nth-child(3){ opacity:.45; animation-delay:.24s }
-  @keyframes wave{
-    0%,100%{ transform: scaleX(1); opacity: inherit }
-    50%{ transform: scaleX(1.07); opacity: .55 }
-  }
-
-  /* Ripple – kropla */
-  .ripple{
-    position:absolute; left:50%; bottom:8%;
-    width:12px; height:12px; transform:translateX(-50%); border-radius:50%;
-    background: radial-gradient(circle, var(--brand) 0%, rgba(255,122,0,.0) 70%);
-    opacity:0; animation: ripple .9s ease-out forwards .5s;
-  }
-  @keyframes ripple{
-    0%{ opacity:0; width:12px; height:12px }
-    10%{opacity:.85}
-    100%{opacity:0; width:280px; height:280px; box-shadow:0 0 70px rgba(255,122,0,.25)}
-  }
-
-  /* ---------- PRZYCISK VOICE (po intro) ---------- */
-  .cta{
-    position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
-    display:flex; align-items:center; gap:10px; padding:14px 18px;
-    background: rgba(20,27,38,.82); border:1px solid #2a3548; border-radius:18px;
-    color:var(--text); font-size:18px; cursor:pointer;
-    box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(0,255,128,0);
-    transition: box-shadow .25s ease, transform .15s ease, opacity .3s ease;
-    opacity:0;
-  }
-  .cta.show{ opacity:1 }
-  .cta:hover{ transform: translateX(-50%) scale(1.02) }
-  .cta.pulse{
-    animation: pulse 1.6s infinite;
-    border-color:#22d37f77;
-    box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 26px #22d37f44;
-  }
-  @keyframes pulse{
-    0%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,.55) }
-    70%{box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 16px rgba(34,211,127,0)}
-    100%{box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,0)}
-  }
-
-  /* Accessibility */
-  @media (prefers-reduced-motion: reduce){
-    .intro{ display:none !important; }
-    .cta{ opacity:1 }
-  }
-</style>
+    /* delikatne kołysanie po wylądowaniu */
+    @keyframes sway{
+      0%,100% { transform:translateX(-50%) translateY(0) }
+      50%     { transform:translateX(-50%) translateY(-14px) }
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1 style="margin:0 0 10px;font-size:28px;opacity:.85">UI‑Lab — animacja „kropla + mikrofon”</h1>
-    <div style="color:#93a1b4">Test poligon, bez dotykania produkcyjnego indexa.</div>
-  </div>
-
-  <!-- INTRO (kropla + mic) -->
-  <div class="intro" id="ffIntro" aria-hidden="true">
-    <div class="stage">
-      <div class="photo"></div>
-      <div class="svg-wrap" id="logoWrap">
-        <svg viewBox="0 0 512 512" role="img" aria-label="FreeFlow mic vinyl">
-          <defs>
-            <radialGradient id="g" cx="50%" cy="45%" r="60%">
-              <stop offset="0%" stop-color="#1B2232"/>
-              <stop offset="60%" stop-color="#0F1622"/>
-              <stop offset="100%" stop-color="#0B1118"/>
-            </radialGradient>
-            <filter id="softGlow">
-              <feGaussianBlur stdDeviation="6" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-          <circle class="disc" cx="256" cy="256" r="220"/>
-          <g filter="url(#softGlow)">
-            <rect class="mic-body" x="236" y="150" width="40" height="120" rx="18"/>
-            <rect class="mic-ring" x="228" y="270" width="56" height="28" rx="8"/>
-            <rect class="mic-stem" x="246" y="298" width="20" height="80" rx="6"/>
-            <g class="waves">
-              <path d="M256,210 c20,-20 40,-20 60,0" />
-              <path d="M256,230 c30,-25 60,-25 90,0" />
-              <path d="M256,250 c40,-28 80,-28 120,0" />
-            </g>
-          </g>
-        </svg>
-      </div>
-      <div class="ripple"></div>
-    </div>
-  </div>
-
-  <!-- CTA (fałszywy przycisk — tylko do podglądu) -->
-  <button class="cta" id="ctaBtn">🎤 Kliknij, aby mówić…</button>
-
-<script>
-(function(){
-  const intro = document.getElementById('ffIntro');
-  const logoWrap = document.getElementById('logoWrap');
-  const cta = document.getElementById('ctaBtn');
-
-  // kliknięcie = pomiń intro
-  intro.addEventListener('click', endIntro);
-
-  // po ~1.3s zjedź logo ku dołowi (wizualna transformacja w guzik)
-  setTimeout(() => {
-    logoWrap.style.transition = 'transform .5s ease, opacity .35s ease';
-    logoWrap.style.transform = 'translateY(32vh) scale(0.40)';
-  }, 820);
-
-  // po ~1.4s pokaż przycisk
-  setTimeout(() => {
-    cta.classList.add('show', 'pulse');
-    endIntro();
-  }, 1400);
-
-  function endIntro(){
-    if (!intro) return;
-    intro.classList.add('hide');
-    setTimeout(()=> intro.remove(), 360);
-  }
-
-  // Demo: klik CTA = puls stop/start (tu podepniesz realny start nasłuchu)
-  let pulsing = true;
-  cta.addEventListener('click', () => {
-    pulsing = !pulsing;
-    cta.classList.toggle('pulse', pulsing);
-    // TODO: tu podepnij startDictation() z freeflow-assistant.js
-  });
-})();
-</script>
+  <div class="badge">UI‑Lab • drop logo test</div>
+  <img class="logo" src="./assets/mic_logo.png" alt="FreeFlow logo">
 </body>
 </html>

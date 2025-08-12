@@ -1,189 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FreeFlow • Logo drop → guzik</title>
-<style>
-  :root{
-    --brand:#ff7a00;
-    --bg1:#0b0f14; --bg2:#101722; --bg3:#0a0f18;
-    --ring:#293449; --glass:#0f1622cc;
-    --drop-dur: 2.2s;         /* całkowity czas animacji „spadnięcia” */
-    --ripple-delay: 0.9s;     /* kiedy zaczyna się rozprysk */
-    --settle-dur: 1.35s;      /* czas zjazdu do dołu i wygaszenia */
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drop Logo Animation</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: url('assets/background.jpg') no-repeat center center/cover;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
 
-  /* Scena */
-  html,body{height:100%}
-  body{
-    margin:0; background: radial-gradient(1200px 800px at 50% -15%, #182131 0%, #0d141d 55%, var(--bg1) 100%);
-    color:#e8eef7; overflow:hidden; font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-  }
+    .logo {
+      position: absolute;
+      top: -200px;
+      width: 150px;
+      animation: drop 1.5s ease-in forwards;
+    }
 
-  /* Kontener warstw */
-  .stage{
-    position:relative; width:100vw; height:100vh; overflow:hidden;
-    background:#02060a;
-  }
+    @keyframes drop {
+      0% { transform: translateY(-200px) scale(1); }
+      70% { transform: translateY(calc(100vh - 250px)) scale(1); }
+      85% { transform: translateY(calc(100vh - 230px)) scale(1.05); }
+      100% { transform: translateY(calc(100vh - 250px)) scale(1); }
+    }
 
-  /* TŁO: jeśli masz obrazek, pokaże się, inaczej zostaje gradient body */
-  .bg{
-    position:absolute; inset:0; object-fit:cover; filter:contrast(1.05) saturate(1.05);
-    opacity:.9;
-  }
+    .content {
+      opacity: 0;
+      animation: fadeIn 1s ease forwards;
+      animation-delay: 1.6s;
+      position: absolute;
+      bottom: 50px;
+      text-align: center;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
 
-  /* Okrąg „sceny logo” na środku (delikatna poświata) */
-  .halo{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:min(78vw, 620px); aspect-ratio:1/1; border-radius:50%;
-    box-shadow:
-      inset 0 0 140px #000a,
-      0 30px 120px #000a,
-      0 0 0 1px var(--ring),
-      0 0 60px rgba(255,122,0,.06);
-    background: radial-gradient(60% 60% at 50% 45%, #1b2637 0%, #0f1722 55%, #0b1018 100%);
-  }
-
-  /* LOGO: PNG (jeśli wrzucone) albo fallback SVG */
-  .logo{
-    position:absolute; left:50%; top:50%;
-    width:min(64vw, 480px); transform:translate(-50%,-200%) scale(1.06);
-    will-change: transform, opacity; opacity:0;
-    filter: drop-shadow(0 8px 22px rgba(0,0,0,.45));
-    animation: dropIn var(--drop-dur) cubic-bezier(.2,.7,.15,1) forwards,
-               settle var(--settle-dur) cubic-bezier(.12,.62,.12,1) forwards;
-    animation-delay: 0s, calc(var(--drop-dur) - .35s);
-  }
-  .logo.fallback svg{display:block; width:100%; height:auto}
-
-  /* Ripple pod sceną: delikatny rozprysk/kręgi */
-  .ripple{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:min(62vw, 520px); aspect-ratio:1/1; pointer-events:none;
-  }
-  .ripple::before, .ripple::after{
-    content:""; position:absolute; inset:0; border-radius:50%;
-    border:2px solid rgba(255,255,255,.09);
-    box-shadow: 0 0 24px rgba(255,122,0,.12), inset 0 0 24px rgba(255,122,0,.08);
-    opacity:0; transform:scale(.88);
-    animation: ripple 1.6s ease-out forwards;
-    animation-delay: var(--ripple-delay);
-  }
-  .ripple::after{
-    border-color: rgba(255,122,0,.22);
-    animation-delay: calc(var(--ripple-delay) + .18s);
-  }
-
-  /* Docelowy GUZIK (na dole) */
-  .cta{
-    position:absolute; left:50%; bottom:5.5%;
-    transform:translate(-50%, 140%) scale(.86);
-    background: linear-gradient(180deg, #161e2a, #0e1623);
-    border:1px solid #263248; color:#eaf1ff; border-radius:16px;
-    padding:14px 18px; font-size:18px; display:flex; align-items:center; gap:10px;
-    box-shadow: 0 18px 36px rgba(0,0,0,.45), 0 0 0 0 rgba(34,211,127,0);
-    opacity:0; will-change: transform, opacity;
-    transition: transform .18s ease, background .2s ease;
-    animation: ctaIn .6s ease-out forwards;
-    animation-delay: calc(var(--drop-dur) + .35s);
-  }
-  .cta:hover{ transform:translate(-50%, 130%) scale(.89); background:#182233 }
-
-  /* KEYFRAMES */
-  @keyframes dropIn{
-    0%   { transform:translate(-50%,-200%) scale(1.06); opacity:0; }
-    48%  { transform:translate(-50%,-52%)  scale(1.00); opacity:1; }  /* przyłapanie */
-    62%  { transform:translate(-50%,-47%)  scale(1.012); }           /* micro-overshoot */
-    100% { transform:translate(-50%,-50%)  scale(1.00); }
-  }
-  @keyframes ripple{
-    0%   { opacity:0; transform:scale(.88); }
-    15%  { opacity:1; }
-    100% { opacity:0; transform:scale(1.18); }
-  }
-  @keyframes settle{
-    0%   { transform:translate(-50%,-50%) scale(1.00); }
-    65%  { transform:translate(-50%, 36%)  scale(.78); }
-    100% { transform:translate(-50%, 90%)  scale(.56); }
-  }
-  @keyframes ctaIn{
-    from { transform:translate(-50%, 140%) scale(.86); opacity:0; }
-    to   { transform:translate(-50%,   0%) scale(1.00); opacity:1; }
-  }
-
-  /* Małe ekrany */
-  @media (max-width:480px){
-    .cta{ bottom:4.5%; font-size:16px; padding:12px 16px }
-  }
-</style>
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+  </style>
 </head>
 <body>
-
-<div class="stage">
-  <!-- Jeśli wrzucisz plik, pokaże się zdjęcie tła -->
-  <img class="bg" src="../assets/background.jpg" alt="" onerror="this.style.display='none'"/>
-
-  <div class="halo" aria-hidden="true"></div>
-  <div class="ripple" aria-hidden="true"></div>
-
-  <!-- LOGO: jeśli jest PNG, użyje PNG; w innym razie pokaże SVG fallback -->
-  <img id="logoPng" class="logo" src="../assets/mic_logo.png" alt="FreeFlow logo" onerror="useFallback()" />
-
-  <button class="cta" id="toVoice">
-    🎤 Dotknij, aby mówić
-  </button>
-</div>
-
-<script>
-  // Fallback do wbudowanego SVG gdy PNG nie istnieje:
-  function useFallback(){
-    const img = document.getElementById('logoPng');
-    img.remove();
-    const wrap = document.createElement('div');
-    wrap.className = 'logo fallback';
-    wrap.innerHTML = `
-      <svg viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="g1" cx="50%" cy="45%">
-            <stop offset="0%" stop-color="#29e6ff"/>
-            <stop offset="55%" stop-color="#ff4fd8"/>
-            <stop offset="100%" stop-color="#ff7a00"/>
-          </radialGradient>
-        </defs>
-        <!-- kropla -->
-        <path d="M210 25
-                 C 310 25, 390 105, 390 205
-                 C 390 320, 310 395, 210 395
-                 C 110 395, 30 320, 30 205
-                 C 30 105, 110 25, 210 25 Z"
-              fill="url(#g1)" fill-opacity="0.18" stroke="#3ad" stroke-opacity=".35"/>
-        <!-- fale -->
-        <circle cx="210" cy="180" r="120" fill="none" stroke="#29e6ff" stroke-opacity=".5" stroke-width="3"/>
-        <circle cx="210" cy="180" r="90"  fill="none" stroke="#7d3cff" stroke-opacity=".45" stroke-width="3"/>
-        <circle cx="210" cy="180" r="60"  fill="none" stroke="#ff7a00" stroke-opacity=".55" stroke-width="3"/>
-        <!-- mikrofon -->
-        <g>
-          <ellipse cx="210" cy="160" rx="56" ry="44" fill="#ffb347" />
-          <rect x="194" y="160" width="32" height="86" rx="16" fill="#1c2433"/>
-          <rect x="188" y="246" width="44" height="22" rx="11" fill="#293449"/>
-        </g>
-      </svg>
-    `;
-    document.querySelector('.stage').appendChild(wrap);
-  }
-
-  // Klik w CTA → tu podepniesz swój start rozpoznawania mowy:
-  document.getElementById('toVoice').addEventListener('click', () => {
-    // TODO: podłącz do Twojej funkcji np. startDictation() albo sendToAssistant()
-    // startDictation();
-    console.log('CTA pressed');
-  });
-
-  // (Opcjonalnie) restart animacji po odświeżeniu/przejściu
-  window.addEventListener('pageshow', (e)=>{
-    if (e.persisted) location.reload();
-  });
-</script>
+  <img src="assets/logo.png" alt="Logo" class="logo">
+  
+  <div class="content">
+    <h1>FreeFlow Voice Ordering</h1>
+    <p>Kliknij logo, aby rozpocząć zamówienie głosowe</p>
+  </div>
 </body>
 </html>

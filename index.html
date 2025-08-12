@@ -7,14 +7,9 @@
   <link rel="icon" href="./Freeflow-logo.png" />
   <style>
     :root{
-      --bg:#0b0f14;
-      --panel:#121821;
-      --panel2:#16202c;
-      --text:#e9eef6;
-      --muted:#93a1b4;
-      --brand:#ff7a00;
-      --glow:#ff7a00aa;
-      --ring:#2a3545;
+      --bg:#0b0f14; --panel:#121821; --panel2:#16202c;
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
+      --glow:#ff7a00aa; --ring:#2a3545;
     }
     html,body{height:100%}
     body{
@@ -23,6 +18,31 @@
       color:var(--text);
     }
 
+    /* ===== efekty glass + neon ===== */
+    .glass{
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:15px;
+      box-shadow: 0 4px 30px rgba(0,0,0,.25);
+    }
+    .glow{
+      box-shadow:
+        0 0 10px rgba(0,255,255,.15),
+        0 0 20px rgba(0,255,255,.12),
+        0 0 30px rgba(0,255,255,.08);
+      transition: box-shadow .3s ease, transform .15s ease;
+    }
+    .glow:hover{
+      box-shadow:
+        0 0 15px rgba(0,255,255,.25),
+        0 0 30px rgba(0,255,255,.18),
+        0 0 45px rgba(0,255,255,.12);
+      transform: translateY(-1px);
+    }
+    /* ================================= */
+
     /* top bar */
     .topbar{
       display:flex; align-items:center; justify-content:space-between;
@@ -30,9 +50,7 @@
       background: linear-gradient(180deg, rgba(13,20,29,.9), rgba(13,20,29,.65), rgba(13,20,29,0));
       backdrop-filter: blur(6px);
     }
-    .brand{
-      display:flex; align-items:center; gap:10px; font-weight:800; font-size:26px;
-    }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:26px; }
     .brand img{width:36px; height:36px; border-radius:8px}
     .brand .accent{color:var(--brand)}
     .claim{font-size:12px; color:var(--muted); margin-top:-6px}
@@ -111,6 +129,10 @@
     .bottom-buttons button:hover{ transform: translateY(-1px); background: #182233; }
     .bottom-buttons .primary{ outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset, 0 10px 32px #000; }
 
+    /* glass + glow aplikacja na wybrane elementy */
+    .iconbtn.glass.glow{ border-color:rgba(255,255,255,.16); }
+    #micBtn.glass.glow{ background:rgba(20,27,38,.55); }
+
     @media (max-width:480px){
       h1{font-size:36px}
       .bottom-buttons button{height:52px; font-size:16px; min-width:110px}
@@ -130,9 +152,9 @@
       <div class="claim">Voice to order</div>
     </div>
     <div class="actions">
-      <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
+      <button class="iconbtn glass glow" id="menuBtn" aria-label="Menu">☰</button>
       <div style="position:relative">
-        <button class="iconbtn" id="cartBtn" aria-label="Koszyk">🛒</button>
+        <button class="iconbtn glass glow" id="cartBtn" aria-label="Koszyk">🛒</button>
         <div class="badge" id="cartBadge">0</div>
       </div>
     </div>
@@ -145,17 +167,17 @@
     <!-- Hero z logo + mic -->
     <section class="hero">
       <img class="logo" src="./Freeflow-logo.png" alt="FreeFlow" />
-      <button id="micBtn" type="button">🎤 Dotknij logo i mów…</button>
+      <button id="micBtn" type="button" class="glass glow">🎤 Dotknij logo i mów…</button>
     </section>
 
     <!-- Transkrypcja / odpowiedzi -->
-    <div id="transcript" class="bubble">Transkrypcja pojawi się tutaj…</div>
+    <div id="transcript" class="bubble glass glow">Transkrypcja pojawi się tutaj…</div>
 
     <!-- Przyciski skrótów -->
     <div class="bottom-buttons" style="margin-bottom:36px">
-      <button class="primary" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
-      <button data-quick="Taxi">🚕 <span>Taxi</span></button>
-      <button data-quick="Hotel">🏠 <span>Hotel</span></button>
+      <button class="primary glass glow" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
+      <button class="glass glow" data-quick="Taxi">🚕 <span>Taxi</span></button>
+      <button class="glass glow" data-quick="Hotel">🏠 <span>Hotel</span></button>
     </div>
   </main>
 
@@ -164,9 +186,10 @@
 
   <!-- Logika asystenta -->
   <script src="./freeflow-assistant.js"></script>
+
+  <!-- Mini logika UI (niemodułowa) -->
   <script>
-    // proste „makiety” menu/koszyka – na później podepniemy realny stan
-    const badge = document.getElementById('cartBadge');
+    const badgeEl = document.getElementById('cartBadge');
     const cartBtn = document.getElementById('cartBtn');
     cartBtn.addEventListener('click',()=> alert('Koszyk (coming soon)'));
     document.getElementById('menuBtn').addEventListener('click',()=> alert('Menu (coming soon)'));
@@ -175,34 +198,35 @@
     document.querySelectorAll('[data-quick]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const t = btn.dataset.quick;
-        sendToAssistant?.(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`); // funkcja z freeflow-assistant.js
+        if (window.sendToAssistant) {
+          window.sendToAssistant(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`);
+        }
       });
     });
-  </script> 
+  </script>
+
+  <!-- Koszyk (moduł) -->
   <script type="module">
-  import { addToCart, getCart, cartCount, clearCart } from './cart.js';
+    import { addToCart, getCart, cartCount, clearCart } from './cart.js';
 
-  const badge = document.getElementById('cartBadge');
-  function renderBadge(){ badge.textContent = cartCount(); }
-  renderBadge();
-  window.addEventListener('cart:update', renderBadge);
+    const badge = document.getElementById('cartBadge');
+    function renderBadge(){ badge.textContent = cartCount(); }
+    renderBadge();
+    window.addEventListener('cart:update', renderBadge);
 
-  // Przykładowe podpięcia pod szybkie przyciski:
-  document.querySelector('[data-quick="Jedzenie"]')
-    .addEventListener('click', ()=> addToCart({type:'food', name:'Zestaw dnia'}));
-  document.querySelector('[data-quick="Taxi"]')
-    .addEventListener('click', ()=> addToCart({type:'taxi', name:'Kurs standard'}));
-  document.querySelector('[data-quick="Hotel"]')
-    .addEventListener('click', ()=> addToCart({type:'hotel', name:'Pokój 1 noc'}));
+    document.querySelector('[data-quick="Jedzenie"]')
+      .addEventListener('click', ()=> addToCart({type:'food', name:'Zestaw dnia'}));
+    document.querySelector('[data-quick="Taxi"]')
+      .addEventListener('click', ()=> addToCart({type:'taxi', name:'Kurs standard'}));
+    document.querySelector('[data-quick="Hotel"]')
+      .addEventListener('click', ()=> addToCart({type:'hotel', name:'Pokój 1 noc'}));
 
-  // Tymczasowy koszyk (modal zastąpimy później)
-  document.getElementById('cartBtn').addEventListener('click', ()=>{
-    const items = getCart();
-    alert(items.length ? items.map(i=>`• ${i.type} – ${i.name}`).join('\n') : 'Koszyk jest pusty');
-  });
+    document.getElementById('cartBtn').addEventListener('click', ()=>{
+      const items = getCart();
+      alert(items.length ? items.map(i=>`• ${i.type} – ${i.name}`).join('\n') : 'Koszyk jest pusty');
+    });
 
-  // Eksport dla asystenta (głos)
-  window.FreeFlowCart = { addToCart, clearCart, getCart };
+    window.FreeFlowCart = { addToCart, clearCart, getCart };
   </script>
 </body>
 </html>

@@ -1,42 +1,202 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drop Logo Animation</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: url('assets/background.jpg') no-repeat center center/cover;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FreeFlow • Drop logo (with splash)</title>
+<style>
+  :root{
+    --w: 170px;            /* szerokość kropli/logo */
+    --fall: 1100ms;        /* czas spadania */
+    --squash: 180ms;       /* “ugięcie” przy lądowaniu */
+    --splash: 680ms;       /* rozprysk kropelek */
+    --ripple: 900ms;       /* fale */
+    --delay-splash: 1050ms;/* odpalenie splash po starcie spadania */
+  }
 
-        .logo {
-            position: absolute;
-            top: -200px;
-            width: 150px;
-            height: auto;
-            animation: drop 2.5s ease-out forwards, bounce 1s ease-in-out 2.5s infinite;
-        }
+  html,body{height:100%}
+  body{
+    margin:0; overflow:hidden;
+    background:#0e1116 url('assets/background.jpg') center/cover no-repeat fixed;
+    display:flex; align-items:flex-start; justify-content:center;
+  }
 
-        @keyframes drop {
-            0% { top: -200px; opacity: 0; transform: scale(0.8); }
-            70% { top: 50%; opacity: 1; transform: scale(1.05); }
-            100% { top: 50%; transform: scale(1); }
-        }
+  /* scenografia */
+  .stage{
+    width:100%; height:100%;
+    position:relative;
+    display:flex; align-items:flex-start; justify-content:center;
+  }
+  .table-shadow{
+    position:absolute; bottom:10%; left:50%; transform:translateX(-50%);
+    width:min(78vw,680px); height:20px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,.35), rgba(0,0,0,0) 70%);
+    filter: blur(10px); opacity:.75; pointer-events:none;
+  }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-    </style>
+  /* logo-kropla */
+  .logo{
+    position:absolute; top:-260px; /* start nad ekranem */
+    width:var(--w); aspect-ratio:1/1.35;
+    background:url('assets/mic_drop.png') center/contain no-repeat;
+    filter: drop-shadow(0 10px 28px rgba(0,0,0,.45));
+    transform-origin: 50% 90%;
+    animation:
+      drop var(--fall) cubic-bezier(.22,.9,.27,1) 0ms 1 forwards,
+      squash var(--squash) cubic-bezier(.2,.9,.3,1) calc(var(--fall)) 1 both,
+      rebound 520ms cubic-bezier(.2,.8,.25,1) calc(var(--fall) + var(--squash)) 1 both;
+  }
+
+  /* ripples (fale) pojawiają się na “podstawce” */
+  .ripples{
+    position:absolute; bottom:18.5%; left:50%;
+    transform:translateX(-50%);
+    width: clamp(120px, 36vw, 420px); aspect-ratio:1/1;
+    pointer-events:none; filter: drop-shadow(0 0 12px rgba(255,122,0,.2));
+  }
+  .ripples span{
+    position:absolute; inset:0; border-radius:50%;
+    border:2px solid rgba(255,180,100,.25);
+    transform:scale(.4); opacity:0;
+    animation: ripple var(--ripple) ease-out var(--delay-splash) forwards;
+  }
+  .ripples span:nth-child(2){ animation-delay: calc(var(--delay-splash) + 120ms); }
+  .ripples span:nth-child(3){ animation-delay: calc(var(--delay-splash) + 240ms); }
+
+  /* kropelki */
+  .splash{
+    position:absolute; bottom:20%; left:50%;
+    width:0; height:0; pointer-events:none;
+    filter: drop-shadow(0 0 10px rgba(255,140,0,.25));
+  }
+  .splash i{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, #ffd9a1, #ff9f3a 60%, #ff7a00 100%);
+    opacity:0;
+    animation: splash var(--splash) cubic-bezier(.1,.7,.1,1) var(--delay-splash) forwards;
+  }
+
+  /* pozycje i kierunki kropelek */
+  /* 12 “strzałów” po okręgu z drobną losowością */
+  .splash i:nth-child(1){ --dx:  0.0;  --dy:-1.0; }
+  .splash i:nth-child(2){ --dx:  0.5;  --dy:-0.9; }
+  .splash i:nth-child(3){ --dx:  0.9;  --dy:-0.5; }
+  .splash i:nth-child(4){ --dx:  1.0;  --dy: 0.0; }
+  .splash i:nth-child(5){ --dx:  0.9;  --dy: 0.5; }
+  .splash i:nth-child(6){ --dx:  0.5;  --dy: 0.9; }
+  .splash i:nth-child(7){ --dx:  0.0;  --dy: 1.0; }
+  .splash i:nth-child(8){ --dx: -0.5;  --dy: 0.9; }
+  .splash i:nth-child(9){ --dx: -0.9;  --dy: 0.5; }
+  .splash i:nth-child(10){--dx: -1.0;  --dy: 0.0; }
+  .splash i:nth-child(11){--dx: -0.9;  --dy:-0.5; }
+  .splash i:nth-child(12){--dx: -0.5;  --dy:-0.9; }
+  .splash i{ --dist: 120px; }         /* zasięg rozprysku */
+  .splash i:nth-child(odd){ --dist: 150px; } /* niektóre dalej */
+
+  /* animacje */
+  @keyframes drop{
+    0%   { transform: translateY(-60vh) scale(1) rotate(0deg); }
+    85%  { transform: translateY(62vh)  scale(1) rotate(0.5deg); }
+    100% { transform: translateY(60vh)  scale(1) rotate(0deg); }
+  }
+  @keyframes squash{
+    0%   { transform: translateY(60vh) scale(1,1); }
+    100% { transform: translateY(60vh) scale(1.08,.92); }
+  }
+  @keyframes rebound{
+    0%   { transform: translateY(60vh) scale(1.08,.92); }
+    35%  { transform: translateY(57vh) scale(.98,1.05); }
+    100% { transform: translateY(60vh) scale(1,1); }
+  }
+  @keyframes ripple{
+    0%   { transform:scale(.6); opacity:.0; border-color: rgba(255,180,100,.28); }
+    20%  { opacity:.9; }
+    100% { transform:scale(1.3); opacity:0; border-color: rgba(255,180,100,0); }
+  }
+  @keyframes splash{
+    0%   { opacity:0; transform: translate(-4px, -4px) scale(.6); }
+    8%   { opacity:1; }
+    100% {
+      opacity:0;
+      transform: translate(calc(var(--dx) * var(--dist)), calc(var(--dy) * var(--dist))) scale(.88);
+      filter: blur(1px);
+    }
+  }
+
+  /* przycisk replay */
+  .replay{
+    position:fixed; inset:auto 12px 12px auto;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.45);
+    color:#e9eef6; font: 600 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    padding:10px 14px; border-radius:12px; cursor:pointer;
+    backdrop-filter: blur(6px);
+  }
+
+  /* mobile tune */
+  @media (max-width:520px){
+    :root{ --w: 150px; }
+  }
+</style>
 </head>
 <body>
-    <img src="assets/mic_logo.png" alt="Logo" class="logo">
+
+<div class="stage" id="stage">
+  <div class="table-shadow"></div>
+
+  <!-- kropla z mikrofonem -->
+  <div class="logo" id="logo" aria-hidden="true"></div>
+
+  <!-- fale -->
+  <div class="ripples" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- kropelki -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i><i></i>
+    <i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+</div>
+
+<button class="replay" id="replay">▶︎ Odtwórz ponownie</button>
+
+<script>
+  // Prosty mechanizm powtórki: usuwamy i dodajemy elementy z klasami/animacjami
+  const stage   = document.getElementById('stage');
+  const logo    = document.getElementById('logo');
+  const replay  = document.getElementById('replay');
+
+  function restartAnimation(){
+    // snapshot pozycji (opcjonalnie można dodać klasę)
+    logo.style.animation = 'none';
+    // wymuszenie reflow
+    void logo.offsetWidth;
+
+    // przywrócenie sekwencji
+    logo.style.animation =
+      `drop var(--fall) cubic-bezier(.22,.9,.27,1) 0ms 1 forwards,
+       squash var(--squash) cubic-bezier(.2,.9,.3,1) calc(var(--fall)) 1 both,
+       rebound 520ms cubic-bezier(.2,.8,.25,1) calc(var(--fall) + var(--squash)) 1 both`;
+
+    // Podmieniamy “ripples” i “splash”, żeby ich animacje odpaliły od zera
+    const rip = stage.querySelector('.ripples');
+    const spl = stage.querySelector('.splash');
+    const ripClone = rip.cloneNode(true);
+    const splClone = spl.cloneNode(true);
+    rip.replaceWith(ripClone);
+    spl.replaceWith(splClone);
+  }
+
+  replay.addEventListener('click', restartAnimation);
+
+  // Jeszcze raz uruchom po załadowaniu obrazków (gdy CDN/gh-pages cacheuje)
+  window.addEventListener('load', () => {
+    // jeśli tło/kropla już są zcache’owane, to wystarczy lekki delay,
+    // by animacje zaczęły spójnie
+    setTimeout(restartAnimation, 60);
+  });
+</script>
+
 </body>
 </html>

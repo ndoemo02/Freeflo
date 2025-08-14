@@ -1,58 +1,186 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFlow • UI‑Lab (drop logo)</title>
+  <title>FreeFlow • UI Lab</title>
   <style>
-    :root { --w: 160px; }
+    :root{
+      --accent:#ff7a00;
+      --glass:rgba(12,16,22,.55);
+      --ring:rgba(255,122,0,.35);
+      --logoSize:clamp(140px,26vw,260px);
+      --btnSize:68px;
+      --ease:cubic-bezier(.22,.9,.27,1);
+    }
 
     html,body{height:100%}
     body{
-      margin:0; padding:0; overflow:hidden;
-      background:#0b0f14 url('./assets/background.jpg') center/cover no-repeat fixed;
-      display:flex; justify-content:center; align-items:flex-start;
-      font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      margin:0;
+      font: 16px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#e9eef6;
+      background:#0e1116;
+      overflow-x:hidden;
+      animation: fadein .6s ease both;
     }
 
-    /* kontener testowy, żeby było jasne że to lab */
-    .badge {
-      position: fixed; top:12px; left:12px;
-      font-size:12px; letter-spacing:.3px; color:#cbd5e1;
-      background: rgba(15,22,35,.66);
-      border:1px solid #293449; border-radius:10px;
-      padding:6px 10px;
-      backdrop-filter: blur(6px);
+    /* scena */
+    .hero{
+      position:relative;
+      min-height: clamp(64vh, 76vh, 88vh);
+      display:grid; place-items:center;
+      overflow:hidden; isolation:isolate;
+      background:
+        radial-gradient(1000px 1000px at 60% 30%, rgba(255,122,0,.07) 0 45%, transparent 55%),
+        radial-gradient(900px 900px at 40% 70%, rgba(0,209,255,.05) 0 50%, transparent 60%),
+        #0e1116 url("./Background.png") center/cover no-repeat;
+      filter:saturate(1) brightness(.97);
     }
 
-    .logo {
-      position:absolute;
-      top:-220px; left:50%; transform:translateX(-50%) scale(.92);
-      width:var(--w); height:auto;
-      filter: drop-shadow(0 12px 28px rgba(0,0,0,.45));
-      animation:
-        drop 2.6s cubic-bezier(.2,.9,.2,1) forwards,
-        sway 2.2s ease-in-out 2.6s infinite;
-      will-change: transform, top;
+    .logo{
+      width:var(--logoSize);
+      aspect-ratio:1/1.05;
+      background:url("./Freeflow-logo.png") center/contain no-repeat;
+      filter:
+        drop-shadow(0 20px 40px rgba(0,0,0,.45))
+        drop-shadow(0 0 22px rgba(255,122,0,.25))
+        drop-shadow(0 0 18px rgba(0,209,255,.18));
+      animation: drop 900ms var(--ease) both, squash 160ms cubic-bezier(.2,.9,.3,1) 900ms both;
     }
 
-    /* spadanie z miękkim wyhamowaniem */
+    /* podgląd transkrypcji (opcjonalny) */
+    .bubble{
+      position:absolute; left:50%; bottom:20%;
+      transform:translateX(-50%);
+      min-width:min(70ch, 86vw);
+      max-width: 92vw;
+      padding:12px 14px;
+      font-size:15px; line-height:1.3;
+      color:#e9eef6;
+      background: rgba(12,16,22,.60);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
+      opacity:.0; transform-origin:50% 100%;
+      animation: bubbleIn .5s ease .6s both;
+    }
+
+    /* przycisk voice */
+    .voice{
+      position:fixed; left:50%; bottom:18px; translate:-50% 0;
+      width:var(--btnSize); height:var(--btnSize);
+      border-radius:999px; border:1px solid rgba(255,255,255,.12);
+      background:var(--glass); color:#e9eef6;
+      display:grid; place-items:center; cursor:pointer; gap:8px;
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35),
+                  0 0 20px rgba(255,122,0,.15),
+                  inset 0 0 0 1px rgba(255,255,255,.06);
+      transition: transform .2s ease, box-shadow .2s ease, opacity .25s ease;
+      opacity:0; animation: voiceIn .6s ease .9s both;
+    }
+    .voice__pulse{
+      position:absolute; inset:0; border-radius:999px; pointer-events:none;
+      box-shadow:0 0 0 0 var(--ring);
+      animation: pulse 1900ms ease-out infinite;
+    }
+    .voice__dot{
+      width:22px; height:22px; border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #ffd9a1, #ff9f3a 60%, #ff7a00 100%);
+      box-shadow: 0 0 10px rgba(255,122,0,.55), 0 0 20px rgba(255,122,0,.25);
+    }
+    .voice__label{
+      position:absolute; bottom:calc(100% + 10px); left:50%; translate:-50% 0;
+      font:600 13px/1.1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      color:#e9eef6; padding:6px 10px; border-radius:10px;
+      background:rgba(12,16,22,.6); border:1px solid rgba(255,255,255,.08);
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+      white-space:nowrap; opacity:0; transform:translateY(4px);
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    .voice:hover .voice__label{ opacity:1; transform:translateY(0); }
+    .voice:hover{ transform: translate(-50%, -2px); box-shadow:
+      0 12px 34px rgba(0,0,0,.45), 0 0 26px rgba(255,122,0,.22),
+      inset 0 0 0 1px rgba(255,255,255,.08); }
+    .voice:active{ transform: translate(-50%,0) scale(.98); }
+
+    /* animacje */
+    @keyframes fadein{ from{opacity:0} to{opacity:1} }
     @keyframes drop{
-      0%   { top:-220px; opacity:0; transform:translateX(-50%) scale(.92) }
-      70%  { top:52%;   opacity:1; transform:translateX(-50%) scale(1.06) }
-      88%  { top:49%;                transform:translateX(-50%) scale(.995) }
-      100% { top:50%;                transform:translateX(-50%) scale(1) }
+      0%{transform: translateY(-58vh) scale(1)}
+      85%{transform: translateY(38vh)  scale(1.02)}
+      100%{transform: translateY(34vh)  scale(1)}
+    }
+    @keyframes squash{
+      0%{transform: translateY(34vh) scale(1,1)}
+      100%{transform: translateY(34vh) scale(1.06,.94)}
+    }
+    @keyframes bubbleIn{
+      from{ opacity:0; transform:translate(-50%, 6px) scale(.98) }
+      to  { opacity:1; transform:translate(-50%, 0)   scale(1) }
+    }
+    @keyframes voiceIn{
+      from{ opacity:0; transform:translate(-50%, 6px) scale(.92) }
+      to  { opacity:1; transform:translate(-50%, 0)   scale(1) }
+    }
+    @keyframes pulse{
+      0%{ box-shadow:0 0 0 0 var(--ring); }
+      70%{box-shadow:0 0 0 16px rgba(255,122,0,0);}
+      100%{box-shadow:0 0 0 0 rgba(255,122,0,0);}
     }
 
-    /* delikatne kołysanie po wylądowaniu */
-    @keyframes sway{
-      0%,100% { transform:translateX(-50%) translateY(0) }
-      50%     { transform:translateX(-50%) translateY(-14px) }
+    @media (max-width:520px){
+      :root{ --logoSize:56vw; --btnSize:64px; }
+      .bubble{ display:none; } /* na telefonie zostawiamy sam guzik */
+    }
+    @media (prefers-reduced-motion:reduce){
+      .logo, .voice__pulse { animation:none !important }
     }
   </style>
 </head>
 <body>
-  <div class="badge">UI‑Lab • drop logo test</div>
-  <img class="logo" src="./assets/mic_logo.png" alt="FreeFlow logo">
+
+  <section class="hero">
+    <div class="logo" aria-label="FreeFlow"></div>
+    <div class="bubble" id="transcript">Złóż zamówienie. Taxi, posiłek, a może nocleg?</div>
+  </section>
+
+  <!-- przycisk voice -->
+  <button class="voice" id="ffVoice" type="button" aria-label="Kliknij, aby mówić">
+    <span class="voice__pulse"></span>
+    <span class="voice__dot"></span>
+    <span class="voice__label">Mów do mnie</span>
+  </button>
+
+  <script>
+    // Hook: klik w przycisk voice
+    const btn = document.getElementById('ffVoice');
+    const bubble = document.getElementById('transcript');
+
+    btn.addEventListener('click', () => {
+      // Jeśli masz globalną funkcję startVoice() – użyj jej:
+      if (typeof window.startVoice === 'function') {
+        window.startVoice();
+      } else {
+        // Fallback: wyślij event dla Twojego skryptu (np. freeflow-assistant.js)
+        document.dispatchEvent(new CustomEvent('ff:voice:start'));
+      }
+      // Opcjonalne potwierdzenie w UI
+      if (bubble) bubble.textContent = '...słucham...';
+    });
+
+    // Przykład: odbiór transkrypcji z Twojego asystenta (jeśli emitujesz eventy)
+    document.addEventListener('ff:transcript:update', (e) => {
+      if (bubble && e.detail && e.detail.text) {
+        bubble.textContent = e.detail.text;
+      }
+    });
+    document.addEventListener('ff:assistant:reply', (e) => {
+      if (bubble && e.detail && e.detail.text) {
+        bubble.textContent = e.detail.text;
+      }
+    });
+  </script>
 </body>
 </html>

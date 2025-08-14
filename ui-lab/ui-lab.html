@@ -1,160 +1,136 @@
 <!doctype html>
 <html lang="pl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>FreeFlow</title>
 <style>
   :root{
-    --btn-size: 112px;            /* rozmiar „guzika” z logo */
-    --shadow: 0 12px 26px rgba(0,0,0,.35);
-    --glow1: 0 0 18px rgba(255,155,0,.45);
-    --glow2: 0 0 32px rgba(0,200,255,.25);
+    /* ROZMIARY LOGO-GUZIKA */
+    --logo-final: 260px;        /* docelowy rozmiar kropli na mobile */
+    --logo-final-desktop: 320px;/* docelowy rozmiar na >768px */
+    --drop-time: 1100ms;        /* czas spadania */
+    --squash-time: 180ms;       /* ugięcie po lądowaniu */
+    --bounce-time: 520ms;       /* odbicie */
+    --shadow: 0 14px 42px rgba(0,0,0,.45);
   }
 
   html,body{height:100%}
   body{
     margin:0; overflow:hidden;
-    background: #0b0f14 url("./Background.png") center/cover no-repeat fixed;
-    font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    background: #0b0f14 url('Background.png') center/cover no-repeat fixed;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
 
-  /* warstwa na ewentualne treści */
-  .content{
-    position:relative; z-index:1;
-    min-height:100%; display:flex; align-items:center; justify-content:center;
-    padding:24px;
+  /* KILL-SWITCH starego żółtego przycisku/dema */
+  .mic, .mic-circle, .mic-dot, .voice-cta, .record-btn, .record-button, .cta-mic {
+    display:none !important;
   }
 
-  /* DOKOWANY PRZYCISK Z LOGO */
+  /* Kontener na guzik (pozycja przy dolnej krawędzi) */
   .mic-wrap{
-    position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-    z-index:9;
-    width:var(--btn-size); height:var(--btn-size);
-    border-radius:999px;
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(4px);
+    position:fixed;
+    left:50%; bottom:18px; transform:translateX(-50%);
+    z-index:9999;                      /* NA WIERZCHU */
+    width:var(--logo-final); height:var(--logo-final);
     display:grid; place-items:center;
     pointer-events:auto;
+    filter: drop-shadow(var(--shadow));
   }
+
+  /* Sam guzik z logo */
   .mic-btn{
-    position:relative;
-    width:100%; height:100%;
-    border:none; outline:0; background:transparent; padding:0; margin:0;
+    width:100%; height:100%; border:0; padding:0; margin:0;
+    background: transparent;
+    display:grid; place-items:center;
     cursor:pointer;
   }
   .mic-btn img{
-    width:100%; height:100%; object-fit:contain; display:block;
-    /* PNG MUSI BYĆ Z PRZEZROCZYSTYM TŁEM */
-    filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2));
-    transform-origin:center;
-    animation: idle-pulse 2400ms ease-in-out infinite;
+    width:100%; height:100%; object-fit:contain;
+    will-change: transform, filter;
+    transform-origin: 50% 90%;
+    /* sekwencja animacji przy starcie strony */
+    animation:
+      dropDown var(--drop-time) cubic-bezier(.22,.9,.27,1) 0ms 1 forwards,
+      squash   var(--squash-time) cubic-bezier(.2,.9,.3,1) calc(var(--drop-time)) 1 both,
+      rebound  var(--bounce-time) cubic-bezier(.2,.8,.25,1) calc(var(--drop-time) + var(--squash-time)) 1 both;
   }
 
-  /* „fala” feedback po tapnięciu */
-  .ripple{
-    position:absolute; inset:0; border-radius:50%; pointer-events:none;
-    border:2px solid rgba(255,200,120,.28);
-    transform:scale(.6); opacity:0;
-  }
-  .ripple.show{
-    animation: ripple 800ms ease-out forwards;
+  /* Efekt "słuchania" po kliknięciu (delikatny puls) */
+  .mic-btn.listening img{
+    animation: listening 1400ms ease-in-out 0ms infinite;
+    filter: drop-shadow(0 0 24px rgba(255,140,0,.35));
   }
 
-  /* animacje */
-  @keyframes idle-pulse {
-    0%   { transform:scale(1);   filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2)); }
-    50%  { transform:scale(1.04); filter: drop-shadow(0 0 26px rgba(255,180,60,.55)) drop-shadow(0 0 42px rgba(0,210,255,.35)); }
-    100% { transform:scale(1);   filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2)); }
+  /* Animacje */
+  @keyframes dropDown{
+    0%   { transform: translateY(calc(-100vh - 200px)) scale(.38) rotate(0deg); }
+    85%  { transform: translateY(-22px) scale(.98) rotate(.5deg); }
+    100% { transform: translateY(0)     scale(1)    rotate(0deg); }
   }
-  @keyframes ripple{
-    0%   { opacity:.0; transform:scale(.6); }
-    10%  { opacity:.9; }
-    100% { opacity:0; transform:scale(1.35); }
+  @keyframes squash{
+    0%   { transform: translateY(0) scale(1,1); }
+    100% { transform: translateY(0) scale(1.06,.94); }
   }
-
-  /* baner „intro” (opcjonalnie): logo w centrum po wejściu */
-  .intro{
-    position:fixed; inset:0; display:grid; place-items:center;
-    background: radial-gradient(80% 60% at 50% 30%, rgba(0,0,0,.45), rgba(0,0,0,.0));
-    z-index:2; pointer-events:none;
-    animation: intro-fade 1100ms ease-out 1 forwards;
+  @keyframes rebound{
+    0%   { transform: translateY(0) scale(1.06,.94); }
+    35%  { transform: translateY(-10px) scale(.99,1.03); }
+    100% { transform: translateY(0) scale(1,1); }
   }
-  .intro img{
-    width:min(58vw, 360px);
-    filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2));
-    animation: intro-pop 900ms cubic-bezier(.2,.9,.2,1) 1 both;
-  }
-  @keyframes intro-pop{
-    0%{ transform: translateY(-16px) scale(.92); opacity:0; }
-    55%{ transform: translateY(0) scale(1.04); opacity:1; }
-    100%{ transform: translateY(0) scale(1); opacity:1; }
-  }
-  @keyframes intro-fade{
-    0%{ opacity:1 }
-    100%{ opacity:0 }
+  @keyframes listening{
+    0%   { transform: scale(1);    filter: drop-shadow(0 0 14px rgba(255,140,0,.25)); }
+    50%  { transform: scale(1.04); filter: drop-shadow(0 0 26px rgba(255,140,0,.45)); }
+    100% { transform: scale(1);    filter: drop-shadow(0 0 14px rgba(255,140,0,.25)); }
   }
 
-  /* Mobile tweaks */
-  @media (max-width: 520px){
-    :root{ --btn-size: 96px; }
+  /* RESPONSYWNOŚĆ – na większych ekranach powiększamy guzik */
+  @media (min-width: 768px){
+    .mic-wrap{ width:var(--logo-final-desktop); height:var(--logo-final-desktop); }
+  }
+
+  /* Prostokąt „sceny” w czasie spadania (tylko kosmetyka – brak interakcji) */
+  .stage{
+    position:fixed; inset:0; pointer-events:none;
   }
 </style>
 </head>
 <body>
 
-  <!-- OPCJONALNY lekki „hero” na starcie – sam zgaśnie -->
-  <div class="intro" aria-hidden="true">
-    <img src="./Freeflow-logo.png" alt="" />
-  </div>
+  <!-- „Scena” (opcjonalne – pozwala kiedyś dodać rozprysk/fale) -->
+  <div class="stage" aria-hidden="true"></div>
 
-  <!-- Twoje właściwe treści (placeholder) -->
-  <main class="content" role="main" aria-label="FreeFlow">
-    <!-- tu może zostać cała funkcjonalność z obecnej strony -->
-  </main>
-
-  <!-- Dokowany przycisk: LOGO jako click-to-voice -->
+  <!-- Nasz duży logo-guzik (kropla) -->
   <div class="mic-wrap">
-    <button class="mic-btn" id="micBtn" aria-label="Mów do FreeFlow" title="Mów do FreeFlow">
-      <span class="ripple" id="micRipple"></span>
-      <img src="./Freeflow-logo.png" alt="FreeFlow Logo">
+    <button class="mic-btn" id="voiceBtn" aria-label="Click to Voice">
+      <img src="Freeflow-logo.png" alt="FreeFlow Logo" width="1024" height="1024" decoding="async" />
     </button>
   </div>
 
 <script>
-  // 1) Animacja rippla + mały feedback skali
-  const micBtn = document.getElementById('micBtn');
-  const ripple = document.getElementById('micRipple');
+  // Minimalna logika kliknięcia – możesz tu wpiąć swoje start/stop voice
+  const btn = document.getElementById('voiceBtn');
+  let listening = false;
 
-  function clickFX(){
-    ripple.classList.remove('show'); // restart animacji
-    void ripple.offsetWidth;
-    ripple.classList.add('show');
+  btn.addEventListener('click', () => {
+    listening = !listening;
+    btn.classList.toggle('listening', listening);
 
-    micBtn.style.transform = 'scale(.97)';
-    setTimeout(()=> micBtn.style.transform = 'scale(1)', 120);
-  }
+    // TODO: wpiąć realny start/stop mikrofonu:
+    // if(listening) startVoice(); else stopVoice();
+    console.log('[FreeFlow] Voice button:', listening ? 'START' : 'STOP');
+  });
 
-  // 2) Integracja z Twoją logiką: najpierw lekkie FX, potem wywołanie
-  function triggerVoice(){
-    // FX
-    clickFX();
-    // Twoja właściwa akcja:
-    // a) jeśli masz globalną funkcję:
-    try { window.startVoice && window.startVoice(); } catch(e){}
-    // b) albo nasłuchuj tego CustomEvent w swoim JS:
-    try {
-      window.dispatchEvent(new CustomEvent('freeflow:mic:toggle', { detail:{ source:'logo-button' } }));
-    } catch(e){}
-  }
-
-  micBtn.addEventListener('click', triggerVoice);
-
-  // Opcjonalne: klawisz Enter/Space dla dostępności (button robi to natywnie)
-  // — nic nie trzeba dopisywać.
-
-  // Uwaga: jeżeli obrazek Freeflow-logo.png ma białe tło,
-  // zobaczysz „kartkę”. Użyj wersji PNG z kanałem ALPHA (przezroczystość).
+  // Na wypadek twardego cache – mały restart animacji po załadowaniu
+  window.addEventListener('load', () => {
+    const img = btn.querySelector('img');
+    // Wymuszamy reflow, by animacja dropa na pewno zagrała
+    img.style.animation = 'none';
+    void img.offsetWidth;
+    img.style.animation =
+      `dropDown var(--drop-time) cubic-bezier(.22,.9,.27,1) 0ms 1 forwards,
+       squash var(--squash-time) cubic-bezier(.2,.9,.3,1) calc(var(--drop-time)) 1 both,
+       rebound var(--bounce-time) cubic-bezier(.2,.8,.25,1) calc(var(--drop-time) + var(--squash-time)) 1 both`;
+  });
 </script>
 </body>
 </html>

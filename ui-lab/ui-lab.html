@@ -1,32 +1,157 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FreeFlow UI Lab</title>
-  <link rel="stylesheet" href="ff-intro.css">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: url('Background.png') no-repeat center center fixed;
-      background-size: cover;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FreeFlow • UI-Lab (root assets)</title>
+<style>
+  :root{
+    --btn-size: 84px;           /* docelowy rozmiar przycisku na dole */
+    --logo-size: 340px;         /* początkowy rozmiar logo */
+    --in-time: 700ms;           /* czas pojawienia się */
+    --travel-time: 900ms;       /* czas zjazdu do dołu */
+  }
+
+  /* tło z roota */
+  html,body{height:100%}
+  body{
+    margin:0;
+    background: #0b0f14 url('Background.png?v=2') center/cover no-repeat fixed;
+    overflow:hidden;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  }
+
+  /* warstwa na animacje */
+  .stage{
+    position:relative;
+    width:100%; height:100%;
+  }
+
+  /* logo w środku – start */
+  .logo-wrap{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .logo{
+    width:var(--logo-size);
+    aspect-ratio: 1/1.05;
+    background:url('Freeflow-logo.png?v=2') center/contain no-repeat;
+    filter: drop-shadow(0 14px 30px rgba(0,0,0,.45));
+    opacity:0; transform: scale(.86) translateY(10px);
+    animation:
+      fadeIn var(--in-time) cubic-bezier(.2,.8,.2,1) 120ms forwards,
+      toButton var(--travel-time) cubic-bezier(.2,.8,.25,1) calc(var(--in-time)+250ms) forwards;
+    transform-origin: 50% 50%;
+  }
+
+  /* przycisk docelowy na dole – “slot” */
+  .cta-slot{
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    width:var(--btn-size); height:var(--btn-size);
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; /* klikamy w .cta real */
+  }
+
+  /* pulsujące halo (pod logo) */
+  .halo{
+    position:absolute; inset:0; border-radius:50%;
+    box-shadow: 0 0 0 0 rgba(255,156,28,.35);
+    animation: halo 1600ms ease-out infinite;
+  }
+
+  /* prawdziwy klikany przycisk (na końcu animacji przykryje halo) */
+  .cta{
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    width:var(--btn-size); height:var(--btn-size);
+    border-radius:50%;
+    background: radial-gradient(circle at 32% 32%, #ffd68a, #ff9a2d 62%, #ff7a00 100%);
+    box-shadow:
+      0 10px 30px rgba(0,0,0,.45),
+      inset 0 -10px 20px rgba(0,0,0,.25);
+    border: 2px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; justify-content:center;
+    color:#101418; font-weight:700;
+    cursor:pointer;
+    outline:none; border:none;
+  }
+
+  /* proste “odtwórz ponownie” */
+  .replay{
+    position:fixed; right:12px; bottom:12px;
+    padding:10px 14px; border-radius:12px;
+    background: rgba(0,0,0,.45); color:#e9eef6;
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(6px);
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  /* ANIMACJE */
+  @keyframes fadeIn{
+    to{ opacity:1; transform: scale(1) translateY(0); }
+  }
+  @keyframes toButton{
+    0%{
+      transform: translateY(0) scale(1);
     }
-    .logo {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    55%{
+      transform: translateY(40vh) scale(.55);
     }
-    .logo img {
-      max-width: 300px;
-      height: auto;
+    100%{
+      /* pozycja przycisku – bottom:18px i skala do ~przycisku */
+      transform: translateY(calc(50vh - 18px)) scale(calc(var(--btn-size)/var(--logo-size)));
     }
-  </style>
+  }
+  @keyframes halo{
+    0%  { box-shadow: 0 0 0 0 rgba(255,156,28,.35); opacity:.9; }
+    70% { box-shadow: 0 0 0 28px rgba(255,156,28,0); opacity:0; }
+    100%{ box-shadow: 0 0 0 0 rgba(255,156,28,0); opacity:0; }
+  }
+
+  /* mobile drobne korekty */
+  @media (max-width:520px){
+    :root{ --logo-size: 300px; --btn-size: 76px; }
+  }
+</style>
 </head>
 <body>
-  <div class="logo">
-    <img src="Freeflow-logo.png" alt="FreeFlow Logo">
-  </div>
+
+<div class="stage" id="stage">
+  <div class="logo-wrap"><div class="logo" id="logo"></div></div>
+
+  <!-- slot i halo pod docelowy guzik -->
+  <div class="cta-slot"><div class="halo"></div></div>
+
+  <!-- faktyczny przycisk “click to voice” (teraz demo) -->
+  <button class="cta" id="ctaBtn" aria-label="Click to voice">●</button>
+</div>
+
+<button class="replay" id="replayBtn">▶︎ Odtwórz ponownie</button>
+
+<script>
+  // prosta powtórka animacji
+  const logo = document.getElementById('logo');
+  const replay = document.getElementById('replayBtn');
+
+  function restart(){
+    logo.style.animation = 'none';
+    void logo.offsetWidth; // reflow
+    logo.style.animation =
+      'fadeIn var(--in-time) cubic-bezier(.2,.8,.2,1) 120ms forwards,' +
+      'toButton var(--travel-time) cubic-bezier(.2,.8,.25,1) calc(var(--in-time)+250ms) forwards';
+  }
+  replay.addEventListener('click', restart);
+
+  // Demo: klik CTA
+  document.getElementById('ctaBtn').addEventListener('click', () => {
+    alert('Tu podepniemy “click-to-voice”.');
+  });
+
+  // jeśli obrazy mogą być zcache’owane – uruchom lekko później
+  window.addEventListener('load', () => setTimeout(restart, 80));
+</script>
+
 </body>
 </html>

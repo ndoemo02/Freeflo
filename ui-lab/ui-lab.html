@@ -1,133 +1,160 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow • UI-Lab (click-to-voice)</title>
-
-<!-- KLUCZOWE: ustaw bazę ścieżek na ROOT (z folderu ui-lab wracamy o 1 poziom) -->
-<base href="../">
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FreeFlow</title>
 <style>
-  :root{ --btn:88px; --logo:360px; }
+  :root{
+    --btn-size: 112px;            /* rozmiar „guzika” z logo */
+    --shadow: 0 12px 26px rgba(0,0,0,.35);
+    --glow1: 0 0 18px rgba(255,155,0,.45);
+    --glow2: 0 0 32px rgba(0,200,255,.25);
+  }
 
   html,body{height:100%}
   body{
     margin:0; overflow:hidden;
-    background:#0b0f14 url('Background.png?v=3') center/cover no-repeat fixed;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  }
-  .stage{ position:relative; width:100%; height:100%; }
-
-  .logo-wrap{
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    pointer-events:none;
-  }
-  .logo{
-    width:var(--logo);
-    aspect-ratio:1/1.05;
-    background:url('Freeflow-logo.png?v=3') center/contain no-repeat;
-    filter:drop-shadow(0 14px 30px rgba(0,0,0,.45));
-    will-change:transform,opacity;
-    opacity:0; transform:scale(.92);
+    background: #0b0f14 url("./Background.png") center/cover no-repeat fixed;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
   }
 
-  .cta{
-    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
-    width:var(--btn); height:var(--btn); border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 32% 32%, #ffd68a, #ff9a2d 62%, #ff7a00 100%);
-    border:2px solid rgba(255,255,255,.1);
-    box-shadow:0 12px 28px rgba(0,0,0,.45), inset 0 -10px 18px rgba(0,0,0,.25);
-    color:#0e1013; font-weight:700; cursor:pointer; outline:none; z-index:3;
+  /* warstwa na ewentualne treści */
+  .content{
+    position:relative; z-index:1;
+    min-height:100%; display:flex; align-items:center; justify-content:center;
+    padding:24px;
   }
-  .halo{
-    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
-    width:var(--btn); height:var(--btn); border-radius:50%; pointer-events:none; z-index:2;
+
+  /* DOKOWANY PRZYCISK Z LOGO */
+  .mic-wrap{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+    z-index:9;
+    width:var(--btn-size); height:var(--btn-size);
+    border-radius:999px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(4px);
+    display:grid; place-items:center;
+    pointer-events:auto;
   }
-  .halo::before{
-    content:""; position:absolute; inset:0; border-radius:50%;
-    box-shadow:0 0 0 0 rgba(255,156,28,.35);
-    animation:halo 1600ms ease-out infinite;
+  .mic-btn{
+    position:relative;
+    width:100%; height:100%;
+    border:none; outline:0; background:transparent; padding:0; margin:0;
+    cursor:pointer;
   }
-  .replay{
-    position:fixed; right:12px; bottom:12px; z-index:4;
-    padding:10px 14px; border-radius:12px;
-    background:rgba(0,0,0,.45); color:#e9eef6;
-    border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(6px);
-    cursor:pointer; font-weight:600;
+  .mic-btn img{
+    width:100%; height:100%; object-fit:contain; display:block;
+    /* PNG MUSI BYĆ Z PRZEZROCZYSTYM TŁEM */
+    filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2));
+    transform-origin:center;
+    animation: idle-pulse 2400ms ease-in-out infinite;
   }
-  @keyframes halo{
-    0%{box-shadow:0 0 0 0 rgba(255,156,28,.35); opacity:.9}
-    70%{box-shadow:0 0 0 28px rgba(255,156,28,0); opacity:0}
-    100%{box-shadow:0 0 0 0 rgba(255,156,28,0); opacity:0}
+
+  /* „fala” feedback po tapnięciu */
+  .ripple{
+    position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    border:2px solid rgba(255,200,120,.28);
+    transform:scale(.6); opacity:0;
   }
-  @media (max-width:520px){ :root{ --btn:78px; --logo:320px; } }
+  .ripple.show{
+    animation: ripple 800ms ease-out forwards;
+  }
+
+  /* animacje */
+  @keyframes idle-pulse {
+    0%   { transform:scale(1);   filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2)); }
+    50%  { transform:scale(1.04); filter: drop-shadow(0 0 26px rgba(255,180,60,.55)) drop-shadow(0 0 42px rgba(0,210,255,.35)); }
+    100% { transform:scale(1);   filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2)); }
+  }
+  @keyframes ripple{
+    0%   { opacity:.0; transform:scale(.6); }
+    10%  { opacity:.9; }
+    100% { opacity:0; transform:scale(1.35); }
+  }
+
+  /* baner „intro” (opcjonalnie): logo w centrum po wejściu */
+  .intro{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background: radial-gradient(80% 60% at 50% 30%, rgba(0,0,0,.45), rgba(0,0,0,.0));
+    z-index:2; pointer-events:none;
+    animation: intro-fade 1100ms ease-out 1 forwards;
+  }
+  .intro img{
+    width:min(58vw, 360px);
+    filter: drop-shadow(var(--glow1)) drop-shadow(var(--glow2));
+    animation: intro-pop 900ms cubic-bezier(.2,.9,.2,1) 1 both;
+  }
+  @keyframes intro-pop{
+    0%{ transform: translateY(-16px) scale(.92); opacity:0; }
+    55%{ transform: translateY(0) scale(1.04); opacity:1; }
+    100%{ transform: translateY(0) scale(1); opacity:1; }
+  }
+  @keyframes intro-fade{
+    0%{ opacity:1 }
+    100%{ opacity:0 }
+  }
+
+  /* Mobile tweaks */
+  @media (max-width: 520px){
+    :root{ --btn-size: 96px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="stage" id="stage">
-  <div class="logo-wrap"><div class="logo" id="logo"></div></div>
-  <div class="halo"></div>
-  <button class="cta" id="ctaBtn" aria-label="Click to voice">●</button>
-</div>
+  <!-- OPCJONALNY lekki „hero” na starcie – sam zgaśnie -->
+  <div class="intro" aria-hidden="true">
+    <img src="./Freeflow-logo.png" alt="" />
+  </div>
 
-<button class="replay" id="replayBtn">▶︎ Odtwórz ponownie</button>
+  <!-- Twoje właściwe treści (placeholder) -->
+  <main class="content" role="main" aria-label="FreeFlow">
+    <!-- tu może zostać cała funkcjonalność z obecnej strony -->
+  </main>
+
+  <!-- Dokowany przycisk: LOGO jako click-to-voice -->
+  <div class="mic-wrap">
+    <button class="mic-btn" id="micBtn" aria-label="Mów do FreeFlow" title="Mów do FreeFlow">
+      <span class="ripple" id="micRipple"></span>
+      <img src="./Freeflow-logo.png" alt="FreeFlow Logo">
+    </button>
+  </div>
 
 <script>
-  const BG_FILE   = 'Background.png';
-  const LOGO_FILE = 'Freeflow-logo.png'; // plik w ROOT, nazwa dokładnie taka
+  // 1) Animacja rippla + mały feedback skali
+  const micBtn = document.getElementById('micBtn');
+  const ripple = document.getElementById('micRipple');
 
-  const logoEl   = document.getElementById('logo');
-  const ctaEl    = document.getElementById('ctaBtn');
-  const replayEl = document.getElementById('replayBtn');
+  function clickFX(){
+    ripple.classList.remove('show'); // restart animacji
+    void ripple.offsetWidth;
+    ripple.classList.add('show');
 
-  function preload(src){
-    return new Promise((res, rej)=>{
-      const i = new Image();
-      i.onload = ()=>res(src);
-      i.onerror = rej;
-      i.src = src + '?v=3'; // odświeża cache
-    });
+    micBtn.style.transform = 'scale(.97)';
+    setTimeout(()=> micBtn.style.transform = 'scale(1)', 120);
   }
 
-  function animateLogo(){
-    logoEl.style.opacity = '1';
-    logoEl.style.transform = 'scale(1)';
-
-    const lb = logoEl.getBoundingClientRect();
-    const cb = ctaEl.getBoundingClientRect();
-    const dx = (cb.left + cb.width/2) - (lb.left + lb.width/2);
-    const dy = (cb.top  + cb.height/2) - (lb.top  + lb.height/2);
-    const sc = cb.width / lb.width;
-
-    logoEl.animate(
-      [{opacity:0, transform:'scale(.92)'},{opacity:1, transform:'scale(1)'}],
-      {duration:600, easing:'cubic-bezier(.2,.8,.2,1)'}
-    );
-    logoEl.animate(
-      [
-        { transform:`translate(0,0) scale(1)` },
-        { transform:`translate(${dx}px, ${dy}px) scale(${sc})` }
-      ],
-      {duration:950, delay:160, easing:'cubic-bezier(.2,.8,.25,1)', fill:'forwards'}
-    );
+  // 2) Integracja z Twoją logiką: najpierw lekkie FX, potem wywołanie
+  function triggerVoice(){
+    // FX
+    clickFX();
+    // Twoja właściwa akcja:
+    // a) jeśli masz globalną funkcję:
+    try { window.startVoice && window.startVoice(); } catch(e){}
+    // b) albo nasłuchuj tego CustomEvent w swoim JS:
+    try {
+      window.dispatchEvent(new CustomEvent('freeflow:mic:toggle', { detail:{ source:'logo-button' } }));
+    } catch(e){}
   }
 
-  function restart(){
-    logoEl.getAnimations().forEach(a=>a.cancel());
-    logoEl.style.opacity='0'; logoEl.style.transform='scale(.92)';
-    setTimeout(animateLogo, 40);
-  }
+  micBtn.addEventListener('click', triggerVoice);
 
-  replayEl.addEventListener('click', restart);
-  ctaEl.addEventListener('click', ()=>alert('Click-to-Voice 🔊'));
+  // Opcjonalne: klawisz Enter/Space dla dostępności (button robi to natywnie)
+  // — nic nie trzeba dopisywać.
 
-  Promise.all([preload(BG_FILE), preload(LOGO_FILE)]).then(restart);
-  window.addEventListener('load', ()=>setTimeout(restart, 400));
+  // Uwaga: jeżeli obrazek Freeflow-logo.png ma białe tło,
+  // zobaczysz „kartkę”. Użyj wersji PNG z kanałem ALPHA (przezroczystość).
 </script>
-
 </body>
 </html>

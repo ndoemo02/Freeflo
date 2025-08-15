@@ -3,30 +3,58 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — voice + kropla</title>
+<title>FreeFlow — voice + tło</title>
 <style>
-:root{ --bg:#0b0c10; --txt:#f1f1f1; --accent:#00e5ff; --accent2:#ffb300; }
+:root{
+  --txt:#f1f1f1;
+  --accent:#00e5ff;
+  --accent2:#ffb300;
+  --bg-dim: rgba(0,0,0,.35);
+  /* Ścieżki do zasobów z repo */
+  --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
+  --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
   margin:0; color:var(--txt);
-  background: radial-gradient(1200px 800px at 50% 20%, #141824, var(--bg));
   font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   overflow:hidden;
+}
+
+/* TŁO: zdjęcie + subtelny przyciemniacz + ziarnko */
+.bg{
+  position:fixed; inset:0; z-index:0;
+  background-image: var(--bg-url);
+  background-size: cover; background-position: center; background-repeat:no-repeat;
+  transform: translateZ(0);
+}
+.bg::before{
+  content:""; position:absolute; inset:0; 
+  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.35), rgba(10,10,16,.55)),
+              linear-gradient(180deg, rgba(10,10,16,.15), rgba(10,10,16,.4));
+}
+.bg::after{
+  content:""; position:absolute; inset:0;
+  opacity:.06; pointer-events:none;
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 3px 3px;
 }
 
 /* Pasek u góry */
 .topbar{
   position:fixed; inset:0 0 auto 0; height:56px; z-index:3000;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 12px; background:linear-gradient(180deg, rgba(10,10,15,.92), rgba(10,10,15,.55));
-  backdrop-filter: blur(8px); border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex; align-items:center; justify-content:space-between; padding:0 12px;
+  background: linear-gradient(180deg, rgba(10,10,15,.82), rgba(10,10,15,.35));
+  backdrop-filter: blur(8px);
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
 .brand{font-weight:800; letter-spacing:.5px}
 .top-actions{display:flex; gap:8px}
 .icon-btn{
-  height:36px; min-width:40px; padding:0 10px; border:0; border-radius:10px;
-  background:#1f2330; color:var(--txt); font-size:18px; cursor:pointer;
+  height:36px; min-width:40px; padding:0 10px; border:0; border-radius:12px;
+  background: rgba(255,255,255,.06); color:var(--txt); font-size:18px; cursor:pointer;
+  backdrop-filter: blur(6px); border:1px solid rgba(255,255,255,.12);
 }
 .icon-btn:active{transform:translateY(1px)}
 .badge{font-size:12px;background:var(--accent2);color:#1a1a1a;padding:1px 6px;border-radius:999px;margin-left:4px}
@@ -34,94 +62,85 @@ body{
 /* Menu */
 .dropdown{
   position:fixed; top:60px; right:10px; z-index:2500; display:none; flex-direction:column; gap:8px;
-  background:#141724; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.08);
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  background: rgba(16,18,28,.8); padding:10px; border-radius:14px;
+  border:1px solid rgba(255,255,255,.12); box-shadow:0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(10px);
 }
 .dropdown.open{display:flex}
 .dropdown button{
-  background:#202433; color:var(--txt); border:0; border-radius:10px; padding:10px 12px; cursor:pointer; text-align:left;
+  background: rgba(255,255,255,.06); color:var(--txt); border:0; border-radius:10px;
+  padding:10px 12px; cursor:pointer; text-align:left; border:1px solid rgba(255,255,255,.1);
 }
-.dropdown button:hover{background:#2a2f42}
+.dropdown button:hover{background: rgba(255,255,255,.1)}
 
 /* BANER do odblokowania autoplay */
 .toast{
   position:fixed; left:50%; transform:translateX(-50%); top:64px; z-index:2600;
-  background:#222632; color:var(--txt); border:1px solid rgba(255,255,255,.1);
-  padding:10px 14px; border-radius:12px; font-size:14px; display:none;
+  background: rgba(20,24,36,.9); color:var(--txt);
+  border:1px solid rgba(255,255,255,.12); padding:10px 14px; border-radius:12px; font-size:14px; display:none;
+  backdrop-filter: blur(8px);
 }
 .toast.show{display:block}
 
-/* ---- KROPLA ---- */
-:root{ --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png"); }
-
+/* ---- GŁÓWNA KROPLA ---- */
 .logo-zone{
   position:fixed; top:72px; left:50%; transform:translateX(-50%);
   width:min(76vw,380px); aspect-ratio:2/3; z-index:2000;
   filter: drop-shadow(0 10px 20px rgba(0,0,0,.6));
 }
+.logo-svg{position:absolute; inset:0; width:100%; height:100%}
 
-/* Sam obraz jako maska – wycina wszystko w kształt kropli */
+/* maska kropli – interaktywna warstwa */
 .droplet{
-  position:absolute; inset:0; 
-  background: var(--txt);
-  -webkit-mask-image: var(--logo-url);
-  mask-image: var(--logo-url);
+  position:absolute; inset:0;
+  -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
   -webkit-mask-size:contain; mask-size:contain;
-  /* filtr SVG: usuń czarne tło z PNG (robimy to poprzez nałożenie obrazu <img> z filtrem pod spodem) */
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(2px);
+  transition: transform .15s ease;
 }
+.droplet:active{ transform: scale(.99) }
 
-/* Podkład: obraz z filtrem progu czerni (dla kompatybilności) */
-.logo-svg{
-  position:absolute; inset:0; width:100%; height:100%;
-}
-
-/* Fale/obramówka w KSZTAŁCIE KROPLI — trzy warstwy */
+/* Neonowa obwódka/fale — w kształcie kropli */
 .wave, .wave::before, .wave::after{
-  content:""; position:absolute; inset:0;
-  -webkit-mask-image: var(--logo-url);
-  mask-image: var(--logo-url);
+  content:""; position:absolute; inset:0; pointer-events:none;
+  -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
   -webkit-mask-size:contain; mask-size:contain;
-  pointer-events:none;
 }
 .wave{ opacity:0; transition:opacity .25s ease; }
-.wave::before, .wave::after{
-  border-radius:0; /* kształt daje maska logo */
-}
-
-/* Obwódka: robimy neon po obrysie przez „ramkę” paddingową i cienie */
 .wave::before{
-  background: transparent;
-  box-shadow: 0 0 24px rgba(0,229,255,.35), inset 0 0 18px rgba(0,229,255,.2);
-  transform: scale(1.015);
-  animation: breathe 2.4s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(0,229,255,.28), inset 0 0 14px rgba(0,229,255,.18);
+  transform: scale(1.012); animation: breathe 2.4s ease-in-out infinite;
 }
 .wave::after{
-  background: transparent;
   box-shadow: 0 0 28px rgba(0,229,255,.45), inset 0 0 22px rgba(0,229,255,.28);
-  transform: scale(1.04);
-  animation: spin 6s linear infinite;
+  transform: scale(1.035); animation: spin 7s linear infinite;
 }
 
-/* Stan nagrywania = fale widoczne i neon */
 .recording .wave{ opacity:1 }
 .clicked .logo-zone{ animation:pulse 500ms ease-out }
 
-/* Dolny pasek */
+/* ---- DOLNE PRZYCISKI (GLASS PILLS) ---- */
 .bottom-bar{
   position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
-  display:flex; gap:10px; padding:6px 8px;
-  background:rgba(10,10,16,.6); backdrop-filter: blur(10px);
-  border:1px solid rgba(255,255,255,.08); border-radius:16px;
+  display:flex; gap:10px; padding:6px;
+  background: rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12);
+  border-radius:16px; backdrop-filter: blur(10px);
 }
 .pill{
-  border:0; border-radius:999px; padding:10px 14px; font-weight:700; cursor:pointer;
-  background:linear-gradient(180deg,#ffc400,#ff8f00); color:#1a1a1a;
+  display:flex; align-items:center; gap:8px;
+  border:1px solid rgba(255,255,255,.14); border-radius:999px;
+  padding:10px 14px; font-weight:700; cursor:pointer;
+  background: rgba(255,255,255,.08); color:#fff;
+  backdrop-filter: blur(8px);
 }
-.pill:active{transform:translateY(1px)}
+.pill .ico{ font-size:18px; opacity:.95 }
+.pill:active{ transform:translateY(1px) }
+.pill:hover{ background: rgba(255,255,255,.12) }
 
 /* Animacje */
 @keyframes pulse{
@@ -130,7 +149,7 @@ body{
   100%{ transform:translateX(-50%) scale(1); filter:drop-shadow(0 0 0 rgba(0,229,255,0)) }
 }
 @keyframes spin{ to{ transform: rotate(360deg) } }
-@keyframes breathe{ 0%,100%{ transform: scale(1.01) } 50%{ transform: scale(1.04) } }
+@keyframes breathe{ 0%,100%{ transform: scale(1.01) } 50%{ transform: scale(1.035) } }
 
 @media (max-width:400px){
   .logo-zone{ width:78vw }
@@ -139,6 +158,10 @@ body{
 </style>
 </head>
 <body>
+  <!-- TŁO -->
+  <div class="bg" aria-hidden="true"></div>
+
+  <!-- Górny pasek -->
   <header class="topbar">
     <div class="brand">FreeFlow</div>
     <nav class="top-actions">
@@ -147,17 +170,19 @@ body{
     </nav>
   </header>
 
+  <!-- Menu -->
   <div class="dropdown" id="mainMenu">
     <button onclick="selectPay('blik')">Płatność: BLIK</button>
     <button onclick="selectPay('karta')">Płatność: Karta</button>
     <button onclick="selectPay('gotówka')">Płatność: Gotówka</button>
   </div>
 
+  <!-- Baner odblokowania audio -->
   <div id="audioToast" class="toast">🔊 Stuknij, aby odtworzyć komunikat</div>
 
-  <!-- STREFA LOGO -->
+  <!-- GŁÓWNA KROPLA -->
   <div class="logo-zone" id="logoZone" onclick="toggleVoice()">
-    <!-- Obraz z progiem czerni (SVG) -->
+    <!-- Filtr usuwający czarne tło z PNG (SVG) -->
     <svg class="logo-svg" viewBox="0 0 768 1152" aria-hidden="true">
       <defs>
         <filter id="removeBlack" color-interpolation-filters="sRGB">
@@ -177,17 +202,17 @@ body{
              x="0" y="0" width="768" height="1152" preserveAspectRatio="xMidYMid meet" filter="url(#removeBlack)"/>
     </svg>
 
-    <!-- Kropla (maskowana warstwa – klikalny „przycisk”) -->
+    <!-- Warstwa maskowana (klik) -->
     <div class="droplet"></div>
-    <!-- Fale/obramówka w KSZTAŁCIE KROPLI -->
+    <!-- Neon/obramówka w kształcie kropli -->
     <div class="wave"></div>
   </div>
 
-  <!-- DOLNE PRZYCISKI -->
+  <!-- DOLNE PRZYCISKI – minimalistyczne pigułki (nie krople!) -->
   <div class="bottom-bar">
-    <button class="pill" onclick="quickIntent('Jedzenie')">🍽️ Jedzenie</button>
-    <button class="pill" onclick="quickIntent('Taxi')">🚕 Taxi</button>
-    <button class="pill" onclick="quickIntent('Hotel')">🏨 Hotel</button>
+    <button class="pill" onclick="quickIntent('Jedzenie')"><span class="ico">🍽️</span><span>Jedzenie</span></button>
+    <button class="pill" onclick="quickIntent('Taxi')"><span class="ico">🚕</span><span>Taxi</span></button>
+    <button class="pill" onclick="quickIntent('Hotel')"><span class="ico">🏨</span><span>Hotel</span></button>
   </div>
 
 <script>
@@ -208,7 +233,7 @@ function quickIntent(kind){
 
 /* Voice ON/OFF */
 function toggleVoice(){
-  if(!introSpoken){ sayIntro(); } // jeśli intro jeszcze nie padło, puść je najpierw
+  if(!introSpoken){ sayIntro(); } // jeśli intro nie padło, puść je najpierw
   recording = !recording;
   document.body.classList.toggle('recording', recording);
   document.body.classList.add('clicked');
@@ -216,14 +241,14 @@ function toggleVoice(){
 
   if(recording){
     speak('Nagrywanie włączone. Słucham.');
-    // startRecording(); // TU podepniesz realny capture
+    // startRecording(); // TU podepnij realny capture (Whisper/WebRTC)
   }else{
     speak('Nagrywanie wyłączone.');
     // stopRecording();
   }
 }
 
-/* TTS damski PL */
+/* TTS (damski PL jeśli dostępny) */
 function speak(text){
   try{
     const u = new SpeechSynthesisUtterance(text);
@@ -238,7 +263,7 @@ function speak(text){
   }catch(e){ console.warn('SpeechSynthesis error:', e); }
 }
 
-/* Intro + polityka autoplay */
+/* Intro + autoplay policy */
 const introText = 'W celu złożenia zamówienia proszę nacisnąć przycisk.';
 function sayIntro(){
   if(introSpoken) return;
@@ -260,14 +285,10 @@ function attachUnlockOnce(){
   window.addEventListener('touchstart', unlock, {passive:true});
   window.addEventListener('click', unlock, {passive:true});
 }
-
 function tryAutoplay(){
-  // Spróbuj od razu przemówić
   speak(introText);
-  // Po krótkiej chwili sprawdź, czy przemówiło
   setTimeout(()=>{
     if(!speechSynthesis.speaking){
-      // Autoplay zablokowany – pokaż baner i czekaj na pierwszy tap
       showToast();
       attachUnlockOnce();
     }else{
@@ -277,7 +298,7 @@ function tryAutoplay(){
   }, 700);
 }
 
-/* iOS/webview potrafi ładować głosy asynchronicznie */
+/* iOS/webview – głosy potrafią dochodzić asynchronicznie */
 if(typeof speechSynthesis !== 'undefined'){
   speechSynthesis.onvoiceschanged = ()=>{};
 }

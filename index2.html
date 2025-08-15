@@ -9,7 +9,7 @@
   --txt:#f1f1f1; --muted:#cfd3dc; --accent:#00e5ff; --accent2:#ffb300;
   --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
   --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
-  --transcriptOffset: 28px; /* odległość od dołu logo */
+  --transcriptOffset: 40px; /* odległość od dołu logo (obniżone) */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -79,7 +79,7 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 @keyframes spin{ to{ transform:rotate(360deg) } }
 @keyframes breathe{ 0%,100%{ transform:scale(1.01)} 50%{ transform:scale(1.035)} }
 
-/* TRANSKRYPCJA POD LOGO – niżej i mniejsza, by nie zasłaniała */
+/* TRANSKRYPCJA — pod logo (niżej) */
 .transcript{
   position:fixed; left:50%; transform:translateX(-50%);
   top: calc(72px + min(76vw,380px) + var(--transcriptOffset));
@@ -145,12 +145,11 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 
 <script>
 /* ============================ KONFIG ============================ */
-const ASR_URL = '/asr'; // <-- podmień na swój endpoint serwerowy (Whisper itd.)
-const CHUNK_MS = 4000;  // co ile ms wysyłać paczki
+let cart = 0, recording = false, introSpoken = false;
+const ASR_URL = 'https://freeflow-backend-vercel.vercel.app/api/asr';  // <— URL Vercel
+const CHUNK_MS = 4000;
 
 /* ============================ UI ============================ */
-let cart = 0, recording = false, introSpoken = false;
-
 function toggleMenu(){ document.getElementById('mainMenu').classList.toggle('open'); }
 function togglePayments(){
   const sub = document.getElementById('paymentsSub'); const chev = document.getElementById('payChev');
@@ -203,7 +202,6 @@ async function startServerASR(){
     appendTranscript('asst','Brak dostępu do mikrofonu.');
     throw err;
   }
-  // wybór kodeka
   if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime = 'audio/webm;codecs=opus';
   else if(MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) mime = 'audio/ogg;codecs=opus';
   else if(MediaRecorder.isTypeSupported('audio/webm')) mime = 'audio/webm';
@@ -215,16 +213,24 @@ async function startServerASR(){
     try{
       const fd = new FormData();
       fd.append('audio', e.data, `chunk.${mime.includes('ogg')?'ogg':'webm'}`);
-      // tu: możesz dodać dodatkowe parametry, np. sessionId/userId itp.
+
       const res = await fetch(ASR_URL, { method:'POST', body: fd });
-      if(!res.ok) throw new Error('ASR HTTP ' + res.status);
-      const text = await res.text();
-      if(text && text.trim()) appendTranscript('user', text.trim());
+
+      let text = '';
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const json = await res.json();
+        text = (json && (json.text || json.transcript || '')).trim();
+      } else {
+        text = (await res.text()).trim();
+      }
+
+      if(text) appendTranscript('user', text);
     }catch(err){
       console.warn('ASR send error:', err);
     }
   };
-  mr.start(CHUNK_MS); // pierwsza paczka po CHUNK_MS
+  mr.start(CHUNK_MS);
 }
 
 function stopServerASR(){
@@ -234,7 +240,6 @@ function stopServerASR(){
 }
 
 async function startRecording(){
-  // najpierw spróbuj serwerowej transkrypcji
   try{
     await startServerASR();
     appendTranscript('asst','Transkrypcja serwerowa aktywna.');
@@ -242,7 +247,6 @@ async function startRecording(){
   }catch(err){
     console.warn('Server ASR unavailable, falling back to SR:', err);
   }
-  // fallback: Web Speech API
   if(!hasSR){
     appendTranscript('asst','Twoja przeglądarka nie obsługuje rozpoznawania mowy. Dostępny jest tylko TTS.');
     return;
@@ -251,7 +255,6 @@ async function startRecording(){
   try{ recognizer.start(); appendTranscript('asst','Transkrypcja przeglądarkowa aktywna.'); }catch(_){}
 }
 function stopRecording(){
-  // zatrzymaj oba tryby (którykolwiek był aktywny)
   try{ if(recognizer) recognizer.stop(); }catch(_){}
   stopServerASR();
 }

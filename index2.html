@@ -9,7 +9,7 @@
   --txt:#f1f1f1; --muted:#cfd3dc; --accent:#00e5ff; --accent2:#ffb300;
   --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
   --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
-  --transcriptOffset: 40px; /* odległość od dołu logo (obniżone) */
+  --transcriptOffset: 64px; /* większy odstęp od dołu logo */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -56,14 +56,14 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 /* KROPLA */
 .logo-zone{ position:fixed; top:72px; left:50%; transform:translateX(-50%);
   width:min(76vw,380px); aspect-ratio:2/3; z-index:2000; filter: drop-shadow(0 10px 20px rgba(0,0,0,.6));
-  cursor:pointer; /* pewny wskaźnik klikalności */ }
+  cursor:pointer; }
 .logo-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
   mix-blend-mode:screen; filter:saturate(1.08) contrast(1.06); transition:filter .25s ease, transform .25s ease; }
 .recording .logo-img{ filter:saturate(1.2) contrast(1.14) brightness(1.08); transform:scale(1.01); }
 @keyframes recordPulse{ 0%,100%{ transform:translateX(-50%) scale(1)} 50%{ transform:translateX(-50%) scale(1.012)} }
 .recording .logo-zone{ animation:recordPulse 1.8s ease-in-out infinite; }
 
-/* dodatkowe pulsowanie bezpośrednio na obrazku, pewny efekt */
+/* dodatkowe pulsowanie na obrazku — pewny efekt podczas nagrywania */
 @keyframes imgPulse {
   0%,100% { filter: saturate(1.20) contrast(1.14) brightness(1.08); transform: scale(1.01); }
   50%     { filter: saturate(1.28) contrast(1.18) brightness(1.12); transform: scale(1.02); }
@@ -134,7 +134,7 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
   <!-- AUTOPLAY BANER -->
   <div id="audioToast" class="toast">🔊 Stuknij, aby odtworzyć komunikat</div>
 
-  <!-- KROPLA -->
+  <!-- KROPLA (uwaga: BEZ onclick w HTML) -->
   <div class="logo-zone" id="logoZone" role="button" tabindex="0">
     <img class="logo-img" src="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png" alt="FreeFlow logo">
     <div class="droplet" id="logoHit"></div>
@@ -154,7 +154,7 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 <script>
 /* ============================ KONFIG ============================ */
 let cart = 0, recording = false, introSpoken = false;
-const ASR_URL = 'https://freeflow-backend-vercel.vercel.app/api/asr';  // URL Vercel
+const ASR_URL = 'https://freeflow-backend-vercel.vercel.app/api/asr';
 const CHUNK_MS = 4000;
 
 /* ============================ UI ============================ */
@@ -267,6 +267,15 @@ function stopRecording(){
   stopServerASR();
 }
 
+/* Debounce klików (touchstart + click na mobile) */
+let lastToggleTs = 0;
+function safeToggle(){
+  const now = Date.now();
+  if (now - lastToggleTs < 400) return; // ignoruj zdublowane eventy z jednego dotknięcia
+  lastToggleTs = now;
+  toggleVoice();
+}
+
 function toggleVoice(){
   const wasRecording = recording;
   appendTranscript('asst', `Przełączanie nagrywania: ${wasRecording ? 'ON→OFF' : 'OFF→ON'}`);
@@ -287,16 +296,17 @@ function toggleVoice(){
   }
 }
 
-/* --- Pewne podpięcie klików do logo --- */
+/* --- Pewne podpięcie klików do logo (bez onclick w HTML) --- */
 (function ensureLogoClicks(){
   const zone = document.getElementById('logoZone');
   const hit  = document.getElementById('logoHit');
+
   function onToggle(e){
     e.preventDefault(); e.stopPropagation();
     appendTranscript('asst', 'Klik na logo wykryty.');
-    toggleVoice();
+    safeToggle();
   }
-  ['click','touchstart'].forEach(ev => {
+  ['touchstart','click'].forEach(ev => {
     zone.addEventListener(ev, onToggle, {passive:true});
     if (hit) hit.addEventListener(ev, onToggle, {passive:true});
   });

@@ -3,18 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — voice + transkrypcja</title>
+<title>FreeFlow — voice + serwerowa transkrypcja</title>
 <style>
 :root{
   --txt:#f1f1f1; --muted:#cfd3dc; --accent:#00e5ff; --accent2:#ffb300;
   --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
   --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
+  --transcriptOffset: 28px; /* odległość od dołu logo */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; overflow:hidden; }
 
-/* TŁO (bez blur) */
+/* TŁO */
 .bg{ position:fixed; inset:0; z-index:0; background-image:var(--bg-url); background-size:cover; background-position:center; }
 .bg::before{ content:""; position:absolute; inset:0;
   background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.22), rgba(10,10,16,.40)),
@@ -25,8 +26,7 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 /* Topbar */
 .topbar{ position:fixed; inset:0 0 auto 0; height:56px; z-index:3000;
   display:flex; align-items:center; justify-content:space-between; padding:0 12px;
-  background:linear-gradient(180deg, rgba(6,8,12,.88), rgba(6,8,12,.42));
-  border-bottom:1px solid rgba(255,255,255,.06); }
+  background:linear-gradient(180deg, rgba(6,8,12,.88), rgba(6,8,12,.42)); border-bottom:1px solid rgba(255,255,255,.06); }
 .brand{ font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
 .top-actions{ display:flex; gap:8px; }
 .icon-btn{ height:36px; min-width:40px; padding:0 10px; border:1px solid rgba(255,255,255,.18);
@@ -34,15 +34,13 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 .icon-btn:active{ transform:translateY(1px) }
 .badge{ font-size:12px; background:var(--accent2); color:#1a1a1a; padding:1px 6px; border-radius:999px; margin-left:4px; }
 
-/* Menu: jedna pozycja „Płatności” + podmenu */
+/* MENU: „Płatności” → podmenu */
 .dropdown{ position:fixed; top:60px; right:10px; z-index:2600; display:none; gap:10px;
   background:rgba(16,18,28,.9); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.12); box-shadow:0 10px 30px rgba(0,0,0,.35); }
 .dropdown.open{ display:block; }
 .menu-item{ display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 12px; cursor:pointer; }
 .chev{ opacity:.8; }
-
-/* Podmenu płatności */
 .submenu{ display:none; margin-top:8px; }
 .submenu.open{ display:flex; flex-direction:column; gap:8px; }
 .submenu button{ background:rgba(255,255,255,.06); color:var(--txt); border:1px solid rgba(255,255,255,.12);
@@ -55,26 +53,21 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
   padding:10px 14px; border-radius:12px; font-size:14px; display:none; }
 .toast.show{ display:block }
 
-/* Kropla */
+/* KROPLA */
 .logo-zone{ position:fixed; top:72px; left:50%; transform:translateX(-50%);
   width:min(76vw,380px); aspect-ratio:2/3; z-index:2000; filter: drop-shadow(0 10px 20px rgba(0,0,0,.6)); }
 .logo-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
   mix-blend-mode:screen; filter:saturate(1.08) contrast(1.06); transition:filter .25s ease, transform .25s ease; }
 .recording .logo-img{ filter:saturate(1.2) contrast(1.14) brightness(1.08); transform:scale(1.01); }
-/* delikatny puls ciągły podczas nagrywania */
 @keyframes recordPulse{ 0%,100%{ transform:translateX(-50%) scale(1)} 50%{ transform:translateX(-50%) scale(1.012)} }
 .recording .logo-zone{ animation:recordPulse 1.8s ease-in-out infinite; }
 
-.droplet{ position:absolute; inset:0;
-  -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url);
-  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-  -webkit-mask-position:center; mask-position:center;
+.droplet{ position:absolute; inset:0; -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url);
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
   -webkit-mask-size:contain; mask-size:contain; background:transparent; border:0; }
 .wave, .wave::before, .wave::after{ content:""; position:absolute; inset:0; pointer-events:none;
-  -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url);
-  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-  -webkit-mask-position:center; mask-position:center;
-  -webkit-mask-size:contain; mask-size:contain; }
+  -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url); -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center; mask-position:center; -webkit-mask-size:contain; mask-size:contain; }
 .wave{ opacity:0; transition:opacity .25s ease; }
 .wave::before{ box-shadow:0 0 18px rgba(0,229,255,.25), inset 0 0 12px rgba(0,229,255,.16); transform:scale(1.012);
   animation:breathe 2.4s ease-in-out infinite; }
@@ -86,25 +79,23 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 @keyframes spin{ to{ transform:rotate(360deg) } }
 @keyframes breathe{ 0%,100%{ transform:scale(1.01)} 50%{ transform:scale(1.035)} }
 
-/* Transkrypcja – POD logo (nie zasłania) */
+/* TRANSKRYPCJA POD LOGO – niżej i mniejsza, by nie zasłaniała */
 .transcript{
   position:fixed; left:50%; transform:translateX(-50%);
-  top: calc(72px + min(76vw,380px) + 8px);
-  width:min(94vw, 560px); max-height:22vh; overflow:auto;
-  background: rgba(0,0,0,.34); border:1px solid rgba(255,255,255,.14);
-  border-radius:12px; padding:10px 12px; z-index:2100;
+  top: calc(72px + min(76vw,380px) + var(--transcriptOffset));
+  width:min(94vw, 560px); max-height:18vh; overflow:auto;
+  background: rgba(0,0,0,.32); border:1px solid rgba(255,255,255,.14);
+  border-radius:12px; padding:8px 10px; z-index:2100;
 }
 .line{ display:flex; gap:8px; margin:4px 0; align-items:flex-start; }
 .role{ opacity:.72; min-width:84px; font-weight:700; font-size:13px; color:var(--muted); }
 .text{ flex:1; font-size:14px; line-height:1.35 }
 
-/* Dół: pigułki */
+/* Dół */
 .bottom-bar{ position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
-  display:flex; gap:10px; padding:6px; background:rgba(10,10,16,.35);
-  border:1px solid rgba(255,255,255,.12); border-radius:16px; }
+  display:flex; gap:10px; padding:6px; background:rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12); border-radius:16px; }
 .pill{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.14);
-  border-radius:999px; padding:10px 14px; font-weight:700; cursor:pointer;
-  background:rgba(255,255,255,.08); color:#fff; }
+  border-radius:999px; padding:10px 14px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.08); color:#fff; }
 .pill .ico{ font-size:18px; opacity:.95 } .pill:active{ transform:translateY(1px) }
 @media (max-width:400px){ .logo-zone{width:78vw} .transcript{width:94vw} .pill{padding:10px 12px; font-size:15px} }
 </style>
@@ -122,30 +113,27 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
 
   <!-- MENU -->
   <div class="dropdown" id="mainMenu">
-    <div class="menu-item" onclick="togglePayments()">
-      <span>💳 Płatności</span><span class="chev" id="payChev">▾</span>
-    </div>
+    <div class="menu-item" onclick="togglePayments()"><span>💳 Płatności</span><span class="chev" id="payChev">▾</span></div>
     <div class="submenu" id="paymentsSub">
       <button onclick="selectPay('BLIK')">BLIK</button>
       <button onclick="selectPay('Karta')">Karta</button>
       <button onclick="selectPay('PayPal')">PayPal</button>
     </div>
-
     <div class="menu-item" onclick="openOrders()">📦 Moje zamówienia</div>
     <div class="menu-item" onclick="openHelp()">❓ Pomoc / FAQ</div>
   </div>
 
-  <!-- BANER AUTOPLAY -->
+  <!-- AUTOPLAY BANER -->
   <div id="audioToast" class="toast">🔊 Stuknij, aby odtworzyć komunikat</div>
 
-  <!-- GŁÓWNE LOGO / KROPLA -->
+  <!-- KROPLA -->
   <div class="logo-zone" id="logoZone" onclick="toggleVoice()">
     <img class="logo-img" src="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png" alt="FreeFlow logo">
     <div class="droplet"></div>
     <div class="wave"></div>
   </div>
 
-  <!-- TRANSKRYPCJA POD LOGO -->
+  <!-- TRANSKRYPCJA -->
   <div class="transcript" id="transcriptBox" aria-live="polite"></div>
 
   <!-- DÓŁ -->
@@ -156,20 +144,23 @@ body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,R
   </div>
 
 <script>
+/* ============================ KONFIG ============================ */
+const ASR_URL = '/asr'; // <-- podmień na swój endpoint serwerowy (Whisper itd.)
+const CHUNK_MS = 4000;  // co ile ms wysyłać paczki
+
+/* ============================ UI ============================ */
 let cart = 0, recording = false, introSpoken = false;
 
-/* Topbar & menu */
 function toggleMenu(){ document.getElementById('mainMenu').classList.toggle('open'); }
 function togglePayments(){
   const sub = document.getElementById('paymentsSub'); const chev = document.getElementById('payChev');
   sub.classList.toggle('open'); chev.textContent = sub.classList.contains('open') ? '▴' : '▾';
 }
-function openCart(){ alert('Koszyk (demo). Tu pokażesz listę i checkout.'); }
+function openCart(){ alert('Koszyk (demo).'); }
 function openOrders(){ alert('Moje zamówienia (demo).'); }
 function openHelp(){ alert('Pomoc / FAQ (demo).'); }
 function selectPay(type){ appendTranscript('asst', `Wybrano metodę płatności: ${type}.`); }
 
-/* Transkrypcja UI */
 function appendTranscript(role, text){
   const box = document.getElementById('transcriptBox');
   const line = document.createElement('div'); line.className='line';
@@ -177,56 +168,92 @@ function appendTranscript(role, text){
   const t = document.createElement('div'); t.className='text'; t.textContent = text;
   line.append(r,t); box.append(line); box.scrollTop = box.scrollHeight;
 }
-
-/* Quick intents */
 function quickIntent(kind){
   cart++; document.getElementById('cartCount').textContent = cart;
   appendTranscript('user', `Wybieram: ${kind}.`);
   speakAndLog(`Potwierdzam wybór: ${kind}. Dodano do koszyka.`);
 }
 
-/* VOICE: TTS + STT (SpeechRecognition) */
-let recognizer = null;
+/* ============================ VOICE ============================ */
+let recognizer = null;     // Web Speech API (fallback)
+let mr = null, stream = null, mime = null; // MediaRecorder (server ASR)
+
 const hasSR = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 function initRecognizer(){
-  if(!hasSR) return null;
   const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
   const rec = new Ctor();
-  rec.lang = 'pl-PL';
-  rec.interimResults = true;
-  rec.continuous = true;
-
+  rec.lang = 'pl-PL'; rec.interimResults = true; rec.continuous = true;
   rec.onresult = (e)=>{
     let finalChunk = '';
-    for(let i=e.resultIndex; i<e.results.length; i++){
+    for(let i=e.resultIndex;i<e.results.length;i++){
       const chunk = e.results[i][0].transcript.trim();
-      if(e.results[i].isFinal){
-        finalChunk += (finalChunk?' ':'') + chunk;
-      }
+      if(e.results[i].isFinal){ finalChunk += (finalChunk?' ':'') + chunk; }
     }
-    if(finalChunk){
-      appendTranscript('user', finalChunk);
-      // TODO: tu podłącz logikę NLU / serwer (np. fetch do /asr)
-    }
+    if(finalChunk){ appendTranscript('user', finalChunk); }
   };
-  rec.onerror = (e)=>{ console.warn('SR error:', e.error); };
-  rec.onend = ()=>{
-    // jeśli nadal recording, spróbuj wznowić (Android ma time-outy)
-    if(recording){ try{ rec.start(); }catch(_e){} }
-  };
+  rec.onerror = (e)=>console.warn('SR error:', e.error);
+  rec.onend = ()=>{ if(recording){ try{ rec.start(); }catch(_){} } };
   return rec;
 }
 
-function startRecording(){
+async function startServerASR(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(err){
+    appendTranscript('asst','Brak dostępu do mikrofonu.');
+    throw err;
+  }
+  // wybór kodeka
+  if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime = 'audio/webm;codecs=opus';
+  else if(MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) mime = 'audio/ogg;codecs=opus';
+  else if(MediaRecorder.isTypeSupported('audio/webm')) mime = 'audio/webm';
+  else { appendTranscript('asst','MediaRecorder nieobsługiwany – wracam do rozpoznawania przeglądarkowego.'); throw new Error('no-mime'); }
+
+  mr = new MediaRecorder(stream, {mimeType: mime});
+  mr.ondataavailable = async (e)=>{
+    if(!e.data || e.data.size === 0) return;
+    try{
+      const fd = new FormData();
+      fd.append('audio', e.data, `chunk.${mime.includes('ogg')?'ogg':'webm'}`);
+      // tu: możesz dodać dodatkowe parametry, np. sessionId/userId itp.
+      const res = await fetch(ASR_URL, { method:'POST', body: fd });
+      if(!res.ok) throw new Error('ASR HTTP ' + res.status);
+      const text = await res.text();
+      if(text && text.trim()) appendTranscript('user', text.trim());
+    }catch(err){
+      console.warn('ASR send error:', err);
+    }
+  };
+  mr.start(CHUNK_MS); // pierwsza paczka po CHUNK_MS
+}
+
+function stopServerASR(){
+  try{ if(mr && mr.state !== 'inactive') mr.stop(); }catch(_){}
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+  mr = null; stream = null; mime = null;
+}
+
+async function startRecording(){
+  // najpierw spróbuj serwerowej transkrypcji
+  try{
+    await startServerASR();
+    appendTranscript('asst','Transkrypcja serwerowa aktywna.');
+    return;
+  }catch(err){
+    console.warn('Server ASR unavailable, falling back to SR:', err);
+  }
+  // fallback: Web Speech API
   if(!hasSR){
-    appendTranscript('asst','Twoja przeglądarka nie obsługuje rozpoznawania mowy. Dostępny jest TTS.');
+    appendTranscript('asst','Twoja przeglądarka nie obsługuje rozpoznawania mowy. Dostępny jest tylko TTS.');
     return;
   }
   if(!recognizer) recognizer = initRecognizer();
-  try{ recognizer.start(); }catch(_e){}
+  try{ recognizer.start(); appendTranscript('asst','Transkrypcja przeglądarkowa aktywna.'); }catch(_){}
 }
 function stopRecording(){
-  if(recognizer){ try{ recognizer.stop(); }catch(_e){} }
+  // zatrzymaj oba tryby (którykolwiek był aktywny)
+  try{ if(recognizer) recognizer.stop(); }catch(_){}
+  stopServerASR();
 }
 
 function toggleVoice(){
@@ -245,7 +272,7 @@ function toggleVoice(){
   }
 }
 
-/* TTS */
+/* ============================ TTS ============================ */
 function speakAndLog(text){ appendTranscript('asst', text); speak(text); }
 function speak(text){
   try{
@@ -260,7 +287,7 @@ function speak(text){
   }catch(e){ console.warn('TTS error:', e); }
 }
 
-/* Intro + autoplay fallback */
+/* ============================ INTRO ============================ */
 const introText = 'W celu złożenia zamówienia proszę nacisnąć logo. Po aktywacji trybu voice dopytam o szczegóły.';
 function sayIntro(){ if(introSpoken) return; introSpoken = true; hideToast(); speakAndLog(introText); }
 function showToast(){ document.getElementById('audioToast').classList.add('show'); }
@@ -269,7 +296,8 @@ function attachUnlockOnce(){
   const unlock = ()=>{ sayIntro();
     window.removeEventListener('pointerdown', unlock, {passive:true});
     window.removeEventListener('touchstart', unlock, {passive:true});
-    window.removeEventListener('click', unlock, {passive:true}); };
+    window.removeEventListener('click', unlock, {passive:true});
+  };
   window.addEventListener('pointerdown', unlock, {passive:true});
   window.addEventListener('touchstart', unlock, {passive:true});
   window.addEventListener('click', unlock, {passive:true});
@@ -282,8 +310,6 @@ function tryAutoplay(){
   }, 700);
 }
 if(typeof speechSynthesis!=='undefined'){ speechSynthesis.onvoiceschanged=()=>{}; }
-
-/* Start */
 window.addEventListener('load', tryAutoplay, {once:true});
 </script>
 </body>

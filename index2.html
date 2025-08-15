@@ -3,14 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — voice + tło</title>
+<title>FreeFlow — voice + kropla (ostre logo)</title>
 <style>
 :root{
   --txt:#f1f1f1;
   --accent:#00e5ff;
   --accent2:#ffb300;
-  --bg-dim: rgba(0,0,0,.35);
-  /* Ścieżki do zasobów z repo */
   --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
   --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
 }
@@ -22,7 +20,7 @@ body{
   overflow:hidden;
 }
 
-/* TŁO: zdjęcie + subtelny przyciemniacz + ziarnko */
+/* TŁO */
 .bg{
   position:fixed; inset:0; z-index:0;
   background-image: var(--bg-url);
@@ -30,13 +28,13 @@ body{
   transform: translateZ(0);
 }
 .bg::before{
-  content:""; position:absolute; inset:0; 
-  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.35), rgba(10,10,16,.55)),
-              linear-gradient(180deg, rgba(10,10,16,.15), rgba(10,10,16,.4));
+  content:""; position:absolute; inset:0;
+  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.28), rgba(10,10,16,.48)),
+              linear-gradient(180deg, rgba(10,10,16,.12), rgba(10,10,16,.34));
 }
 .bg::after{
   content:""; position:absolute; inset:0;
-  opacity:.06; pointer-events:none;
+  opacity:.02; pointer-events:none;
   background-image: radial-gradient(currentColor 1px, transparent 1px);
   background-size: 3px 3px;
 }
@@ -72,38 +70,44 @@ body{
 }
 .dropdown button:hover{background: rgba(255,255,255,.1)}
 
-/* BANER do odblokowania autoplay */
+/* BANER autoplay */
 .toast{
   position:fixed; left:50%; transform:translateX(-50%); top:64px; z-index:2600;
-  background: rgba(20,24,36,.9); color:var(--txt);
+  background: rgba(20,24,36,.92); color:var(--txt);
   border:1px solid rgba(255,255,255,.12); padding:10px 14px; border-radius:12px; font-size:14px; display:none;
   backdrop-filter: blur(8px);
 }
 .toast.show{display:block}
 
-/* ---- GŁÓWNA KROPLA ---- */
+/* ---- KROPLA ---- */
 .logo-zone{
   position:fixed; top:72px; left:50%; transform:translateX(-50%);
   width:min(76vw,380px); aspect-ratio:2/3; z-index:2000;
   filter: drop-shadow(0 10px 20px rgba(0,0,0,.6));
 }
-.logo-svg{position:absolute; inset:0; width:100%; height:100%}
+.logo-img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
+  image-rendering:auto;
+  mix-blend-mode:screen;                 /* czarne → znika, neony ostre */
+  filter: saturate(1.08) contrast(1.06);
+  transition: filter .25s ease, transform .25s ease;
+}
+.recording .logo-img{
+  filter: saturate(1.18) contrast(1.12) brightness(1.08); /* jaśniej przy voice ON */
+  transform: scale(1.01);
+}
 
-/* maska kropli – interaktywna warstwa */
+/* Hitbox maskowany (tylko do kliknięcia) */
 .droplet{
   position:absolute; inset:0;
   -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
   -webkit-mask-size:contain; mask-size:contain;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.08);
-  backdrop-filter: blur(2px);
-  transition: transform .15s ease;
+  background: transparent; border:0; backdrop-filter:none;
 }
-.droplet:active{ transform: scale(.99) }
 
-/* Neonowa obwódka/fale — w kształcie kropli */
+/* Neon/fale po OBWODZIE KROPLI */
 .wave, .wave::before, .wave::after{
   content:""; position:absolute; inset:0; pointer-events:none;
   -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
@@ -113,18 +117,17 @@ body{
 }
 .wave{ opacity:0; transition:opacity .25s ease; }
 .wave::before{
-  box-shadow: 0 0 20px rgba(0,229,255,.28), inset 0 0 14px rgba(0,229,255,.18);
+  box-shadow: 0 0 18px rgba(0,229,255,.25), inset 0 0 12px rgba(0,229,255,.16);
   transform: scale(1.012); animation: breathe 2.4s ease-in-out infinite;
 }
 .wave::after{
-  box-shadow: 0 0 28px rgba(0,229,255,.45), inset 0 0 22px rgba(0,229,255,.28);
+  box-shadow: 0 0 26px rgba(0,229,255,.42), inset 0 0 20px rgba(0,229,255,.24);
   transform: scale(1.035); animation: spin 7s linear infinite;
 }
-
-.recording .wave{ opacity:1 }
+.recording .wave{ opacity:1 }               /* mocniej tylko w nagrywaniu */
 .clicked .logo-zone{ animation:pulse 500ms ease-out }
 
-/* ---- DOLNE PRZYCISKI (GLASS PILLS) ---- */
+/* Dół: szklane pigułki */
 .bottom-bar{
   position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
   display:flex; gap:10px; padding:6px;
@@ -161,7 +164,7 @@ body{
   <!-- TŁO -->
   <div class="bg" aria-hidden="true"></div>
 
-  <!-- Górny pasek -->
+  <!-- Topbar -->
   <header class="topbar">
     <div class="brand">FreeFlow</div>
     <nav class="top-actions">
@@ -177,38 +180,22 @@ body{
     <button onclick="selectPay('gotówka')">Płatność: Gotówka</button>
   </div>
 
-  <!-- Baner odblokowania audio -->
+  <!-- Baner do odblokowania dźwięku -->
   <div id="audioToast" class="toast">🔊 Stuknij, aby odtworzyć komunikat</div>
 
-  <!-- GŁÓWNA KROPLA -->
+  <!-- KROPLA -->
   <div class="logo-zone" id="logoZone" onclick="toggleVoice()">
-    <!-- Filtr usuwający czarne tło z PNG (SVG) -->
-    <svg class="logo-svg" viewBox="0 0 768 1152" aria-hidden="true">
-      <defs>
-        <filter id="removeBlack" color-interpolation-filters="sRGB">
-          <feColorMatrix type="matrix" values="
-            0.2126 0.7152 0.0722 0 0
-            0.2126 0.7152 0.0722 0 0
-            0.2126 0.7152 0.0722 0 0
-            0       0       0       1 0" result="lum"/>
-          <feComponentTransfer in="lum" result="a">
-            <feFuncR type="identity"/><feFuncG type="identity"/><feFuncB type="identity"/>
-            <feFuncA type="linear" slope="5" intercept="-0.9"/>
-          </feComponentTransfer>
-          <feComposite operator="in" in="SourceGraphic" in2="a"/>
-        </filter>
-      </defs>
-      <image href="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png"
-             x="0" y="0" width="768" height="1152" preserveAspectRatio="xMidYMid meet" filter="url(#removeBlack)"/>
-    </svg>
-
-    <!-- Warstwa maskowana (klik) -->
+    <!-- Ostre logo (czerń znika dzięki screen) -->
+    <img class="logo-img"
+         src="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png"
+         alt="FreeFlow logo">
+    <!-- hitbox maskowany -->
     <div class="droplet"></div>
-    <!-- Neon/obramówka w kształcie kropli -->
+    <!-- neon po obrysie kropli -->
     <div class="wave"></div>
   </div>
 
-  <!-- DOLNE PRZYCISKI – minimalistyczne pigułki (nie krople!) -->
+  <!-- Dół -->
   <div class="bottom-bar">
     <button class="pill" onclick="quickIntent('Jedzenie')"><span class="ico">🍽️</span><span>Jedzenie</span></button>
     <button class="pill" onclick="quickIntent('Taxi')"><span class="ico">🚕</span><span>Taxi</span></button>
@@ -225,7 +212,7 @@ function toggleMenu(){ document.getElementById('mainMenu').classList.toggle('ope
 function openCart(){ alert('Koszyk (demo). Tu pokażesz listę i checkout.'); }
 function selectPay(type){ alert(`Wybrano metodę płatności: ${type.toUpperCase()}`); toggleMenu(); }
 
-/* Quick intents */
+/* Intencje */
 function quickIntent(kind){
   cart += 1; document.getElementById('cartCount').textContent = cart;
   speak(`Wybrano: ${kind}. Dodano do koszyka.`);
@@ -241,7 +228,7 @@ function toggleVoice(){
 
   if(recording){
     speak('Nagrywanie włączone. Słucham.');
-    // startRecording(); // TU podepnij realny capture (Whisper/WebRTC)
+    // startRecording(); // miejsce na realny capture (Whisper/WebRTC)
   }else{
     speak('Nagrywanie wyłączone.');
     // stopRecording();
@@ -264,7 +251,7 @@ function speak(text){
 }
 
 /* Intro + autoplay policy */
-const introText = 'W celu złożenia zamówienia proszę nacisnąć przycisk.';
+const introText = 'W celu złożenia zamówienia proszę nacisnąć logo. Po aktywacji trybu voice dopytam o szczegóły.';
 function sayIntro(){
   if(introSpoken) return;
   introSpoken = true;
@@ -298,7 +285,7 @@ function tryAutoplay(){
   }, 700);
 }
 
-/* iOS/webview – głosy potrafią dochodzić asynchronicznie */
+/* iOS/webview — głosy mogą dochodzić asynchronicznie */
 if(typeof speechSynthesis !== 'undefined'){
   speechSynthesis.onvoiceschanged = ()=>{};
 }

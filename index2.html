@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FreeFlow — tryb testowy</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Pasek u góry -->
+  <header class="topbar">
+    <div class="brand">FreeFlow</div>
+    <nav class="top-actions">
+      <button class="icon-btn" aria-label="Menu" onclick="toggleMenu()">
+        ☰
+      </button>
+      <button class="icon-btn" aria-label="Koszyk" onclick="openCart()">
+        🛒 <span class="badge" id="cartCount">0</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Menu rozwijane -->
+  <div class="dropdown" id="mainMenu">
+    <button onclick="selectPay('blik')">Płatność: BLIK</button>
+    <button onclick="selectPay('card')">Płatność: Karta</button>
+    <button onclick="selectPay('cash')">Płatność: Gotówka</button>
+  </div>
+
+  <!-- Logo jako „kropla” + animacja + filtr usuwający czarne tło -->
+  <div class="logo-wrap" onclick="logoClick()">
+    <svg class="logo-svg" viewBox="0 0 768 1152" aria-label="FreeFlow logo">
+      <defs>
+        <!-- Filtr: czarne/ciemne piksele -> przezroczystość -->
+        <filter id="removeBlack" color-interpolation-filters="sRGB">
+          <!-- wyciągamy luminancję -->
+          <feColorMatrix type="matrix" values="
+            0.2126 0.7152 0.0722 0 0
+            0.2126 0.7152 0.0722 0 0
+            0.2126 0.7152 0.0722 0 0
+            0       0       0       1 0" result="lum"/>
+          <!-- z luminancji robimy alfę -->
+          <feComponentTransfer in="lum" result="a">
+            <!-- poniżej prog=0.18 ustaw alfa~0, powyżej rośnie -->
+            <feFuncR type="identity"/>
+            <feFuncG type="identity"/>
+            <feFuncB type="identity"/>
+            <feFuncA type="linear" slope="5" intercept="-0.9"/>
+          </feComponentTransfer>
+          <!-- łączymy kolor oryginalny z wyliczoną alfą -->
+          <feComposite operator="in" in="SourceGraphic" in2="a"/>
+        </filter>
+
+        <!-- subtelna poświata neonowa przy kliknięciu -->
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge>
+            <feMergeNode in="b"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Obraz z repo (raw) -->
+      <image
+        href="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png"
+        x="0" y="0" width="768" height="1152"
+        preserveAspectRatio="xMidYMid meet"
+        filter="url(#removeBlack)"/>
+    </svg>
+  </div>
+
+  <!-- Przyciski dolne -->
+  <div class="bottom-bar">
+    <button class="pill" onclick="choose('food')">🍽️ Jedzenie</button>
+    <button class="pill" onclick="choose('taxi')">🚕 Taxi</button>
+    <button class="pill" onclick="choose('hotel')">🏨 Hotel</button>
+  </div>
+
+  <script>
+    let cart = 0;
+
+    function logoClick() {
+      const wrap = document.querySelector('.logo-wrap');
+      wrap.classList.add('clicked');
+      setTimeout(() => wrap.classList.remove('clicked'), 500);
+      // Tu podpinamy Voice start/stop:
+      // startVoiceRecording();
+    }
+
+    function toggleMenu() {
+      const m = document.getElementById('mainMenu');
+      m.classList.toggle('open');
+    }
+
+    function openCart() {
+      alert('Koszyk otwarty (demo). Tu pokażesz zawartość i checkout.');
+    }
+
+    function selectPay(type) {
+      alert(`Wybrano metodę płatności: ${type.toUpperCase()}`);
+      toggleMenu();
+    }
+
+    function choose(kind) {
+      const map = { food: 'Jedzenie', taxi: 'Taxi', hotel: 'Hotel' };
+      cart += 1;
+      document.getElementById('cartCount').textContent = cart;
+      alert(`Wybrano: ${map[kind]} (demo). Dodano do koszyka.`);
+    }
+  </script>
+</body>
+</html>

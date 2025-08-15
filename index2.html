@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — voice + kropla (ostre logo)</title>
+<title>FreeFlow — voice + transkrypcja</title>
 <style>
 :root{
   --txt:#f1f1f1;
+  --muted:#cfd3dc;
   --accent:#00e5ff;
   --accent2:#ffb300;
   --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
   --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
 }
+
+/* Reset */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
@@ -20,62 +23,63 @@ body{
   overflow:hidden;
 }
 
-/* TŁO */
+/* TŁO – bez blurów */
 .bg{
   position:fixed; inset:0; z-index:0;
   background-image: var(--bg-url);
   background-size: cover; background-position: center; background-repeat:no-repeat;
-  transform: translateZ(0);
 }
 .bg::before{
   content:""; position:absolute; inset:0;
-  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.28), rgba(10,10,16,.48)),
-              linear-gradient(180deg, rgba(10,10,16,.12), rgba(10,10,16,.34));
+  /* tylko delikatne przyciemnienie dla czytelności UI, bez blur */
+  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.22), rgba(10,10,16,.40)),
+              linear-gradient(180deg, rgba(10,10,16,.08), rgba(10,10,16,.26));
 }
 .bg::after{
-  content:""; position:absolute; inset:0;
-  opacity:.02; pointer-events:none;
+  /* lekkie ziarnko →  czytelność, bez zamglenia */
+  content:""; position:absolute; inset:0; opacity:.02; pointer-events:none;
   background-image: radial-gradient(currentColor 1px, transparent 1px);
   background-size: 3px 3px;
 }
 
-/* Pasek u góry */
+/* Pasek u góry – bez blur, półprzezroczysty */
 .topbar{
   position:fixed; inset:0 0 auto 0; height:56px; z-index:3000;
   display:flex; align-items:center; justify-content:space-between; padding:0 12px;
-  background: linear-gradient(180deg, rgba(10,10,15,.82), rgba(10,10,15,.35));
-  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(6,8,12,.88), rgba(6,8,12,.42));
   border-bottom:1px solid rgba(255,255,255,.06);
 }
-.brand{font-weight:800; letter-spacing:.5px}
+.brand{
+  font-weight:800; letter-spacing:.5px;
+  /* zbliżony vibe do napisu z logo */
+  text-transform: uppercase; letter-spacing: .12em;
+}
 .top-actions{display:flex; gap:8px}
 .icon-btn{
-  height:36px; min-width:40px; padding:0 10px; border:0; border-radius:12px;
-  background: rgba(255,255,255,.06); color:var(--txt); font-size:18px; cursor:pointer;
-  backdrop-filter: blur(6px); border:1px solid rgba(255,255,255,.12);
+  height:36px; min-width:40px; padding:0 10px; border:1px solid rgba(255,255,255,.18);
+  border-radius:12px; background: rgba(255,255,255,.06); color:var(--txt); font-size:18px; cursor:pointer;
 }
 .icon-btn:active{transform:translateY(1px)}
 .badge{font-size:12px;background:var(--accent2);color:#1a1a1a;padding:1px 6px;border-radius:999px;margin-left:4px}
 
-/* Menu */
+/* Menu – bez blur, półprzezroczyste */
 .dropdown{
   position:fixed; top:60px; right:10px; z-index:2500; display:none; flex-direction:column; gap:8px;
-  background: rgba(16,18,28,.8); padding:10px; border-radius:14px;
-  border:1px solid rgba(255,255,255,.12); box-shadow:0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(10px);
+  background: rgba(16,18,28,.86); padding:10px; border-radius:14px;
+  border:1px solid rgba(255,255,255,.12); box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 .dropdown.open{display:flex}
 .dropdown button{
-  background: rgba(255,255,255,.06); color:var(--txt); border:0; border-radius:10px;
-  padding:10px 12px; cursor:pointer; text-align:left; border:1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.08); color:var(--txt); border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; padding:10px 12px; cursor:pointer; text-align:left;
 }
-.dropdown button:hover{background: rgba(255,255,255,.1)}
+.dropdown button:hover{background: rgba(255,255,255,.12)}
 
-/* BANER autoplay */
+/* BANER autoplay (bez blur) */
 .toast{
   position:fixed; left:50%; transform:translateX(-50%); top:64px; z-index:2600;
   background: rgba(20,24,36,.92); color:var(--txt);
   border:1px solid rgba(255,255,255,.12); padding:10px 14px; border-radius:12px; font-size:14px; display:none;
-  backdrop-filter: blur(8px);
 }
 .toast.show{display:block}
 
@@ -90,24 +94,30 @@ body{
   image-rendering:auto;
   mix-blend-mode:screen;                 /* czarne → znika, neony ostre */
   filter: saturate(1.08) contrast(1.06);
-  transition: filter .25s ease, transform .25s ease;
+  transition: filter .25s ease, transform .25s ease, opacity .25s ease;
 }
 .recording .logo-img{
-  filter: saturate(1.18) contrast(1.12) brightness(1.08); /* jaśniej przy voice ON */
+  filter: saturate(1.2) contrast(1.14) brightness(1.08);
   transform: scale(1.01);
 }
+/* ciągły, delikatny „oddech” w czasie nagrywania */
+@keyframes recordPulse{
+  0%,100%{ transform:translateX(-50%) scale(1) }
+  50%{ transform:translateX(-50%) scale(1.012) }
+}
+.recording .logo-zone{ animation: recordPulse 1.8s ease-in-out infinite }
 
-/* Hitbox maskowany (tylko do kliknięcia) */
+/* Hitbox maskowany (klik) */
 .droplet{
   position:absolute; inset:0;
   -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
   -webkit-mask-size:contain; mask-size:contain;
-  background: transparent; border:0; backdrop-filter:none;
+  background: transparent; border:0;
 }
 
-/* Neon/fale po OBWODZIE KROPLI */
+/* Neon/fale po OBWODZIE KROPLI – tylko gdy nagrywa */
 .wave, .wave::before, .wave::after{
   content:""; position:absolute; inset:0; pointer-events:none;
   -webkit-mask-image: var(--logo-url); mask-image: var(--logo-url);
@@ -118,34 +128,17 @@ body{
 .wave{ opacity:0; transition:opacity .25s ease; }
 .wave::before{
   box-shadow: 0 0 18px rgba(0,229,255,.25), inset 0 0 12px rgba(0,229,255,.16);
-  transform: scale(1.012); animation: breathe 2.4s ease-in-out infinite;
+  transform: scale(1.012);
+  animation: breathe 2.4s ease-in-out infinite;
 }
 .wave::after{
   box-shadow: 0 0 26px rgba(0,229,255,.42), inset 0 0 20px rgba(0,229,255,.24);
-  transform: scale(1.035); animation: spin 7s linear infinite;
+  transform: scale(1.035);
+  animation: spin 7s linear infinite;
 }
-.recording .wave{ opacity:1 }               /* mocniej tylko w nagrywaniu */
+.recording .wave{ opacity:1 }
 .clicked .logo-zone{ animation:pulse 500ms ease-out }
 
-/* Dół: szklane pigułki */
-.bottom-bar{
-  position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
-  display:flex; gap:10px; padding:6px;
-  background: rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12);
-  border-radius:16px; backdrop-filter: blur(10px);
-}
-.pill{
-  display:flex; align-items:center; gap:8px;
-  border:1px solid rgba(255,255,255,.14); border-radius:999px;
-  padding:10px 14px; font-weight:700; cursor:pointer;
-  background: rgba(255,255,255,.08); color:#fff;
-  backdrop-filter: blur(8px);
-}
-.pill .ico{ font-size:18px; opacity:.95 }
-.pill:active{ transform:translateY(1px) }
-.pill:hover{ background: rgba(255,255,255,.12) }
-
-/* Animacje */
 @keyframes pulse{
   0%{ transform:translateX(-50%) scale(1); filter:drop-shadow(0 0 0 rgba(0,229,255,0)) }
   50%{ transform:translateX(-50%) scale(1.06); filter:drop-shadow(0 0 20px rgba(0,229,255,.55)) }
@@ -154,8 +147,40 @@ body{
 @keyframes spin{ to{ transform: rotate(360deg) } }
 @keyframes breathe{ 0%,100%{ transform: scale(1.01) } 50%{ transform: scale(1.035) } }
 
+/* TRANSKRYPCJA – pasek pod logo (bez blur, półprzezroczysty) */
+.transcript{
+  position:fixed; left:50%; transform:translateX(-50%);
+  top: calc(72px + min(76vw,380px) * 1); /* tuż pod logo */
+  width:min(92vw, 520px); max-height:22vh; overflow:auto;
+  background: rgba(0,0,0,.34);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:12px; padding:10px 12px; z-index:2100;
+}
+.line{ display:flex; gap:8px; margin:4px 0; align-items:flex-start; }
+.role{ opacity:.72; min-width:84px; font-weight:700; font-size:13px; color:var(--muted); }
+.text{ flex:1; font-size:14px; line-height:1.35 }
+
+/* Dół: pigułki bez blur */
+.bottom-bar{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
+  display:flex; gap:10px; padding:6px;
+  background: rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+}
+.pill{
+  display:flex; align-items:center; gap:8px;
+  border:1px solid rgba(255,255,255,.14); border-radius:999px;
+  padding:10px 14px; font-weight:700; cursor:pointer;
+  background: rgba(255,255,255,.08); color:#fff;
+}
+.pill .ico{ font-size:18px; opacity:.95 }
+.pill:active{ transform:translateY(1px) }
+.pill:hover{ background: rgba(255,255,255,.12) }
+
+/* Responsywność */
 @media (max-width:400px){
   .logo-zone{ width:78vw }
+  .transcript{ width:94vw }
   .pill{ padding:10px 12px; font-size:15px }
 }
 </style>
@@ -166,7 +191,7 @@ body{
 
   <!-- Topbar -->
   <header class="topbar">
-    <div class="brand">FreeFlow</div>
+    <div class="brand">FREEFLOW</div>
     <nav class="top-actions">
       <button class="icon-btn" aria-label="Menu" onclick="toggleMenu()">☰</button>
       <button class="icon-btn" aria-label="Koszyk" onclick="openCart()">🛒 <span class="badge" id="cartCount">0</span></button>
@@ -175,9 +200,11 @@ body{
 
   <!-- Menu -->
   <div class="dropdown" id="mainMenu">
-    <button onclick="selectPay('blik')">Płatność: BLIK</button>
-    <button onclick="selectPay('karta')">Płatność: Karta</button>
-    <button onclick="selectPay('gotówka')">Płatność: Gotówka</button>
+    <button onclick="selectPay('blik')">Płatności → BLIK</button>
+    <button onclick="selectPay('karta')">Płatności → Karta</button>
+    <button onclick="selectPay('paypal')">Płatności → PayPal</button>
+    <button onclick="openOrders()">Moje zamówienia</button>
+    <button onclick="openHelp()">Pomoc / FAQ</button>
   </div>
 
   <!-- Baner do odblokowania dźwięku -->
@@ -185,15 +212,15 @@ body{
 
   <!-- KROPLA -->
   <div class="logo-zone" id="logoZone" onclick="toggleVoice()">
-    <!-- Ostre logo (czerń znika dzięki screen) -->
     <img class="logo-img"
          src="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png"
          alt="FreeFlow logo">
-    <!-- hitbox maskowany -->
     <div class="droplet"></div>
-    <!-- neon po obrysie kropli -->
     <div class="wave"></div>
   </div>
+
+  <!-- TRANSKRYPCJA -->
+  <div class="transcript" id="transcriptBox" aria-live="polite"></div>
 
   <!-- Dół -->
   <div class="bottom-bar">
@@ -207,15 +234,34 @@ let cart = 0;
 let recording = false;
 let introSpoken = false;
 
-/* Topbar */
+/* Menu / Topbar */
 function toggleMenu(){ document.getElementById('mainMenu').classList.toggle('open'); }
 function openCart(){ alert('Koszyk (demo). Tu pokażesz listę i checkout.'); }
-function selectPay(type){ alert(`Wybrano metodę płatności: ${type.toUpperCase()}`); toggleMenu(); }
+function openOrders(){ alert('Moje zamówienia (demo).'); }
+function openHelp(){ alert('Pomoc / FAQ (demo).'); }
+function selectPay(type){
+  appendTranscript('asst', `Wybrano metodę płatności: ${type.toUpperCase()}.`);
+  toggleMenu();
+}
 
-/* Intencje */
+/* Transkrypcja (prosty bufor UI) */
+function appendTranscript(role, text){
+  const box = document.getElementById('transcriptBox');
+  const line = document.createElement('div'); line.className = 'line';
+  const r = document.createElement('div'); r.className = 'role';
+  const t = document.createElement('div'); t.className = 'text';
+  r.textContent = role === 'user' ? 'Ty:' : 'Asystent:';
+  t.textContent = text;
+  line.appendChild(r); line.appendChild(t);
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* Intencje – spinamy z transkrypcją */
 function quickIntent(kind){
   cart += 1; document.getElementById('cartCount').textContent = cart;
-  speak(`Wybrano: ${kind}. Dodano do koszyka.`);
+  appendTranscript('user', `Wybieram: ${kind}.`);
+  speakAndLog(`Potwierdzam wybór: ${kind}. Dodano do koszyka.`);
 }
 
 /* Voice ON/OFF */
@@ -227,15 +273,19 @@ function toggleVoice(){
   setTimeout(()=>document.body.classList.remove('clicked'), 500);
 
   if(recording){
+    appendTranscript('asst','Nagrywanie włączone. Słucham.');
     speak('Nagrywanie włączone. Słucham.');
-    // startRecording(); // miejsce na realny capture (Whisper/WebRTC)
+    // startRecording(); // <- TU podepniesz prawdziwe WebRTC/Whisper
   }else{
+    appendTranscript('asst','Nagrywanie wyłączone.');
     speak('Nagrywanie wyłączone.');
     // stopRecording();
   }
 }
 
-/* TTS (damski PL jeśli dostępny) */
+/* TTS (damski PL jeśli dostępny) + logowanie do transkrypcji */
+function speakAndLog(text){ appendTranscript('asst', text); speak(text); }
+
 function speak(text){
   try{
     const u = new SpeechSynthesisUtterance(text);
@@ -256,7 +306,7 @@ function sayIntro(){
   if(introSpoken) return;
   introSpoken = true;
   hideToast();
-  speak(introText);
+  speakAndLog(introText);
 }
 function showToast(){ document.getElementById('audioToast').classList.add('show'); }
 function hideToast(){ document.getElementById('audioToast').classList.remove('show'); }
@@ -273,9 +323,11 @@ function attachUnlockOnce(){
   window.addEventListener('click', unlock, {passive:true});
 }
 function tryAutoplay(){
-  speak(introText);
+  // Spróbuj od razu
+  speakAndLog(introText);
   setTimeout(()=>{
     if(!speechSynthesis.speaking){
+      // Autoplay zablokowany – pokaż baner i czekaj na pierwszy tap
       showToast();
       attachUnlockOnce();
     }else{
@@ -285,7 +337,7 @@ function tryAutoplay(){
   }, 700);
 }
 
-/* iOS/webview — głosy mogą dochodzić asynchronicznie */
+/* iOS/webview — głosy mogą ładować się asynchronicznie */
 if(typeof speechSynthesis !== 'undefined'){
   speechSynthesis.onvoiceschanged = ()=>{};
 }

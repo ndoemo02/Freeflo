@@ -1,161 +1,115 @@
-/* FreeFlow – logo-click SR
-   - Po kliknięciu logo mówi: "Czy mogę przyjąć zamówienie?"
-   - Rozpoznawanie mowy: interim na żywo, wysyłka DOPIERO po final
-   - Grace 250ms, fallback: jeśli brak final → wyślij ostatni interim
-*/
+// === KONFIG ===
+const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
 
-(() => {
-  const transcriptEl = document.getElementById("transcript");
-  const micBtn = document.getElementById("micBtn");
-  const ttsPlayer = document.getElementById("ttsPlayer");
+// elementy UI
+const micBtn = document.getElementById('micBtn');
+const transcriptBox = document.getElementById('transcript');
+const player = document.getElementById('ttsPlayer');
 
-  // Ustaw tu, jeśli backend stoi na innej domenie. Pusty = względne /api/*
-  const BASE_URL = "";
+// helper
+function showText(text){ transcriptBox.textContent = text; }
 
-  function setTranscript(t){ transcriptEl.textContent = t; }
-
-  // ====== Browser TTS (proste i bez kosztów) ======
-  function speak(text, lang="pl-PL", rate=1.0, pitch=1.0){
-    try{
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang; u.rate = rate; u.pitch = pitch;
-      const list = speechSynthesis.getVoices();
-      const v = list.find(v => v.lang?.startsWith('pl'));
-      if (v) u.voice = v;
-      speechSynthesis.speak(u);
-    }catch{}
+// odtwarzanie MP3 (base64) + fallback Web Speech
+async function playBase64Mp3(base64, fallbackText){
+  try{
+    const src = `data:audio/mpeg;base64,${base64}`;
+    player.src = src;
+    await player.play();
+    return true;
+  }catch(e){
+    console.warn('Autoplay error, fallback to Web Speech:', e);
+    speakWithWebSpeech(fallbackText);
+    return false;
   }
+}
+function speakWithWebSpeech(text, lang='pl-PL'){
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }catch(e){ console.warn('speechSynthesis failed:', e); }
+}
 
-  // ====== Dialog z backendem ======
-  async function sendText(text) {
-    const clean = (text||"").trim();
-    if (!clean) return;
-    setTranscript(clean);
+// wysyłka do backendu
+async function sendToAssistant(userText){
+  try{
+    showText('… myślę …');
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: userText })
+    });
+    const data = await res.json();
 
-    try {
-      // odpowiedź asystenta
-      const r = await fetch(`${BASE_URL}/api/assistant-text`, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ text: clean })
-      });
-      const data = await r.json();
-      const reply = data?.reply || "OK.";
-      setTranscript(reply);
-
-      // opcjonalny TTS backendowy (jeśli masz endpoint /api/tts zwracający url)
-      try {
-        const t = await fetch(`${BASE_URL}/api/tts`, {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify({ text: reply, voice: "pl" })
-        });
-        if (t.ok) {
-          const j = await t.json();
-          if (j?.audioUrl) { ttsPlayer.src = j.audioUrl; ttsPlayer.play().catch(()=>{}); }
-        } else {
-          // fallback: TTS w przeglądarce
-          speak(reply);
-        }
-      } catch {
-        speak(reply);
-      }
-    } catch (e) {
-      console.error(e);
-      setTranscript("Błąd sieci lub backendu. Spróbuj ponownie.");
+    if(!data?.success){
+      showText('Błąd serwera. Spróbuj ponownie.');
+      speakWithWebSpeech('Wystąpił błąd po stronie serwera.');
+      return;
     }
-  }
-  window.sendToAssistant = sendText;
 
-  // ====== Speech Recognition (Chrome/Android) ======
+    const answer = data.assistantText || 'Nie mam teraz odpowiedzi.';
+    showText(answer);
+
+    if(data.audioBase64){
+      await playBase64Mp3(data.audioBase64, answer);
+    }else{
+      speakWithWebSpeech(answer);
+    }
+
+    // jeśli backend zwrócił propozycję narzędzia (tool-call)
+    if (data.tool && window.FreeFlowCart) {
+      if (data.tool.name === 'cart:add' && data.tool.payload) {
+        window.FreeFlowCart.addToCart(data.tool.payload);
+      }
+      if (data.tool.name === 'cart:clear') {
+        window.FreeFlowCart.clearCart();
+      }
+    }
+  }catch(err){
+    console.error(err);
+    showText('Nie udało się połączyć z serwerem.');
+    speakWithWebSpeech('Nie udało się połączyć z serwerem.');
+  }
+}
+
+// rozpoznawanie mowy → Web Speech (przeglądarka)
+function startDictation(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
-  let listening = false;
-  let finalSent = false;
-  let lastFinal = "";
-  let lastInterim = "";
-  let stopTimer = null;
+  if(!SR){ alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.'); return; }
 
-  const GRACE_MS = 250; // margines, żeby nie ucinało ostatniego słowa
+  const rec = new SR();
+  rec.lang = 'pl-PL';
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
 
-  if (SR) {
-    recognition = new SR();
-    recognition.lang = "pl-PL";
-    recognition.continuous = false;
-    recognition.interimResults = true; // pokazujemy na żywo (…)
-    // final-only wysyłka w onresult
-
-    recognition.addEventListener("start", () => {
-      listening = true; finalSent = false; lastFinal = ""; lastInterim = "";
-      setTranscript("Nagrywam… mów śmiało. Puść, gdy skończysz.");
-    });
-
-    recognition.addEventListener("result", (e) => {
-      // scal wszystko z bufora
-      let combined = "";
-      for (const res of e.results) combined += res[0].transcript;
-      const isFinal = e.results[e.results.length-1].isFinal;
-
-      if (isFinal) {
-        lastFinal = combined.trim();
-        setTranscript(lastFinal);
-        finalSent = true;
-        sendText(lastFinal);
-      } else {
-        lastInterim = combined.trim();
-        setTranscript(lastInterim + " …");
-      }
-    });
-
-    recognition.addEventListener("error", (e) => {
-      console.warn("SR error:", e.error);
-      setTranscript("Błąd rozpoznawania mowy. Spróbuj ponownie.");
-      safeStop();
-    });
-
-    recognition.addEventListener("end", () => {
-      listening = false;
-      // Fallback: jeżeli final nie spłynął – wyślij ostatni interim
-      if (!finalSent && lastInterim) {
-        const maybeFull = lastInterim.replace(/[.…\s]+$/,'').trim();
-        if (maybeFull) sendText(maybeFull);
-      }
-    });
-  } else {
-    // Brak wsparcia SR
-    micBtn.disabled = true;
-    micBtn.title = "Brak wsparcia rozpoznawania mowy w tej przeglądarce";
-  }
-
-  function startSR(){
-    if (!recognition || listening) return;
-    try { recognition.start(); } catch {}
-  }
-  function safeStop(){
-    if (!recognition) return;
-    try { recognition.stop(); } catch {}
-  }
-
-  // Klik na logo: najpierw komunikat TTS, potem start SR
-  const startFlow = () => {
-    speak("Czy mogę przyjąć zamówienie?", "pl-PL", 1.0, 1.0);
-    // mała pauza, żeby nie „wciął” pierwszego słowa użytkownika
-    setTimeout(() => { startSR(); }, 300);
+  rec.onstart = ()=> showText('Słucham…');
+  rec.onresult = (e)=>{
+    // pokazuj interim w czasie rzeczywistym
+    let final = '';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal){ final += t; } else { showText(t); }
+    }
+    if(final.trim()){
+      showText(final.trim());
+      sendToAssistant(final.trim());
+    }
   };
+  rec.onerror = (e)=> showText('Błąd rozpoznawania: ' + (e.error||'nieznany'));
+  rec.onend = ()=> micBtn.classList.remove('recording');
 
-  micBtn.addEventListener("mousedown", () => {
-    clearTimeout(stopTimer);
-    startFlow();
+  rec.start();
+}
+
+// zdarzenie na przycisku (gest dla autoplay)
+if(micBtn){
+  micBtn.addEventListener('click', ()=>{
+    try{ window.speechSynthesis.cancel(); player.pause(); }catch{}
+    micBtn.classList.add('recording');
+    startDictation();
   });
-  micBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); clearTimeout(stopTimer); startFlow(); }, {passive:false});
+}
 
-  // Po zwolnieniu palca – poczekaj GRACE_MS i zatrzymaj SR
-  const scheduleStop = () => {
-    clearTimeout(stopTimer);
-    stopTimer = setTimeout(safeStop, GRACE_MS);
-  };
-  micBtn.addEventListener("mouseup", scheduleStop);
-  micBtn.addEventListener("mouseleave", scheduleStop);
-  micBtn.addEventListener("touchend", scheduleStop);
-
-})();
+// eksport „globalnie" dla quick actions
+window.sendToAssistant = sendToAssistant;

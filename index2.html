@@ -1,245 +1,217 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — index2</title>
-<style>
-  :root{
-    --txt:#e8eef8; --muted:#cfd3dc; --accent:#ff9c2f;
-    --bg-url:url("./Background.png");
-    --logo-url:url("./Freeflow-logo.png");
-    --transcriptOffset: 96px; /* odstęp transkrypcji od kropli */
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-        background:#0c0f14; overflow-x:hidden; }
-
-  /* TŁO */
-  .bg{ position:fixed; inset:0; z-index:0; background-image:var(--bg-url); background-size:cover; background-position:center; }
-  .bg::before{ content:""; position:absolute; inset:0;
-    background: radial-gradient(1100px 700px at 50% 18%, rgba(10,10,16,.20), rgba(10,10,16,.44)),
-                linear-gradient(180deg, rgba(10,10,16,.06), rgba(10,10,16,.26)); }
-  .bg::after{ content:""; position:absolute; inset:0; opacity:.02; pointer-events:none;
-    background-image: radial-gradient(currentColor 1px, transparent 1px); background-size:3px 3px; }
-
-  /* TOPBAR (lekki, nie zmienia logiki) */
-  .topbar{ position:fixed; inset:0 0 auto 0; height:56px; z-index:3000;
-    display:flex; align-items:center; justify-content:space-between; padding:0 12px;
-    background:linear-gradient(180deg, rgba(6,8,12,.88), rgba(6,8,12,.42)); border-bottom:1px solid rgba(255,255,255,.06); }
-  .brand{ font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
-  .top-actions{ display:flex; gap:8px; }
-  .icon-btn{ height:36px; min-width:40px; padding:0 10px; border:1px solid rgba(255,255,255,.18);
-    border-radius:12px; background:rgba(255,255,255,.06); color:var(--txt); font-size:18px; cursor:pointer; }
-  .icon-btn:active{ transform:translateY(1px) }
-  .badge{ font-size:12px; background:var(--accent); color:#1a1a1a; padding:1px 6px; border-radius:999px; margin-left:4px; }
-
-  /* KROPLA — przycisk (bez zmian eventów po Twojej stronie) */
-  .logo-zone{ position:fixed; top:72px; left:50%; transform:translateX(-50%);
-    width:min(76vw,380px); aspect-ratio:2/3; z-index:2000; cursor:pointer;
-    filter: drop-shadow(0 10px 20px rgba(0,0,0,.6)); }
-  .logo-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
-    mix-blend-mode:screen; filter:saturate(1.08) contrast(1.06); transition:filter .25s ease, transform .25s ease; }
-  .recording .logo-img{ filter:saturate(1.2) contrast(1.14) brightness(1.08); transform:scale(1.01); }
-
-  /* NEONOWY, WYRAŹNY PULS WOKÓŁ KROPLI (włącza się gdy jest nagrywanie)
-     Działa gdy:
-        - <body> ma klasę .recording    LUB
-        - .logo-zone ma klasę .listening
-     Nie modyfikuje JS – tylko reaguje na istniejące klasy.
-  */
-  .logo-neon{position:absolute; inset:-7%; pointer-events:none; border-radius:40% 40% 56% 56% / 44% 44% 60% 60%; opacity:0; }
-  .recording .logo-neon, .logo-zone.listening .logo-neon{ opacity:1; animation:neonPulse 1.35s ease-in-out infinite; }
-  @keyframes neonPulse{
-    0%{
-      box-shadow:
-        0 0 10px 4px rgba(255,156,47,.60),
-        0 0 26px 8px rgba(255,156,47,.35),
-        inset 0 0 10px rgba(255,156,47,.22);
-      transform:scale(1);
-      filter:saturate(1);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FreeFlow</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url("Freeflow-logo.png") no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      text-align: center;
     }
-    50%{
-      box-shadow:
-        0 0 18px 8px rgba(255,156,47,.75),
-        0 0 44px 16px rgba(255,156,47,.40),
-        inset 0 0 16px rgba(255,156,47,.28);
-      transform:scale(1.03);
-      filter:saturate(1.15);
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.6);
     }
-    100%{
-      box-shadow:
-        0 0 10px 4px rgba(255,156,47,.60),
-        0 0 26px 8px rgba(255,156,47,.35),
-        inset 0 0 10px rgba(255,156,47,.22);
-      transform:scale(1);
-      filter:saturate(1);
+
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 2px;
     }
-  }
 
-  /* Delikatna praca obrazka podczas nagrywania (niezależnie od JS) */
-  @keyframes imgBreathe {
-    0%,100% { transform: scale(1);   filter: saturate(1.05) contrast(1.06) brightness(1.02); }
-    50%     { transform: scale(1.01); filter: saturate(1.18) contrast(1.12) brightness(1.06); }
-  }
-  .recording .logo-img, .logo-zone.listening .logo-img{ animation: imgBreathe 1.35s ease-in-out infinite; }
+    .logo-container {
+      margin-top: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-  /* TRANSKRYPCJA — niżej i na środku; wspieramy różne nazwy kontenerów */
-  .transcript, #transcript, .transcriptBox{
-    position:fixed; left:50%; transform:translateX(-50%);
-    top: calc(72px + min(76vw,380px) + var(--transcriptOffset));
-    width:min(94vw, 720px); max-height:38vh; overflow:auto;
-    background: rgba(22,24,32,.72); border:1px solid rgba(255,255,255,.08);
-    border-radius:14px; padding:12px 14px; z-index:2100;
-    box-shadow:0 10px 30px rgba(0,0,0,.25);
-  }
-  .transcript .line, #transcript .line, .transcriptBox .line{ display:flex; gap:8px; margin:4px 0; align-items:flex-start; }
-  .role{ opacity:.72; min-width:84px; font-weight:700; font-size:13px; color:var(--muted); }
-  .text{ flex:1; font-size:14px; line-height:1.35 }
+    .logo {
+      width: 220px;
+      height: auto;
+      transition: transform 0.3s ease-in-out;
+    }
 
-  /* DÓŁ – kapsułki */
-  .bottom-bar{ position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
-    display:flex; gap:10px; padding:6px; background:rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12); border-radius:16px; }
-  .pill{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.14);
-    border-radius:999px; padding:10px 14px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.08); color:#fff; }
-  .pill .ico{ font-size:18px; opacity:.95 } .pill:active{ transform:translateY(1px) }
+    .logo.pulsing {
+      animation: pulse 1.5s infinite;
+    }
 
-  @media (max-width:400px){ .logo-zone{width:78vw} .transcript{width:94vw} .pill{padding:10px 12px; font-size:15px} }
-</style>
+    @keyframes pulse {
+      0% { transform: scale(1); filter: drop-shadow(0 0 10px orange); }
+      50% { transform: scale(1.1); filter: drop-shadow(0 0 25px orangered); }
+      100% { transform: scale(1); filter: drop-shadow(0 0 10px orange); }
+    }
+
+    .messages {
+      margin: 20px auto;
+      width: 90%;
+      max-width: 600px;
+      text-align: left;
+      background: rgba(0,0,0,0.6);
+      border-radius: 10px;
+      padding: 15px;
+      font-size: 14px;
+    }
+
+    .message {
+      margin-bottom: 8px;
+    }
+
+    .footer-buttons {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-buttons button {
+      background: rgba(0,0,0,0.7);
+      border: 1px solid #ff6600;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-buttons button:hover {
+      background: #ff6600;
+    }
+  </style>
 </head>
 <body>
-  <!-- TŁO -->
-  <div class="bg" aria-hidden="true"></div>
-
-  <!-- GÓRA (lekko) -->
-  <header class="topbar">
-    <div class="brand">FREEFLOW</div>
-    <nav class="top-actions">
-      <button class="icon-btn" aria-label="Menu">☰</button>
-      <button class="icon-btn" aria-label="Koszyk">🛒 <span class="badge" id="cartCount">0</span></button>
-    </nav>
+  <header>
+    <h1>FREEFLOW</h1>
+    <div>🛒 0</div>
   </header>
 
-  <!-- KROPLA (nie dotykamy Twojej logiki JS: klik i toggle masz po swojej stronie)
-       Jeśli Twoja logika nasłuchuje innego selektora – zostaw .logo-zone,
-       a tryb nagrywania włącza neon poprzez .recording na body albo .listening na logo.
-  -->
-  <div class="logo-zone" id="logoBtn" role="button" tabindex="0">
-    <img class="logo-img" src="./Freeflow-logo.png" alt="FreeFlow logo">
-    <div class="logo-neon"></div>
+  <div class="logo-container">
+    <img src="Freeflow-logo.png" alt="FreeFlow Logo" class="logo" id="logo">
   </div>
 
-  <!-- TRANSKRYPCJA (używamy Twojego istniejącego kontenera, jeżeli masz inny – CSS wspiera kilka nazw) -->
-  <div class="transcript" id="transcript" aria-live="polite"></div>
+  <div class="messages" id="messages"></div>
 
-  <!-- DÓŁ – guziki skrótów (bez zmiany logiki) -->
-  <div class="bottom-bar">
-    <button class="pill" id="btnFood"><span class="ico">🍽️</span><span>Jedzenie</span></button>
-    <button class="pill" id="btnTaxi"><span class="ico">🚕</span><span>Taxi</span></button>
-    <button class="pill" id="btnHotel"><span class="ico">🏨</span><span>Hotel</span></button>
+  <div class="footer-buttons">
+    <button onclick="sendCommand('jedzenie')">🍽️ Jedzenie</button>
+    <button onclick="sendCommand('taxi')">🚖 Taxi</button>
+    <button onclick="sendCommand('hotel')">🏨 Hotel</button>
   </div>
 
-<script>
-/* ================== KONFIG ================== */
-const BACKEND = 'https://freeflow-backend-vercel.vercel.app';
-const ASR_URL = `${BACKEND}/api/asr`;  // zostawiamy /api/asr — nic nie zmieniasz w backendzie
-const CHUNK_MS = 4000;
+  <script>
+    const backendUrl = "https://freeflow-backend-vercel.vercel.app/api";
+    const logo = document.getElementById("logo");
+    const messagesDiv = document.getElementById("messages");
+    let recording = false;
+    let mediaRecorder;
+    let audioChunks = [];
 
-/* ========== Pomocnicze UI do transkrypcji (bez zmiany Twojej logiki) ========== */
-function appendTranscript(role, text){
-  const box = document.getElementById('transcript');
-  if(!box) return;
-  const line = document.createElement('div'); line.className='line';
-  const r = document.createElement('div'); r.className='role'; r.textContent = role==='user'?'Ty:':'Asystent:';
-  const t = document.createElement('div'); t.className='text'; t.textContent = text;
-  line.append(r,t); box.append(line); box.scrollTop = box.scrollHeight;
-}
-
-/* ========== TRYB NAGRYWANIA — bez ingerencji w Twoje istniejące eventy ==========
-   Jeżeli Twój kod już przełącza nagrywanie i dodaje klasę .recording na <body> lub .listening na .logo-zone,
-   neon i puls włączą się automatycznie przez sam CSS.
-   Poniżej zostawiamy minimalistyczny fallback, który możesz USUNĄĆ, jeśli masz własną obsługę.
-*/
-let recording = false, mr = null, stream = null, mime = null;
-async function fallbackToggle(){
-  // fallback tylko gdy nie masz własnej logiki – w innym wypadku usuń tę funkcję
-  recording = !recording;
-  document.body.classList.toggle('recording', recording);
-  if(recording){ startRecording().catch(()=>{}); appendTranscript('asst','Nagrywanie włączone (fallback).'); }
-  else{ stopRecording(); appendTranscript('asst','Nagrywanie wyłączone (fallback).'); }
-}
-
-/* ========== Serwerowa transkrypcja (MediaRecorder → /api/asr) ========== */
-async function startRecording(){
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  }catch(err){
-    appendTranscript('asst','Brak dostępu do mikrofonu.');
-    throw err;
-  }
-  if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime = 'audio/webm;codecs=opus';
-  else if(MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) mime = 'audio/ogg;codecs=opus';
-  else if(MediaRecorder.isTypeSupported('audio/webm')) mime = 'audio/webm';
-  else { appendTranscript('asst','MediaRecorder nieobsługiwany.'); throw new Error('no-mime'); }
-
-  mr = new MediaRecorder(stream, {mimeType: mime});
-  mr.ondataavailable = async (e)=>{
-    if(!e.data || e.data.size === 0) return;
-    try{
-      const fd = new FormData();
-      fd.append('audio', e.data, `chunk.${mime.includes('ogg')?'ogg':'webm'}`);
-      const res = await fetch(ASR_URL, { method:'POST', body: fd });
-
-      if(!res.ok){
-        const msg = await res.text().catch(()=>res.statusText);
-        appendTranscript('asst', `ASR HTTP ${res.status}: ${msg}`);
-        return;
-      }
-
-      let text = '';
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        const json = await res.json();
-        text = (json && (json.text || json.transcript || '')).trim();
-      } else {
-        text = (await res.text()).trim();
-      }
-      if(text) appendTranscript('user', text);
-    }catch(err){
-      appendTranscript('asst', `ASR błąd sieci: ${err.message || err}`);
+    function logMessage(text) {
+      const p = document.createElement("div");
+      p.className = "message";
+      p.innerText = "Asystent: " + text;
+      messagesDiv.appendChild(p);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-  };
-  mr.start(CHUNK_MS);
-}
-function stopRecording(){
-  try{ if(mr && mr.state !== 'inactive') mr.stop(); }catch(_){}
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); }
-  mr = null; stream = null; mime = null;
-}
 
-/* ========== PODPIĘCIE KLIKÓW ==========
-   Jeśli MASZ już własne nasłuchiwanie klików na kropli — usuń ten blok.
-   Zostawiamy go jako bezpieczny fallback (jeden event 'pointerdown', bez dublowania).
-*/
-(function ensureLogoClicks(){
-  const zone = document.getElementById('logoBtn') || document.querySelector('.logo-zone');
-  if(!zone) return;
-  let last = 0;
-  function onToggle(e){
-    e.preventDefault(); e.stopPropagation();
-    const now = Date.now(); if(now - last < 500) return; last = now;
-    // jeśli masz własną obsługę, ten fallback nie przeszkodzi (jedynie doda .recording na body)
-    fallbackToggle();
-  }
-  zone.addEventListener('pointerdown', onToggle, {passive:false});
-  zone.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' ') onToggle(e); });
-})();
+    async function startRecording() {
+      if (recording) return;
+      recording = true;
+      logo.classList.add("pulsing");
+      logMessage("Nagrywanie włączone...");
 
-/* ========== DÓŁ – skróty (zostawiamy tylko log do transkrypcji) ========== */
-document.getElementById('btnFood')?.addEventListener('click', ()=>appendTranscript('user','Wybieram: Jedzenie.'));
-document.getElementById('btnTaxi')?.addEventListener('click', ()=>appendTranscript('user','Wybieram: Taxi.'));
-document.getElementById('btnHotel')?.addEventListener('click', ()=>appendTranscript('user','Wybieram: Hotel.'));
-</script>
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = sendAudio;
+        mediaRecorder.start();
+      } catch (err) {
+        logMessage("Błąd mikrofonu: " + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (!recording) return;
+      recording = false;
+      logo.classList.remove("pulsing");
+      logMessage("Nagrywanie wyłączone.");
+      mediaRecorder.stop();
+    }
+
+    async function sendAudio() {
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("file", audioBlob, "voice.webm");
+
+      try {
+        const res = await fetch(`${backendUrl}/asr`, { method: "POST", body: formData });
+        if (!res.ok) throw new Error("ASR błąd: " + res.status);
+        const data = await res.json();
+        logMessage("Rozpoznano: " + data.text);
+        sendToAssistant(data.text);
+      } catch (err) {
+        logMessage("ASR błąd sieci: " + err.message);
+      }
+    }
+
+    async function sendToAssistant(text) {
+      try {
+        const res = await fetch(`${backendUrl}/assistant`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (!res.ok) throw new Error("Assistant błąd: " + res.status);
+        const data = await res.json();
+        logMessage(data.reply || "Brak odpowiedzi.");
+        playTTS(data.reply);
+      } catch (err) {
+        logMessage("Assistant błąd sieci: " + err.message);
+      }
+    }
+
+    async function playTTS(text) {
+      try {
+        const res = await fetch(`${backendUrl}/tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (!res.ok) throw new Error("TTS błąd: " + res.status);
+        const audioBlob = await res.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+      } catch (err) {
+        logMessage("TTS błąd sieci: " + err.message);
+      }
+    }
+
+    function sendCommand(cmd) {
+      logMessage("Polecenie: " + cmd);
+      sendToAssistant("Chcę zamówić " + cmd);
+    }
+
+    // Kliknięcie w logo steruje nagrywaniem
+    logo.addEventListener("click", () => {
+      if (recording) stopRecording(); else startRecording();
+    });
+  </script>
 </body>
 </html>

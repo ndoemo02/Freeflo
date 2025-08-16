@@ -2,258 +2,231 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FreeFlow – Voice to order</title>
-
-  <!-- TŁO z repo -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow • Voice to order</title>
+  <link rel="icon" href="./Freeflow-logo.png" />
   <style>
     :root{
-      --bg:#0f141b;
-      --panel:#141b23;
-      --ring:#1f2937;
-      --text:#e5e7eb;
-      --muted:#9ca3af;
-      --accent:#ff7a00;
-      --accent-2:#00d1ff;
+      --bg:#0b0f14; --panel:#121821; --panel2:#16202c;
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
+      --glow:#ff7a00aa; --ring:#2a3545;
     }
-    html,body{
-      height:100%;
-      margin:0;
-      background: #0b0f14 url("./assets/Background.png") center/cover no-repeat fixed;
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 800px at 50% -20%, #182131 0%, #0d141d 50%, var(--bg) 100%);
       color:var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    }
-    .wrap{
-      min-height:100%;
-      display:flex;
-      flex-direction:column;
-      backdrop-filter: saturate(120%) blur(0px);
-      background: radial-gradient(1500px 700px at 50% -200px, rgba(255,170,0,.08), transparent 60%);
     }
 
-    header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:20px 16px;
+    /* ===== efekty glass + neon ===== */
+    .glass{
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:15px;
+      box-shadow: 0 4px 30px rgba(0,0,0,.25);
     }
-    .brand{
-      display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px;
+    .glow{
+      box-shadow:
+        0 0 10px rgba(0,255,255,.15),
+        0 0 20px rgba(0,255,255,.12),
+        0 0 30px rgba(0,255,255,.08);
+      transition: box-shadow .3s ease, transform .15s ease;
     }
-    .brand img{ width:28px; height:28px; border-radius:6px; }
-    .brand .free{ color:var(--accent); }
-    .brand .flow{ color:white; opacity:.9; }
+    .glow:hover{
+      box-shadow:
+        0 0 15px rgba(0,255,255,.25),
+        0 0 30px rgba(0,255,255,.18),
+        0 0 45px rgba(0,255,255,.12);
+      transform: translateY(-1px);
+    }
+    /* ================================= */
 
-    .stage{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px 16px 10px;
+    /* top bar */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 18px; position:sticky; top:0; z-index:20;
+      background: linear-gradient(180deg, rgba(13,20,29,.9), rgba(13,20,29,.65), rgba(13,20,29,0));
+      backdrop-filter: blur(6px);
     }
-    .ring{
-      width:min(92vw, 460px);
-      aspect-ratio:1/1;
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:26px; }
+    .brand img{width:36px; height:36px; border-radius:8px}
+    .brand .accent{color:var(--brand)}
+    .claim{font-size:12px; color:var(--muted); margin-top:-6px}
+    .actions{display:flex; gap:10px}
+    .iconbtn{
+      width:44px; height:44px; border-radius:12px; border:1px solid #243044;
+      background: linear-gradient(180deg,#17202d,#111722);
+      color:#cfe2ff; display:grid; place-items:center; cursor:pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
+    }
+    .badge{
+      position:absolute; margin-top:-28px; margin-left:26px;
+      background:var(--brand); color:#111; font-weight:700; font-size:12px;
+      width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+      box-shadow:0 0 16px var(--glow);
+    }
+
+    /* hero */
+    .wrap{max-width:980px; margin:0 auto; padding: 10px 16px 40px}
+    h1{font-size:42px; line-height:1.05; margin:8px 0 6px}
+    .sub{color:var(--muted); margin-bottom:18px}
+
+    .hero{
+      margin:14px auto 18px; width:min(92vw,640px); aspect-ratio:1/1;
       border-radius:50%;
-      display:grid; place-items:center;
-      box-shadow:
-        0 0 0 2px rgba(255,255,255,0.02) inset,
-        0 50px 150px rgba(0,0,0,.55);
-      background: radial-gradient(70% 70% at 50% 50%, rgba(255,255,255,.04), rgba(255,255,255,0) 60%);
+      background: radial-gradient(60% 60% at 50% 45%, #1f2937 0%, #0f1722 55%, #0b1018 100%);
+      border:1px solid var(--ring);
+      display:grid; place-items:center; position:relative;
+      box-shadow: inset 0 0 120px #000a, 0 40px 120px #000a;
     }
-
-    /* LOGO jako przycisk */
-    .micBtn{
-      width:min(65vw, 320px);
-      aspect-ratio:1/1;
-      border-radius:30px;
-      border:none;
-      background: transparent url("./assets/logo.png") center/contain no-repeat;
-      box-shadow:
-        0 0 0 0 rgba(255,122,0,0),
-        0 0 0 0 rgba(0,209,255,0);
-      transition: transform .12s ease;
-      position:relative;
+    .hero .logo{
+      width:76%; max-width:520px; filter: drop-shadow(0 8px 26px rgba(0,0,0,.45));
+      user-select:none; pointer-events:none;
     }
-    .micBtn:active{ transform: scale(.985); }
-
-    /* Mocny puls podczas nagrywania */
-    .recording .micBtn{
-      animation: pulse 1s ease-in-out infinite;
-      filter: drop-shadow(0 0 18px rgba(255,122,0,.55))
-              drop-shadow(0 0 28px rgba(0,209,255,.45));
+    #micBtn{
+      position:absolute; bottom:9%; left:50%; transform: translateX(-50%);
+      padding:14px 18px; border-radius:18px; cursor:pointer; border:1px solid #2a3548;
+      background: rgba(20,27,38,.8); color:var(--text); font-size:22px;
+      display:flex; align-items:center; gap:10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(0,255,128,0);
+      transition: box-shadow .25s ease, transform .15s ease;
+    }
+    #micBtn:hover{ transform: translateX(-50%) scale(1.02); }
+    #micBtn.recording{
+      animation: pulse 1.6s infinite;
+      border-color:#22d37f77;
+      box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 26px #22d37f44;
     }
     @keyframes pulse{
-      0%   { transform: scale(1.00); }
-      50%  { transform: scale(1.06); }
-      100% { transform: scale(1.00); }
+      0%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,.55); }
+      70%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 16px rgba(34,211,127,0); }
+      100%{ box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 0 0 rgba(34,211,127,0); }
     }
 
-    /* Panel asystenta */
-    .panel{
-      margin:18px auto 26px;
-      width:min(92vw, 780px);
-      background: rgba(13,18,25,.76);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:18px;
-      box-shadow: 0 10px 40px rgba(0,0,0,.35);
-      overflow:hidden;
+    /* transcript bubble */
+    .bubble{
+      margin:18px auto 0; max-width:900px; padding:18px 16px; min-height:40px;
+      background: linear-gradient(180deg,#111824,#0e1520); border:1px solid #243044;
+      border-radius:18px; color:var(--text); font-size:18px;
+      box-shadow: inset 0 0 24px #0008, 0 8px 40px #000a;
     }
-    .feed{
-      max-height:38vh;
-      overflow:auto;
-      padding:16px 16px 6px;
-      font-size:15px;
-      line-height:1.45;
-    }
-    .msg{ padding:10px 12px; margin:8px 0; border-radius:12px; }
-    .me{ background: rgba(255,255,255,.05); }
-    .bot{ background: rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.05); }
-    .muted{ color:var(--muted); font-size:13px; }
 
-    .ctaRow{
-      display:flex; gap:12px; padding:12px; justify-content:center; flex-wrap:wrap;
+    /* bottom buttons (równe) */
+    .bottom-buttons{
+      display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:16px;
     }
-    .chip{
-      flex:1 1 120px; max-width:220px;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
-      color:#fff; padding:14px 16px; border-radius:14px;
-      text-align:center; font-weight:600; letter-spacing:.2px;
+    .bottom-buttons button{
+      flex:1 1 calc(33.333% - 12px); max-width:180px; min-width:120px; height:56px;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      font-size:18px; border-radius:14px;
+      background: linear-gradient(180deg,#161e2a,#101723);
+      color:#e8eefb; border:1px solid #243044; cursor:pointer;
+      box-shadow: 0 10px 32px rgba(0,0,0,.35);
+      transition: transform .15s ease, background .2s ease;
     }
-    .chip:active{ transform: translateY(1px); }
+    .bottom-buttons button:hover{ transform: translateY(-1px); background: #182233; }
+    .bottom-buttons .primary{ outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset, 0 10px 32px #000; }
+
+    /* glass + glow aplikacja na wybrane elementy */
+    .iconbtn.glass.glow{ border-color:rgba(255,255,255,.16); }
+    #micBtn.glass.glow{ background:rgba(20,27,38,.55); }
+
+    @media (max-width:480px){
+      h1{font-size:36px}
+      .bottom-buttons button{height:52px; font-size:16px; min-width:110px}
+      #micBtn{font-size:20px}
+    }
   </style>
 </head>
 <body>
-  <div class="wrap" id="app">
-    <header>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div>
       <div class="brand">
-        <img src="./assets/logo.png" alt="FreeFlow">
-        <div><span class="free">Free</span> <span class="flow">Flow</span></div>
+        <img src="./Freeflow-logo.png" alt="logo"/>
+        <span class="accent">Free</span>Flow
       </div>
-    </header>
+      <div class="claim">Voice to order</div>
+    </div>
+    <div class="actions">
+      <button class="iconbtn glass glow" id="menuBtn" aria-label="Menu">☰</button>
+      <div style="position:relative">
+        <button class="iconbtn glass glow" id="cartBtn" aria-label="Koszyk">🛒</button>
+        <div class="badge" id="cartBadge">0</div>
+      </div>
+    </div>
+  </header>
 
-    <section class="stage">
-      <div class="ring" id="ring">
-        <button id="logoBtn" class="micBtn" aria-label="Naciśnij i przytrzymaj, aby mówić"></button>
-      </div>
+  <main class="wrap">
+    <h1>Złóż zamówienie</h1>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
+
+    <!-- Hero z logo + mic -->
+    <section class="hero">
+      <img class="logo" src="./Freeflow-logo.png" alt="FreeFlow" />
+      <button id="micBtn" type="button" class="glass glow">🎤 Dotknij logo i mów…</button>
     </section>
 
-    <section class="panel">
-      <div class="feed" id="feed">
-        <div class="msg bot">Dotknij i PRZYTRZYMAJ logo, aby mówić. Zwolnij przycisk – dopiero wtedy wyślę zapytanie.</div>
-      </div>
-      <div class="ctaRow">
-        <div class="chip">Jedzenie</div>
-        <div class="chip">Taxi</div>
-        <div class="chip">Hotel</div>
-      </div>
-    </section>
-  </div>
+    <!-- Transkrypcja / odpowiedzi -->
+    <div id="transcript" class="bubble glass glow">Transkrypcja pojawi się tutaj…</div>
 
+    <!-- Przyciski skrótów -->
+    <div class="bottom-buttons" style="margin-bottom:36px">
+      <button class="primary glass glow" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
+      <button class="glass glow" data-quick="Taxi">🚕 <span>Taxi</span></button>
+      <button class="glass glow" data-quick="Hotel">🏠 <span>Hotel</span></button>
+    </div>
+  </main>
+
+  <!-- Audio do TTS -->
+  <audio id="ttsPlayer" preload="auto"></audio>
+
+  <!-- Logika asystenta -->
+  <script src="./freeflow-assistant.js"></script>
+
+  <!-- Mini logika UI (niemodułowa) -->
   <script>
-    // >>>>>>>>>>> KONFIG <<<<<<<<<<
-    // Podmień na swoją domenę backendu (bez końcowego "/")
-    const API_BASE = "https://freeflow-backend-vercel.vercel.app"; // <- Twoje Vercel/Render
-    const ASR_URL  = API_BASE + "/api/asr";
-    const ASSIST_URL = API_BASE + "/api/assistant-text"; // jeśli masz /api/chat – podmień
+    const badgeEl = document.getElementById('cartBadge');
+    const cartBtn = document.getElementById('cartBtn');
+    cartBtn.addEventListener('click',()=> alert('Koszyk (coming soon)'));
+    document.getElementById('menuBtn').addEventListener('click',()=> alert('Menu (coming soon)'));
 
-    // >>>>>>>>>>> STAN UI <<<<<<<<<<
-    const ring  = document.getElementById('ring');
-    const btn   = document.getElementById('logoBtn');
-    const feed  = document.getElementById('feed');
-
-    let mediaRecorder = null;
-    let chunks = [];
-    let isRecording = false;
-
-    function addMsg(text, who='bot', muted=false){
-      const div = document.createElement('div');
-      div.className = `msg ${who} ${muted ? 'muted':''}`;
-      div.textContent = text;
-      feed.appendChild(div);
-      feed.scrollTop = feed.scrollHeight;
-      return div;
-    }
-
-    // Szybki test zdrowia backendu (bez blokady UI)
-    fetch(API_BASE + "/api/health").catch(()=>{});
-
-    // >>>>>>>>>>> NAGRYWANIE: PUSH-TO-TALK <<<<<<<<<<
-    async function startRecording(){
-      if(isRecording) return;
-      try{
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        chunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        mediaRecorder.ondataavailable = e => e.data.size && chunks.push(e.data);
-        mediaRecorder.onstop = onStopRecording;
-
-        mediaRecorder.start();
-        isRecording = true;
-        ring.classList.add('recording');
-        addMsg("Nagrywam… mów śmiało. Zwolnij przycisk, aby wysłać.","bot",true);
-      }catch(err){
-        console.error(err);
-        addMsg("Brak dostępu do mikrofonu.","bot");
-      }
-    }
-
-    function stopRecording(){
-      if(!isRecording || !mediaRecorder) return;
-      isRecording = false;
-      ring.classList.remove('recording');
-      mediaRecorder.stop();
-    }
-
-    // Po puszczeniu – wysyłamy CAŁY klip (nie fragmenty)
-    async function onStopRecording(){
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      chunks = [];
-      const thinking = addMsg("Transkrybuję…","bot",true);
-
-      try{
-        const fd = new FormData();
-        fd.append("audio", blob, "speech.webm");
-
-        // 1) ASR – czekamy na finalny tekst
-        const asrRes = await fetch(ASR_URL, { method:"POST", body: fd });
-        if(!asrRes.ok) throw new Error("ASR failed");
-        const { text } = await asrRes.json();
-
-        thinking.remove();
-        addMsg(text || "(pusto)", "me");
-
-        if(!text || !text.trim()){
-          addMsg("Nie dosłyszałem. Spróbuj jeszcze raz.","bot",true);
-          return;
+    // quick actions → wysyłamy gotowe prompt’y do asystenta
+    document.querySelectorAll('[data-quick]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const t = btn.dataset.quick;
+        if (window.sendToAssistant) {
+          window.sendToAssistant(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`);
         }
+      });
+    });
+  </script>
 
-        // 2) Asystent – dopiero po finalnym tekście
-        const resp = await fetch(ASSIST_URL, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ prompt: text })
-        });
-        const data = await resp.json();
-        addMsg(data.reply || "OK.","bot");
-      }catch(e){
-        console.error(e);
-        thinking.remove();
-        addMsg("Błąd sieci lub backendu. Spróbuj ponownie.","bot");
-      }
-    }
+  <!-- Koszyk (moduł) -->
+  <script type="module">
+    import { addToCart, getCart, cartCount, clearCart } from './cart.js';
 
-    // Obsługa dotyku i myszy (mobile + desktop)
-    const startEvt = ('ontouchstart' in window) ? 'touchstart' : 'mousedown';
-    const endEvt   = ('ontouchend'   in window) ? 'touchend'   : 'mouseup';
+    const badge = document.getElementById('cartBadge');
+    function renderBadge(){ badge.textContent = cartCount(); }
+    renderBadge();
+    window.addEventListener('cart:update', renderBadge);
 
-    btn.addEventListener(startEvt, (e)=>{ e.preventDefault(); startRecording(); }, {passive:false});
-    btn.addEventListener(endEvt,   (e)=>{ e.preventDefault(); stopRecording();  }, {passive:false});
+    document.querySelector('[data-quick="Jedzenie"]')
+      .addEventListener('click', ()=> addToCart({type:'food', name:'Zestaw dnia'}));
+    document.querySelector('[data-quick="Taxi"]')
+      .addEventListener('click', ()=> addToCart({type:'taxi', name:'Kurs standard'}));
+    document.querySelector('[data-quick="Hotel"]')
+      .addEventListener('click', ()=> addToCart({type:'hotel', name:'Pokój 1 noc'}));
 
-    // Bezpiecznik – gdy palec wyjedzie poza ekran
-    document.addEventListener('mouseleave', stopRecording);
-    document.addEventListener('touchcancel', stopRecording);
+    document.getElementById('cartBtn').addEventListener('click', ()=>{
+      const items = getCart();
+      alert(items.length ? items.map(i=>`• ${i.type} – ${i.name}`).join('\n') : 'Koszyk jest pusty');
+    });
+
+    window.FreeFlowCart = { addToCart, clearCart, getCart };
   </script>
 </body>
 </html>

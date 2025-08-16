@@ -13,22 +13,17 @@
     --accent:#ff9c2f;
   }
   html,body{height:100%;margin:0;background:#0c0f14;color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial}
-  /* TŁO */
   body::before{
-    content:"";
-    position:fixed; inset:0;
+    content:""; position:fixed; inset:0;
     background:url("./background.png") center/cover no-repeat fixed;
-    filter:none; opacity:.75;
-    pointer-events:none; z-index:-2;
+    opacity:.75; pointer-events:none; z-index:-2;
   }
-  /* MASKA delikatnego przyciemnienia */
   body::after{
     content:""; position:fixed; inset:0;
     background:radial-gradient(transparent 30%, rgba(0,0,0,.55) 100%);
     pointer-events:none; z-index:-1;
   }
 
-  /* Górny pasek */
   header{
     display:flex; align-items:center; justify-content:space-between;
     padding:12px 16px; background:linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,0));
@@ -41,7 +36,6 @@
     background:rgba(255,255,255,.06); border:1px solid var(--panel-border);
   }
 
-  /* GŁÓWNY KADR */
   main{max-width:960px; margin:0 auto; padding:24px 16px 120px}
 
   /* Logo – przycisk */
@@ -51,46 +45,43 @@
     position:relative; transform:translateZ(0);
   }
   #logoBtn img{
-    width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 14px 26px rgba(0,0,0,.45));
+    width:100%; height:100%; object-fit:contain; display:block;
+    filter:drop-shadow(0 14px 26px rgba(0,0,0,.45));
     transition:transform .15s ease;
   }
   #logoBtn:active img{ transform:scale(.985) }
-  /* Puls podczas nagrywania */
-  #logoBtn.listening::after{
-    content:""; position:absolute; inset:-6%; border-radius:40% 40% 56% 56% / 44% 44% 60% 60%;
-    box-shadow:0 0 0 0 rgba(255,156,47,.55);
-    animation:pulse 1.4s ease-in-out infinite;
+
+  /* Neon puls */
+  #logoBtn.listening img {
+    animation: neonPulse 1.6s ease-in-out infinite;
   }
-  @keyframes pulse{
-    0%{transform:scale(1); box-shadow:0 0 0 0 rgba(255,156,47,.55)}
-    70%{transform:scale(1.02); box-shadow:0 0 0 24px rgba(255,156,47,0)}
-    100%{transform:scale(1); box-shadow:0 0 0 0 rgba(255,156,47,0)}
+  @keyframes neonPulse {
+    0%   { filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 14px var(--accent)); }
+    50%  { filter: drop-shadow(0 0 18px var(--accent)) drop-shadow(0 0 36px var(--accent)); }
+    100% { filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 14px var(--accent)); }
   }
 
-  /* Panel transkrypcji – niżej, na środku */
   #transcript{
     max-width:720px; margin:18px auto 0; padding:14px 16px;
     background:var(--panel); border:1px solid var(--panel-border); border-radius:14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.25); min-height:72px; max-height:38vh; overflow:auto;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    min-height:72px; max-height:38vh; overflow:auto;
   }
   #transcript p{margin:6px 0}
   #transcript p strong{color:#9ed0ff}
 
-  /* Dolny dock z przyciskami */
   .dock{
     position:fixed; left:0; right:0; bottom:18px; display:flex; justify-content:center; z-index:15;
   }
   .dock-inner{
     display:flex; gap:14px; padding:14px 16px; border-radius:18px;
-    background:rgba(10,12,18,.78); border:1px solid var(--panel-border); backdrop-filter:blur(8px) saturate(140%);
+    background:rgba(10,12,18,.78); border:1px solid var(--panel-border);
+    backdrop-filter:blur(8px) saturate(140%);
   }
   .chip{
     display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:16px;
-    background:rgba(255,255,255,.06); border:1px solid var(--panel-border); color:var(--text); font-weight:600;
-  }
-  .pill{
-    margin-left:12px; padding:8px 12px; border-radius:999px; font-size:.9rem; border:1px solid var(--panel-border);
-    background:rgba(255,255,255,.06); cursor:pointer;
+    background:rgba(255,255,255,.06); border:1px solid var(--panel-border);
+    color:var(--text); font-weight:600;
   }
 
   a,button{color:inherit}
@@ -102,23 +93,18 @@
 <header>
   <div class="brand">FREEFLOW</div>
   <div class="actions">
-    <button id="liveToggle" class="pill" title="Ciągła transkrypcja w przeglądarce (Chrome)">Live voice: OFF</button>
     <div class="btn-ghost" aria-label="Menu">☰</div>
     <div class="btn-ghost" aria-label="Koszyk">🛒</div>
   </div>
 </header>
 
 <main>
-  <!-- PRZYCISK LOGO -->
   <button id="logoBtn" aria-label="Click to talk">
     <img src="./Freeflow-logo.png" alt="FreeFlow Logo" />
   </button>
-
-  <!-- PANEL TRANSKRYPCJI -->
   <div id="transcript" aria-live="polite" aria-label="Transkrypcja"></div>
 </main>
 
-<!-- DOLNY DOCK -->
 <div class="dock">
   <div class="dock-inner">
     <a class="chip" href="#food">🍽️ Jedzenie</a>
@@ -128,10 +114,8 @@
 </div>
 
 <script>
-/* ========= KONFIG ========= */
 const BACKEND = 'https://freeflow-backend-vercel.vercel.app';
 
-/* ========= UTIL ========= */
 function addLine(text, who="Asystent"){
   const box = document.getElementById('transcript');
   const p = document.createElement('p');
@@ -141,22 +125,18 @@ function addLine(text, who="Asystent"){
   box.scrollTop = box.scrollHeight;
 }
 
-/* ========= TTS z backendu ========= */
 async function speak(text){
   try{
     const r = await fetch(`${BACKEND}/api/tts`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ text })
     });
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
-    const a = new Audio(url);
-    a.play();
+    const a = new Audio(url); a.play();
   }catch(e){ console.error('TTS error', e); }
 }
 
-/* ========= ASR – tryb wysyłki nagrania do backendu ========= */
 async function serverTranscribe(blob){
   try{
     const fd = new FormData();
@@ -167,51 +147,6 @@ async function serverTranscribe(blob){
   }catch(e){ console.error('ASR error', e); return ""; }
 }
 
-/* ========= Browser Live Voice (Web Speech API) ========= */
-let liveMode = false;
-let rec; // SpeechRecognition
-function initLive(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ alert('Live voice wymaga Chrome/Edge z Web Speech API.'); return null; }
-  const r = new SR();
-  r.lang = 'pl-PL';
-  r.continuous = true;
-  r.interimResults = true;
-  r.onresult = (e)=>{
-    let finalText = "", interim = "";
-    for(let i=e.resultIndex; i<e.results.length; i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) finalText += t + " ";
-      else interim += t;
-    }
-    if(interim) { /* można pokazać „…słucham” – pomijamy dla prostoty */ }
-    if(finalText){
-      addLine(finalText.trim(), "Użytkownik");
-      const reply = "Zrozumiałam: " + finalText.trim();
-      addLine(reply, "Asystent");
-      speak(reply);
-    }
-  };
-  r.onerror = (e)=> console.warn('SR error', e.error);
-  r.onend = ()=> { if(liveMode) try{ r.start(); }catch{} };
-  return r;
-}
-
-document.getElementById('liveToggle').addEventListener('click', ()=>{
-  liveMode = !liveMode;
-  const btn = document.getElementById('liveToggle');
-  btn.textContent = 'Live voice: ' + (liveMode?'ON':'OFF');
-  if(liveMode){
-    if(!rec) rec = initLive();
-    if(rec) try{ rec.start(); }catch(e){}
-    addLine('Tryb live voice włączony (transkrypcja lokalna).');
-  }else{
-    try{ rec && rec.stop(); }catch(e){}
-    addLine('Tryb live voice wyłączony.');
-  }
-});
-
-/* ========= Nagrywanie klik–mów–puść (MediaRecorder) ========= */
 let mediaRecorder, isRecording=false, chunks=[];
 async function startRecording(){
   const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
@@ -236,12 +171,10 @@ async function stopRecording(){
   try{ mediaRecorder?.state === 'recording' && mediaRecorder.stop(); }catch{}
 }
 
-/* ========= Obsługa logo ========= */
 const logoBtn = document.getElementById('logoBtn');
 logoBtn.addEventListener('click', async ()=>{
   isRecording = !isRecording;
   logoBtn.classList.toggle('listening', isRecording);
-
   if(isRecording){
     addLine('Przełączanie nagrywania: OFF→ON');
     speak('Nagrywanie włączone. Słucham.');
@@ -253,7 +186,6 @@ logoBtn.addEventListener('click', async ()=>{
   }
 });
 
-/* ========= Powitanie ========= */
 window.addEventListener('DOMContentLoaded', ()=>{
   speak('W celu złożenia zamówienia proszę nacisnąć logo. Po aktywacji trybu głosowego dopytam o szczegóły.');
   addLine('Transkrypcja serwerowa aktywna. Kliknij logo, aby mówić.');

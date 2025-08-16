@@ -87,3 +87,41 @@
 
     recognition.addEventListener("end", () => {
       listening = false;
+      micBtn.classList.remove("recording");
+      // Fallback: jeśli nie zdążył nadejść final – wyślij ostatni interim
+      if (!finalSent && lastInterim) {
+        const maybeFull = lastInterim.replace(/[.…\s]+$/,'').trim();
+        if (maybeFull) sendText(maybeFull);
+      }
+    });
+  } else {
+    micBtn.disabled = true;
+    micBtn.title = "Brak wsparcia rozpoznawania mowy w tej przeglądarce";
+  }
+
+  function startSR(){
+    if (!recognition || listening) return;
+    try { recognition.start(); } catch {}
+  }
+  function safeStop(){
+    if (!recognition) return;
+    try { recognition.stop(); } catch {}
+  }
+
+  // LOGO = start/stop. Dodajemy „grace” by zdążył dopisać ostatnie słowo
+  const GRACE_MS = 250;
+
+  micBtn.addEventListener("mousedown", () => {
+    clearTimeout(stopTimer); startSR();
+  });
+  micBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); clearTimeout(stopTimer); startSR(); }, {passive:false});
+
+  const scheduleStop = () => {
+    clearTimeout(stopTimer);
+    stopTimer = setTimeout(safeStop, GRACE_MS);
+  };
+  micBtn.addEventListener("mouseup", scheduleStop);
+  micBtn.addEventListener("mouseleave", scheduleStop);
+  micBtn.addEventListener("touchend", scheduleStop);
+
+})();

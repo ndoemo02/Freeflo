@@ -1,0 +1,138 @@
+/* assets/css/freeflow.css
+   FreeFlow – UI z neonową „kroplą”, pulsem, statusem i podniesionym panelem rozmowy.
+   Całość zeskopowana pod .ff-root, aby nie kolidować z innymi stylami. */
+
+:root{
+  /* globalny margines „bezpieczny” nad kafelkami; JS może to nadpisać */
+  --ff-bottom-safe: 120px;
+  --ff-bg: #0d0f12;
+  --ff-fg: #eaeef6;
+  --ff-muted: #93a1b1;
+  --ff-card: #14171c;
+  --ff-card-2: #0f1216;
+  --ff-accent: #ff7a18;     /* neon pomarańcz */
+  --ff-accent-2: #12d6ff;   /* neon turkus */
+  --ff-shadow: 0 10px 40px rgba(0,0,0,.45);
+  --ff-radius: 18px;
+}
+
+/* --- kontener bazowy (opcja) --- */
+.ff-root{
+  min-height: 100dvh;
+  background: radial-gradient(1200px 800px at 50% -200px, rgba(18,214,255,.05), transparent 60%) , var(--ff-bg);
+  color: var(--ff-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- pasek top (delikatny) --- */
+.ff-topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 14px 16px;
+}
+
+/* --- neonowe logo/kropla z pulsem --- */
+.ff-logo-wrap{
+  position: relative;
+  width: clamp(160px, 42vw, 320px);
+  margin: 40px auto 24px auto;
+}
+
+.ff-logo{
+  width: 100%;
+  height: auto;
+  display:block;
+  border-radius: 24px;
+  filter: drop-shadow(0 12px 45px rgba(18,214,255,.18));
+  transition: transform .18s ease;
+  cursor: pointer;
+}
+
+.ff-logo[data-busy="1"]{ transform: scale(1.06); }
+
+/* neonowa obwódka + puls */
+.ff-logo-wrap::before,
+.ff-logo-wrap::after{
+  content:"";
+  position:absolute; inset:-18px;
+  border-radius: 32px;
+  pointer-events:none;
+}
+.ff-logo-wrap::before{
+  background: radial-gradient(60% 60% at 50% 40%, rgba(18,214,255,.22), transparent 62%),
+              radial-gradient(50% 50% at 65% 60%, rgba(255,122,24,.22), transparent 70%);
+  filter: blur(16px);
+}
+.ff-logo-wrap::after{
+  border: 2px solid rgba(18,214,255,.55);
+  box-shadow:
+    0 0 18px rgba(18,214,255,.35),
+    0 0 32px rgba(255,122,24,.20) inset;
+  animation: ff-pulse 2.2s ease-out infinite;
+}
+
+@keyframes ff-pulse{
+  0%   { box-shadow: 0 0 18px rgba(18,214,255,.38), 0 0 32px rgba(255,122,24,.18) inset; }
+  50%  { box-shadow: 0 0 28px rgba(18,214,255,.70), 0 0 48px rgba(255,122,24,.35) inset; }
+  100% { box-shadow: 0 0 18px rgba(18,214,255,.38), 0 0 32px rgba(255,122,24,.18) inset; }
+}
+
+/* --- kropka statusu (idle/listen/think/err) — JS tylko zmienia kolor --- */
+.ff-status-dot{
+  position: fixed; right: 16px; top: 100px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background:#2ecc71; box-shadow: 0 0 10px rgba(46,204,113,.65);
+  z-index: 9999;
+}
+
+/* --- „konsola” / panel rozmowy przy dole ekranu --- */
+.ff-console{
+  position: fixed; left: 16px; right: 16px; bottom: 16px;
+  background: linear-gradient(180deg, rgba(20,23,28,.88), rgba(15,18,22,.90));
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: var(--ff-radius);
+  box-shadow: var(--ff-shadow);
+  padding: 16px;
+  color: var(--ff-fg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* podnieś ponad kafelki: */
+  margin-bottom: var(--ff-bottom-safe);
+  max-height: calc(52vh);
+  overflow: auto;
+}
+
+/* wiersze w panelu */
+.ff-line{ display:flex; gap:8px; margin: 6px 0; font-size: 15px; line-height: 1.5; }
+.ff-role{ color: var(--ff-muted); min-width: 78px; flex:0 0 auto; }
+.ff-msg { color: var(--ff-fg); opacity:.96; }
+
+/* --- kafelki nawigacji (jeśli używasz) --- */
+.ff-actions{
+  position: fixed; left: 0; right: 0;
+  display:flex; justify-content:center; gap:14px; flex-wrap:wrap;
+  bottom: 22px;
+}
+.ff-chip{
+  display:flex; align-items:center; gap:10px;
+  background: linear-gradient(180deg, #171a1f, #111419);
+  border:1px solid rgba(255,255,255,.06);
+  color: var(--ff-fg);
+  padding:12px 18px;
+  border-radius: 18px;
+  box-shadow: var(--ff-shadow);
+  font-size:16px; text-decoration:none;
+}
+.ff-chip:active{ transform: translateY(1px); }
+
+/* --- drobne responsywne dopasowania --- */
+@media (max-width: 420px){
+  .ff-console{ padding:12px; }
+  .ff-chip{ padding:10px 14px; font-size:15px; }
+}
+
+/* --- jeżeli masz istniejący panel z inną klasą (np. .console/.messages/.assistant-box)
+       ta reguła nie naruszy innych elementów, a jednak doda „oddech” nad kafelkami. */
+.console, .messages, .assistant-box, #assistantConsole{
+  margin-bottom: var(--ff-bottom-safe);
+}

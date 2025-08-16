@@ -3,357 +3,261 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FreeFlow — voice + serwerowa transkrypcja</title>
+<title>FreeFlow</title>
 <style>
-:root{
-  --txt:#f1f1f1; --muted:#cfd3dc; --accent:#00e5ff; --accent2:#ffb300;
-  --bg-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Background.png");
-  --logo-url: url("https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png");
-  --transcriptOffset: 64px; /* większy odstęp od dołu logo */
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{ margin:0; color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; overflow:hidden; }
+  :root{
+    --bg:#0c0f14;
+    --panel:rgba(22,24,32,.72);
+    --panel-border:rgba(255,255,255,.08);
+    --text:#e8eef8;
+    --accent:#ff9c2f;
+  }
+  html,body{height:100%;margin:0;background:#0c0f14;color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial}
+  /* TŁO */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:url("./background.png") center/cover no-repeat fixed;
+    filter:none; opacity:.75;
+    pointer-events:none; z-index:-2;
+  }
+  /* MASKA delikatnego przyciemnienia */
+  body::after{
+    content:""; position:fixed; inset:0;
+    background:radial-gradient(transparent 30%, rgba(0,0,0,.55) 100%);
+    pointer-events:none; z-index:-1;
+  }
 
-/* TŁO */
-.bg{ position:fixed; inset:0; z-index:0; background-image:var(--bg-url); background-size:cover; background-position:center; }
-.bg::before{ content:""; position:absolute; inset:0;
-  background: radial-gradient(1200px 800px at 50% 20%, rgba(10,10,16,.22), rgba(10,10,16,.40)),
-              linear-gradient(180deg, rgba(10,10,16,.08), rgba(10,10,16,.26)); }
-.bg::after{ content:""; position:absolute; inset:0; opacity:.02; pointer-events:none;
-  background-image: radial-gradient(currentColor 1px, transparent 1px); background-size:3px 3px; }
+  /* Górny pasek */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,0));
+    position:sticky; top:0; z-index:20; backdrop-filter:saturate(140%) blur(6px);
+  }
+  .brand{letter-spacing:.24em; font-weight:800}
+  .actions{display:flex; gap:10px}
+  .btn-ghost{
+    display:grid; place-items:center; width:44px; height:44px; border-radius:12px;
+    background:rgba(255,255,255,.06); border:1px solid var(--panel-border);
+  }
 
-/* Topbar */
-.topbar{ position:fixed; inset:0 0 auto 0; height:56px; z-index:3000;
-  display:flex; align-items:center; justify-content:space-between; padding:0 12px;
-  background:linear-gradient(180deg, rgba(6,8,12,.88), rgba(6,8,12,.42)); border-bottom:1px solid rgba(255,255,255,.06); }
-.brand{ font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
-.top-actions{ display:flex; gap:8px; }
-.icon-btn{ height:36px; min-width:40px; padding:0 10px; border:1px solid rgba(255,255,255,.18);
-  border-radius:12px; background:rgba(255,255,255,.06); color:var(--txt); font-size:18px; cursor:pointer; }
-.icon-btn:active{ transform:translateY(1px) }
-.badge{ font-size:12px; background:var(--accent2); color:#1a1a1a; padding:1px 6px; border-radius:999px; margin-left:4px; }
+  /* GŁÓWNY KADR */
+  main{max-width:960px; margin:0 auto; padding:24px 16px 120px}
 
-/* MENU: „Płatności” → podmenu */
-.dropdown{ position:fixed; top:60px; right:10px; z-index:2600; display:none; gap:10px;
-  background:rgba(16,18,28,.9); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.12); box-shadow:0 10px 30px rgba(0,0,0,.35); }
-.dropdown.open{ display:block; }
-.menu-item{ display:flex; align-items:center; justify-content:space-between; gap:10px;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 12px; cursor:pointer; }
-.chev{ opacity:.8; }
-.submenu{ display:none; margin-top:8px; }
-.submenu.open{ display:flex; flex-direction:column; gap:8px; }
-.submenu button{ background:rgba(255,255,255,.06); color:var(--txt); border:1px solid rgba(255,255,255,.12);
-  border-radius:10px; padding:10px 12px; text-align:left; cursor:pointer; }
-.submenu button:hover{ background:rgba(255,255,255,.12) }
+  /* Logo – przycisk */
+  #logoBtn{
+    width:min(76vw,380px); aspect-ratio:0.82/1;
+    margin:24px auto 14px; display:block; border:0; background:transparent; cursor:pointer;
+    position:relative; transform:translateZ(0);
+  }
+  #logoBtn img{
+    width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 14px 26px rgba(0,0,0,.45));
+    transition:transform .15s ease;
+  }
+  #logoBtn:active img{ transform:scale(.985) }
+  /* Puls podczas nagrywania */
+  #logoBtn.listening::after{
+    content:""; position:absolute; inset:-6%; border-radius:40% 40% 56% 56% / 44% 44% 60% 60%;
+    box-shadow:0 0 0 0 rgba(255,156,47,.55);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%{transform:scale(1); box-shadow:0 0 0 0 rgba(255,156,47,.55)}
+    70%{transform:scale(1.02); box-shadow:0 0 0 24px rgba(255,156,47,0)}
+    100%{transform:scale(1); box-shadow:0 0 0 0 rgba(255,156,47,0)}
+  }
 
-/* Baner autoplay */
-.toast{ position:fixed; left:50%; transform:translateX(-50%); top:64px; z-index:2700;
-  background:rgba(20,24,36,.92); color:var(--txt); border:1px solid rgba(255,255,255,.12);
-  padding:10px 14px; border-radius:12px; font-size:14px; display:none; }
-.toast.show{ display:block }
+  /* Panel transkrypcji – niżej, na środku */
+  #transcript{
+    max-width:720px; margin:18px auto 0; padding:14px 16px;
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25); min-height:72px; max-height:38vh; overflow:auto;
+  }
+  #transcript p{margin:6px 0}
+  #transcript p strong{color:#9ed0ff}
 
-/* KROPLA */
-.logo-zone{ position:fixed; top:72px; left:50%; transform:translateX(-50%);
-  width:min(76vw,380px); aspect-ratio:2/3; z-index:2000; filter: drop-shadow(0 10px 20px rgba(0,0,0,.6));
-  cursor:pointer; }
-.logo-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
-  mix-blend-mode:screen; filter:saturate(1.08) contrast(1.06); transition:filter .25s ease, transform .25s ease; }
-.recording .logo-img{ filter:saturate(1.2) contrast(1.14) brightness(1.08); transform:scale(1.01); }
-@keyframes recordPulse{ 0%,100%{ transform:translateX(-50%) scale(1)} 50%{ transform:translateX(-50%) scale(1.012)} }
-.recording .logo-zone{ animation:recordPulse 1.8s ease-in-out infinite; }
+  /* Dolny dock z przyciskami */
+  .dock{
+    position:fixed; left:0; right:0; bottom:18px; display:flex; justify-content:center; z-index:15;
+  }
+  .dock-inner{
+    display:flex; gap:14px; padding:14px 16px; border-radius:18px;
+    background:rgba(10,12,18,.78); border:1px solid var(--panel-border); backdrop-filter:blur(8px) saturate(140%);
+  }
+  .chip{
+    display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:16px;
+    background:rgba(255,255,255,.06); border:1px solid var(--panel-border); color:var(--text); font-weight:600;
+  }
+  .pill{
+    margin-left:12px; padding:8px 12px; border-radius:999px; font-size:.9rem; border:1px solid var(--panel-border);
+    background:rgba(255,255,255,.06); cursor:pointer;
+  }
 
-/* dodatkowe pulsowanie na obrazku — pewny efekt podczas nagrywania */
-@keyframes imgPulse {
-  0%,100% { filter: saturate(1.20) contrast(1.14) brightness(1.08); transform: scale(1.01); }
-  50%     { filter: saturate(1.28) contrast(1.18) brightness(1.12); transform: scale(1.02); }
-}
-.recording .logo-img{ animation: imgPulse 1.6s ease-in-out infinite; }
-
-.droplet{ position:absolute; inset:0; -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url);
-  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
-  -webkit-mask-size:contain; mask-size:contain; background:transparent; border:0; }
-.wave, .wave::before, .wave::after{ content:""; position:absolute; inset:0; pointer-events:none;
-  -webkit-mask-image:var(--logo-url); mask-image:var(--logo-url); -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-  -webkit-mask-position:center; mask-position:center; -webkit-mask-size:contain; mask-size:contain; }
-.wave{ opacity:0; transition:opacity .25s ease; }
-.wave::before{ box-shadow:0 0 18px rgba(0,229,255,.25), inset 0 0 12px rgba(0,229,255,.16); transform:scale(1.012);
-  animation:breathe 2.4s ease-in-out infinite; }
-.wave::after{ box-shadow:0 0 26px rgba(0,229,255,.42), inset 0 0 20px rgba(0,229,255,.24); transform:scale(1.035);
-  animation:spin 7s linear infinite; }
-.recording .wave{ opacity:1 }
-.clicked .logo-zone{ animation:pulse 500ms ease-out }
-@keyframes pulse{ 0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}100%{transform:translateX(-50%) scale(1)} }
-@keyframes spin{ to{ transform:rotate(360deg) } }
-@keyframes breathe{ 0%,100%{ transform:scale(1.01)} 50%{ transform:scale(1.035)} }
-
-/* TRANSKRYPCJA — pod logo (niżej) */
-.transcript{
-  position:fixed; left:50%; transform:translateX(-50%);
-  top: calc(72px + min(76vw,380px) + var(--transcriptOffset));
-  width:min(94vw, 560px); max-height:18vh; overflow:auto;
-  background: rgba(0,0,0,.32); border:1px solid rgba(255,255,255,.14);
-  border-radius:12px; padding:8px 10px; z-index:2100;
-}
-.line{ display:flex; gap:8px; margin:4px 0; align-items:flex-start; }
-.role{ opacity:.72; min-width:84px; font-weight:700; font-size:13px; color:var(--muted); }
-.text{ flex:1; font-size:14px; line-height:1.35 }
-
-/* Dół */
-.bottom-bar{ position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:2200;
-  display:flex; gap:10px; padding:6px; background:rgba(10,10,16,.35); border:1px solid rgba(255,255,255,.12); border-radius:16px; }
-.pill{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.14);
-  border-radius:999px; padding:10px 14px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.08); color:#fff; }
-.pill .ico{ font-size:18px; opacity:.95 } .pill:active{ transform:translateY(1px) }
-@media (max-width:400px){ .logo-zone{width:78vw} .transcript{width:94vw} .pill{padding:10px 12px; font-size:15px} }
+  a,button{color:inherit}
+  *{box-sizing:border-box}
 </style>
 </head>
 <body>
-  <div class="bg" aria-hidden="true"></div>
 
-  <header class="topbar">
-    <div class="brand">FREEFLOW</div>
-    <nav class="top-actions">
-      <button class="icon-btn" aria-label="Menu" onclick="toggleMenu()">☰</button>
-      <button class="icon-btn" aria-label="Koszyk" onclick="openCart()">🛒 <span class="badge" id="cartCount">0</span></button>
-    </nav>
-  </header>
-
-  <!-- MENU -->
-  <div class="dropdown" id="mainMenu">
-    <div class="menu-item" onclick="togglePayments()"><span>💳 Płatności</span><span class="chev" id="payChev">▾</span></div>
-    <div class="submenu" id="paymentsSub">
-      <button onclick="selectPay('BLIK')">BLIK</button>
-      <button onclick="selectPay('Karta')">Karta</button>
-      <button onclick="selectPay('PayPal')">PayPal</button>
-    </div>
-    <div class="menu-item" onclick="openOrders()">📦 Moje zamówienia</div>
-    <div class="menu-item" onclick="openHelp()">❓ Pomoc / FAQ</div>
+<header>
+  <div class="brand">FREEFLOW</div>
+  <div class="actions">
+    <button id="liveToggle" class="pill" title="Ciągła transkrypcja w przeglądarce (Chrome)">Live voice: OFF</button>
+    <div class="btn-ghost" aria-label="Menu">☰</div>
+    <div class="btn-ghost" aria-label="Koszyk">🛒</div>
   </div>
+</header>
 
-  <!-- AUTOPLAY BANER -->
-  <div id="audioToast" class="toast">🔊 Stuknij, aby odtworzyć komunikat</div>
+<main>
+  <!-- PRZYCISK LOGO -->
+  <button id="logoBtn" aria-label="Click to talk">
+    <img src="./Freeflow-logo.png" alt="FreeFlow Logo" />
+  </button>
 
-  <!-- KROPLA (uwaga: BEZ onclick w HTML) -->
-  <div class="logo-zone" id="logoZone" role="button" tabindex="0">
-    <img class="logo-img" src="https://raw.githubusercontent.com/ndoemo02/Freeflo/main/Freeflow-logo.png" alt="FreeFlow logo">
-    <div class="droplet" id="logoHit"></div>
-    <div class="wave"></div>
+  <!-- PANEL TRANSKRYPCJI -->
+  <div id="transcript" aria-live="polite" aria-label="Transkrypcja"></div>
+</main>
+
+<!-- DOLNY DOCK -->
+<div class="dock">
+  <div class="dock-inner">
+    <a class="chip" href="#food">🍽️ Jedzenie</a>
+    <a class="chip" href="#taxi">🚕 Taxi</a>
+    <a class="chip" href="#hotel">🏨 Hotel</a>
   </div>
-
-  <!-- TRANSKRYPCJA -->
-  <div class="transcript" id="transcriptBox" aria-live="polite"></div>
-
-  <!-- DÓŁ -->
-  <div class="bottom-bar">
-    <button class="pill" onclick="quickIntent('Jedzenie')"><span class="ico">🍽️</span><span>Jedzenie</span></button>
-    <button class="pill" onclick="quickIntent('Taxi')"><span class="ico">🚕</span><span>Taxi</span></button>
-    <button class="pill" onclick="quickIntent('Hotel')"><span class="ico">🏨</span><span>Hotel</span></button>
-  </div>
+</div>
 
 <script>
-/* ============================ KONFIG ============================ */
-let cart = 0, recording = false, introSpoken = false;
-const ASR_URL = 'https://freeflow-backend-vercel.vercel.app/api/asr';
-const CHUNK_MS = 4000;
+/* ========= KONFIG ========= */
+const BACKEND = 'https://freeflow-backend-vercel.vercel.app';
 
-/* ============================ UI ============================ */
-function toggleMenu(){ document.getElementById('mainMenu').classList.toggle('open'); }
-function togglePayments(){
-  const sub = document.getElementById('paymentsSub'); const chev = document.getElementById('payChev');
-  sub.classList.toggle('open'); chev.textContent = sub.classList.contains('open') ? '▴' : '▾';
-}
-function openCart(){ alert('Koszyk (demo).'); }
-function openOrders(){ alert('Moje zamówienia (demo).'); }
-function openHelp(){ alert('Pomoc / FAQ (demo).'); }
-function selectPay(type){ appendTranscript('asst', `Wybrano metodę płatności: ${type}.`); }
-
-function appendTranscript(role, text){
-  const box = document.getElementById('transcriptBox');
-  const line = document.createElement('div'); line.className='line';
-  const r = document.createElement('div'); r.className='role'; r.textContent = role==='user'?'Ty:':'Asystent:';
-  const t = document.createElement('div'); t.className='text'; t.textContent = text;
-  line.append(r,t); box.append(line); box.scrollTop = box.scrollHeight;
-}
-function quickIntent(kind){
-  cart++; document.getElementById('cartCount').textContent = cart;
-  appendTranscript('user', `Wybieram: ${kind}.`);
-  speakAndLog(`Potwierdzam wybór: ${kind}. Dodano do koszyka.`);
+/* ========= UTIL ========= */
+function addLine(text, who="Asystent"){
+  const box = document.getElementById('transcript');
+  const p = document.createElement('p');
+  if (who) p.innerHTML = `<strong>${who}:</strong> ${text}`;
+  else p.textContent = text;
+  box.appendChild(p);
+  box.scrollTop = box.scrollHeight;
 }
 
-/* ============================ VOICE ============================ */
-let recognizer = null;     // Web Speech API (fallback)
-let mr = null, stream = null, mime = null; // MediaRecorder (server ASR)
-
-const hasSR = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-function initRecognizer(){
-  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const rec = new Ctor();
-  rec.lang = 'pl-PL'; rec.interimResults = true; rec.continuous = true;
-  rec.onresult = (e)=>{
-    let finalChunk = '';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const chunk = e.results[i][0].transcript.trim();
-      if(e.results[i].isFinal){ finalChunk += (finalChunk?' ':'') + chunk; }
-    }
-    if(finalChunk){ appendTranscript('user', finalChunk); }
-  };
-  rec.onerror = (e)=>console.warn('SR error:', e.error);
-  rec.onend = ()=>{ if(recording){ try{ rec.start(); }catch(_){} } };
-  return rec;
-}
-
-async function startServerASR(){
+/* ========= TTS z backendu ========= */
+async function speak(text){
   try{
-    stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  }catch(err){
-    appendTranscript('asst','Brak dostępu do mikrofonu.');
-    throw err;
-  }
-  if(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mime = 'audio/webm;codecs=opus';
-  else if(MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) mime = 'audio/ogg;codecs=opus';
-  else if(MediaRecorder.isTypeSupported('audio/webm')) mime = 'audio/webm';
-  else { appendTranscript('asst','MediaRecorder nieobsługiwany – wracam do rozpoznawania przeglądarkowego.'); throw new Error('no-mime'); }
+    const r = await fetch(`${BACKEND}/api/tts`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ text })
+    });
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    a.play();
+  }catch(e){ console.error('TTS error', e); }
+}
 
-  mr = new MediaRecorder(stream, {mimeType: mime});
-  mr.ondataavailable = async (e)=>{
-    if(!e.data || e.data.size === 0) return;
-    try{
-      const fd = new FormData();
-      fd.append('audio', e.data, `chunk.${mime.includes('ogg')?'ogg':'webm'}`);
+/* ========= ASR – tryb wysyłki nagrania do backendu ========= */
+async function serverTranscribe(blob){
+  try{
+    const fd = new FormData();
+    fd.append('audio', blob, 'audio.webm');
+    const r = await fetch(`${BACKEND}/api/asr`, { method:'POST', body:fd });
+    const j = await r.json().catch(()=> ({}));
+    return j.text || j.transcript || "";
+  }catch(e){ console.error('ASR error', e); return ""; }
+}
 
-      const res = await fetch(ASR_URL, { method:'POST', body: fd });
-
-      let text = '';
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        const json = await res.json();
-        text = (json && (json.text || json.transcript || '')).trim();
-      } else {
-        text = (await res.text()).trim();
-      }
-
-      if(text) appendTranscript('user', text);
-    }catch(err){
-      console.warn('ASR send error:', err);
+/* ========= Browser Live Voice (Web Speech API) ========= */
+let liveMode = false;
+let rec; // SpeechRecognition
+function initLive(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert('Live voice wymaga Chrome/Edge z Web Speech API.'); return null; }
+  const r = new SR();
+  r.lang = 'pl-PL';
+  r.continuous = true;
+  r.interimResults = true;
+  r.onresult = (e)=>{
+    let finalText = "", interim = "";
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalText += t + " ";
+      else interim += t;
+    }
+    if(interim) { /* można pokazać „…słucham” – pomijamy dla prostoty */ }
+    if(finalText){
+      addLine(finalText.trim(), "Użytkownik");
+      const reply = "Zrozumiałam: " + finalText.trim();
+      addLine(reply, "Asystent");
+      speak(reply);
     }
   };
-  mr.start(CHUNK_MS);
+  r.onerror = (e)=> console.warn('SR error', e.error);
+  r.onend = ()=> { if(liveMode) try{ r.start(); }catch{} };
+  return r;
 }
 
-function stopServerASR(){
-  try{ if(mr && mr.state !== 'inactive') mr.stop(); }catch(_){}
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); }
-  mr = null; stream = null; mime = null;
-}
+document.getElementById('liveToggle').addEventListener('click', ()=>{
+  liveMode = !liveMode;
+  const btn = document.getElementById('liveToggle');
+  btn.textContent = 'Live voice: ' + (liveMode?'ON':'OFF');
+  if(liveMode){
+    if(!rec) rec = initLive();
+    if(rec) try{ rec.start(); }catch(e){}
+    addLine('Tryb live voice włączony (transkrypcja lokalna).');
+  }else{
+    try{ rec && rec.stop(); }catch(e){}
+    addLine('Tryb live voice wyłączony.');
+  }
+});
 
+/* ========= Nagrywanie klik–mów–puść (MediaRecorder) ========= */
+let mediaRecorder, isRecording=false, chunks=[];
 async function startRecording(){
-  try{
-    await startServerASR();
-    appendTranscript('asst','Transkrypcja serwerowa aktywna.');
-    return;
-  }catch(err){
-    console.warn('Server ASR unavailable, falling back to SR:', err);
-  }
-  if(!hasSR){
-    appendTranscript('asst','Twoja przeglądarka nie obsługuje rozpoznawania mowy. Dostępny jest tylko TTS.');
-    return;
-  }
-  if(!recognizer) recognizer = initRecognizer();
-  try{ recognizer.start(); appendTranscript('asst','Transkrypcja przeglądarkowa aktywna.'); }catch(_){}
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  mediaRecorder = new MediaRecorder(stream, { mimeType:'audio/webm' });
+  chunks = [];
+  mediaRecorder.ondataavailable = (e)=> e.data.size && chunks.push(e.data);
+  mediaRecorder.onstop = async ()=>{
+    const blob = new Blob(chunks, { type:'audio/webm' });
+    const text = await serverTranscribe(blob);
+    if(text){
+      addLine(text, "Użytkownik");
+      const reply = "Zrozumiałam: " + text;
+      addLine(reply, "Asystent");
+      speak(reply);
+    }else{
+      addLine('Nie udało się rozpoznać mowy.', "Asystent");
+    }
+  };
+  mediaRecorder.start();
 }
-function stopRecording(){
-  try{ if(recognizer) recognizer.stop(); }catch(_){}
-  stopServerASR();
-}
-
-/* Debounce klików (touchstart + click na mobile) */
-let lastToggleTs = 0;
-function safeToggle(){
-  const now = Date.now();
-  if (now - lastToggleTs < 400) return; // ignoruj zdublowane eventy z jednego dotknięcia
-  lastToggleTs = now;
-  toggleVoice();
+async function stopRecording(){
+  try{ mediaRecorder?.state === 'recording' && mediaRecorder.stop(); }catch{}
 }
 
-function toggleVoice(){
-  const wasRecording = recording;
-  appendTranscript('asst', `Przełączanie nagrywania: ${wasRecording ? 'ON→OFF' : 'OFF→ON'}`);
+/* ========= Obsługa logo ========= */
+const logoBtn = document.getElementById('logoBtn');
+logoBtn.addEventListener('click', async ()=>{
+  isRecording = !isRecording;
+  logoBtn.classList.toggle('listening', isRecording);
 
-  if(!introSpoken){ sayIntro(); }
-  recording = !recording;
-  document.body.classList.toggle('recording', recording);
-  document.body.classList.add('clicked'); setTimeout(()=>document.body.classList.remove('clicked'), 500);
-
-  if(recording){
-    appendTranscript('asst','Nagrywanie włączone. Słucham.');
+  if(isRecording){
+    addLine('Przełączanie nagrywania: OFF→ON');
     speak('Nagrywanie włączone. Słucham.');
     startRecording();
   }else{
-    appendTranscript('asst','Nagrywanie wyłączone.');
+    addLine('Przełączanie nagrywania: ON→OFF');
     speak('Nagrywanie wyłączone.');
-    stopRecording();
+    await stopRecording();
   }
-}
+});
 
-/* --- Pewne podpięcie klików do logo (bez onclick w HTML) --- */
-(function ensureLogoClicks(){
-  const zone = document.getElementById('logoZone');
-  const hit  = document.getElementById('logoHit');
-
-  function onToggle(e){
-    e.preventDefault(); e.stopPropagation();
-    appendTranscript('asst', 'Klik na logo wykryty.');
-    safeToggle();
-  }
-  ['touchstart','click'].forEach(ev => {
-    zone.addEventListener(ev, onToggle, {passive:true});
-    if (hit) hit.addEventListener(ev, onToggle, {passive:true});
-  });
-  zone.addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter' || e.key === ' ') { onToggle(e); }
-  });
-})();
-
-/* ============================ TTS ============================ */
-function speakAndLog(text){ appendTranscript('asst', text); speak(text); }
-function speak(text){
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pl-PL';
-    const vs = speechSynthesis.getVoices();
-    const prefer = vs.find(v=>v.lang.startsWith('pl') && /female|Zosia|Paulina|Agata|Agnieszka|Ewa|Maja/i.test(v.name));
-    const anyPL = vs.find(v=>v.lang.startsWith('pl'));
-    u.voice = prefer || anyPL || null;
-    u.rate = 1; u.pitch = 1; u.volume = 1;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){ console.warn('TTS error:', e); }
-}
-
-/* ============================ INTRO ============================ */
-const introText = 'W celu złożenia zamówienia proszę nacisnąć logo. Po aktywacji trybu voice dopytam o szczegóły.';
-function sayIntro(){ if(introSpoken) return; introSpoken = true; hideToast(); speakAndLog(introText); }
-function showToast(){ document.getElementById('audioToast').classList.add('show'); }
-function hideToast(){ document.getElementById('audioToast').classList.remove('show'); }
-function attachUnlockOnce(){
-  const unlock = ()=>{ sayIntro();
-    window.removeEventListener('pointerdown', unlock, {passive:true});
-    window.removeEventListener('touchstart', unlock, {passive:true});
-    window.removeEventListener('click', unlock, {passive:true});
-  };
-  window.addEventListener('pointerdown', unlock, {passive:true});
-  window.addEventListener('touchstart', unlock, {passive:true});
-  window.addEventListener('click', unlock, {passive:true});
-}
-function tryAutoplay(){
-  speakAndLog(introText);
-  setTimeout(()=>{
-    if(!speechSynthesis.speaking){ showToast(); attachUnlockOnce(); }
-    else { introSpoken = true; hideToast(); }
-  }, 700);
-}
-if(typeof speechSynthesis!=='undefined'){ speechSynthesis.onvoiceschanged=()=>{}; }
-window.addEventListener('load', tryAutoplay, {once:true});
+/* ========= Powitanie ========= */
+window.addEventListener('DOMContentLoaded', ()=>{
+  speak('W celu złożenia zamówienia proszę nacisnąć logo. Po aktywacji trybu głosowego dopytam o szczegóły.');
+  addLine('Transkrypcja serwerowa aktywna. Kliknij logo, aby mówić.');
+});
 </script>
 </body>
 </html>

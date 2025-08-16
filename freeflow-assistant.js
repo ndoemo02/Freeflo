@@ -1,33 +1,27 @@
-/* FreeFlow – assistant (final-only speech + przezroczyste UI)
-   Wysyła do backendu TYLKO finalny tekst, nie ucina w połowie.
-   Działa z Web Speech API (Chrome/Android). */
+/* FreeFlow – logo-click SR, final-only z anty-ucięciem (grace + fallback) */
 
 (() => {
   const transcriptEl = document.getElementById("transcript");
   const micBtn = document.getElementById("micBtn");
   const ttsPlayer = document.getElementById("ttsPlayer");
 
-  // jeśli masz własny backend pod inną domeną – ustaw tutaj:
-  const BASE_URL = ""; // pusty = względne /api/*
+  const BASE_URL = ""; // względne /api/*
 
-  // ===== Text → Assistant → (opcjonalnie TTS) =====
   async function sendText(text) {
-    if (!text || !text.trim()) return;
-    setTranscript(text);
-
+    const clean = (text||"").trim();
+    if (!clean) return;
+    setTranscript(clean);
     try {
-      // 1) odpowiedź asystenta (tekst)
       const r = await fetch(`${BASE_URL}/api/assistant-text`, {
         method: "POST",
         headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text: clean })
       });
       const data = await r.json();
       const reply = data?.reply || "OK.";
-
       setTranscript(reply);
 
-      // 2) mowa zwrotna (jeśli endpoint istnieje)
+      // TTS (opcjonalnie)
       try {
         const t = await fetch(`${BASE_URL}/api/tts`, {
           method: "POST",
@@ -36,79 +30,60 @@
         });
         if (t.ok) {
           const { audioUrl } = await t.json();
-          if (audioUrl) {
-            ttsPlayer.src = audioUrl;
-            ttsPlayer.play().catch(()=>{});
-          }
+          if (audioUrl) { ttsPlayer.src = audioUrl; ttsPlayer.play().catch(()=>{}); }
         }
       } catch {}
-    } catch (err) {
+    } catch (e) {
+      console.error(e);
       setTranscript("Błąd sieci lub backendu. Spróbuj ponownie.");
-      console.error(err);
     }
   }
   window.sendToAssistant = sendText;
 
-  function setTranscript(text) { transcriptEl.textContent = text; }
+  function setTranscript(t){ transcriptEl.textContent = t; }
 
-  // ===== Speech Recognition (tylko final) =====
+  // ===== Speech Recognition (logo-only) =====
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null;
   let listening = false;
+  let finalSent = false;
+  let lastFinal = "";
+  let lastInterim = "";
+  let stopTimer = null;
 
   if (SR) {
     recognition = new SR();
     recognition.lang = "pl-PL";
-    recognition.continuous = false;        // jedna wypowiedź = jedno nagranie
-    recognition.interimResults = false;    // <— KLUCZOWE: tylko wynik finalny
+    recognition.continuous = false;
+    recognition.interimResults = true;   // pokazujemy na żywo, ale wysyłamy final
 
     recognition.addEventListener("start", () => {
-      listening = true;
+      listening = true; finalSent = false; lastFinal = ""; lastInterim = "";
       micBtn.classList.add("recording");
-      setTranscript("Nagrywam… mów śmiało. Zwolnij przycisk, aby wysłać.");
+      setTranscript("Nagrywam… mów śmiało. Puść, gdy skończysz.");
     });
 
-    // pokazuj na żywo (opcjonalnie), ale nie wysyłaj jeszcze
     recognition.addEventListener("result", (e) => {
-      const txt = Array.from(e.results).map(r => r[0].transcript).join("");
-      if (!e.results[0].isFinal) {
-        setTranscript(txt + " …");
+      let combined = "";
+      for (const res of e.results) combined += res[0].transcript;
+      const isFinal = e.results[e.results.length-1].isFinal;
+
+      if (isFinal) {
+        lastFinal = combined.trim();
+        setTranscript(lastFinal);
+        finalSent = true;
+        sendText(lastFinal);
       } else {
-        // final – dopiero teraz wysyłamy
-        setTranscript(txt);
-        sendText(txt);
+        lastInterim = combined.trim();
+        setTranscript(lastInterim + " …");
       }
     });
 
     recognition.addEventListener("error", (e) => {
       console.warn("SR error:", e.error);
       setTranscript("Błąd sieci lub backendu. Spróbuj ponownie.");
-      stopSR();
+      safeStop();
     });
 
     recognition.addEventListener("end", () => {
       listening = false;
-      micBtn.classList.remove("recording");
-    });
-  } else {
-    micBtn.disabled = true;
-    micBtn.textContent = "🎤 Brak wsparcia mowy w tej przeglądarce";
-  }
-
-  function startSR() {
-    if (!recognition || listening) return;
-    try { recognition.start(); } catch {}
-  }
-  function stopSR() {
-    if (!recognition) return;
-    try { recognition.stop(); } catch {}
-  }
-
-  // Kliknięcie – start/stop
-  micBtn.addEventListener("mousedown", startSR);
-  micBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); startSR(); }, {passive:false});
-  micBtn.addEventListener("mouseup", stopSR);
-  micBtn.addEventListener("mouseleave", ()=> listening && stopSR());
-  micBtn.addEventListener("touchend", stopSR);
-
-})();

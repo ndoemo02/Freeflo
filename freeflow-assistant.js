@@ -1,115 +1,114 @@
-// === KONFIG ===
-const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
+/* FreeFlow – assistant (final-only speech + przezroczyste UI)
+   Wysyła do backendu TYLKO finalny tekst, nie ucina w połowie.
+   Działa z Web Speech API (Chrome/Android). */
 
-// elementy UI
-const micBtn = document.getElementById('micBtn');
-const transcriptBox = document.getElementById('transcript');
-const player = document.getElementById('ttsPlayer');
+(() => {
+  const transcriptEl = document.getElementById("transcript");
+  const micBtn = document.getElementById("micBtn");
+  const ttsPlayer = document.getElementById("ttsPlayer");
 
-// helper
-function showText(text){ transcriptBox.textContent = text; }
+  // jeśli masz własny backend pod inną domeną – ustaw tutaj:
+  const BASE_URL = ""; // pusty = względne /api/*
 
-// odtwarzanie MP3 (base64) + fallback Web Speech
-async function playBase64Mp3(base64, fallbackText){
-  try{
-    const src = `data:audio/mpeg;base64,${base64}`;
-    player.src = src;
-    await player.play();
-    return true;
-  }catch(e){
-    console.warn('Autoplay error, fallback to Web Speech:', e);
-    speakWithWebSpeech(fallbackText);
-    return false;
+  // ===== Text → Assistant → (opcjonalnie TTS) =====
+  async function sendText(text) {
+    if (!text || !text.trim()) return;
+    setTranscript(text);
+
+    try {
+      // 1) odpowiedź asystenta (tekst)
+      const r = await fetch(`${BASE_URL}/api/assistant-text`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ text })
+      });
+      const data = await r.json();
+      const reply = data?.reply || "OK.";
+
+      setTranscript(reply);
+
+      // 2) mowa zwrotna (jeśli endpoint istnieje)
+      try {
+        const t = await fetch(`${BASE_URL}/api/tts`, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ text: reply, voice: "pl" })
+        });
+        if (t.ok) {
+          const { audioUrl } = await t.json();
+          if (audioUrl) {
+            ttsPlayer.src = audioUrl;
+            ttsPlayer.play().catch(()=>{});
+          }
+        }
+      } catch {}
+    } catch (err) {
+      setTranscript("Błąd sieci lub backendu. Spróbuj ponownie.");
+      console.error(err);
+    }
   }
-}
-function speakWithWebSpeech(text, lang='pl-PL'){
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  }catch(e){ console.warn('speechSynthesis failed:', e); }
-}
+  window.sendToAssistant = sendText;
 
-// wysyłka do backendu
-async function sendToAssistant(userText){
-  try{
-    showText('… myślę …');
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text: userText })
-    });
-    const data = await res.json();
+  function setTranscript(text) { transcriptEl.textContent = text; }
 
-    if(!data?.success){
-      showText('Błąd serwera. Spróbuj ponownie.');
-      speakWithWebSpeech('Wystąpił błąd po stronie serwera.');
-      return;
-    }
-
-    const answer = data.assistantText || 'Nie mam teraz odpowiedzi.';
-    showText(answer);
-
-    if(data.audioBase64){
-      await playBase64Mp3(data.audioBase64, answer);
-    }else{
-      speakWithWebSpeech(answer);
-    }
-
-    // jeśli backend zwrócił propozycję narzędzia (tool-call)
-    if (data.tool && window.FreeFlowCart) {
-      if (data.tool.name === 'cart:add' && data.tool.payload) {
-        window.FreeFlowCart.addToCart(data.tool.payload);
-      }
-      if (data.tool.name === 'cart:clear') {
-        window.FreeFlowCart.clearCart();
-      }
-    }
-  }catch(err){
-    console.error(err);
-    showText('Nie udało się połączyć z serwerem.');
-    speakWithWebSpeech('Nie udało się połączyć z serwerem.');
-  }
-}
-
-// rozpoznawanie mowy → Web Speech (przeglądarka)
-function startDictation(){
+  // ===== Speech Recognition (tylko final) =====
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.'); return; }
+  let recognition = null;
+  let listening = false;
 
-  const rec = new SR();
-  rec.lang = 'pl-PL';
-  rec.interimResults = true;
-  rec.maxAlternatives = 1;
+  if (SR) {
+    recognition = new SR();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;        // jedna wypowiedź = jedno nagranie
+    recognition.interimResults = false;    // <— KLUCZOWE: tylko wynik finalny
 
-  rec.onstart = ()=> showText('Słucham…');
-  rec.onresult = (e)=>{
-    // pokazuj interim w czasie rzeczywistym
-    let final = '';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal){ final += t; } else { showText(t); }
-    }
-    if(final.trim()){
-      showText(final.trim());
-      sendToAssistant(final.trim());
-    }
-  };
-  rec.onerror = (e)=> showText('Błąd rozpoznawania: ' + (e.error||'nieznany'));
-  rec.onend = ()=> micBtn.classList.remove('recording');
+    recognition.addEventListener("start", () => {
+      listening = true;
+      micBtn.classList.add("recording");
+      setTranscript("Nagrywam… mów śmiało. Zwolnij przycisk, aby wysłać.");
+    });
 
-  rec.start();
-}
+    // pokazuj na żywo (opcjonalnie), ale nie wysyłaj jeszcze
+    recognition.addEventListener("result", (e) => {
+      const txt = Array.from(e.results).map(r => r[0].transcript).join("");
+      if (!e.results[0].isFinal) {
+        setTranscript(txt + " …");
+      } else {
+        // final – dopiero teraz wysyłamy
+        setTranscript(txt);
+        sendText(txt);
+      }
+    });
 
-// zdarzenie na przycisku (gest dla autoplay)
-if(micBtn){
-  micBtn.addEventListener('click', ()=>{
-    try{ window.speechSynthesis.cancel(); player.pause(); }catch{}
-    micBtn.classList.add('recording');
-    startDictation();
-  });
-}
+    recognition.addEventListener("error", (e) => {
+      console.warn("SR error:", e.error);
+      setTranscript("Błąd sieci lub backendu. Spróbuj ponownie.");
+      stopSR();
+    });
 
-// eksport „globalnie" dla quick actions
-window.sendToAssistant = sendToAssistant;
+    recognition.addEventListener("end", () => {
+      listening = false;
+      micBtn.classList.remove("recording");
+    });
+  } else {
+    micBtn.disabled = true;
+    micBtn.textContent = "🎤 Brak wsparcia mowy w tej przeglądarce";
+  }
+
+  function startSR() {
+    if (!recognition || listening) return;
+    try { recognition.start(); } catch {}
+  }
+  function stopSR() {
+    if (!recognition) return;
+    try { recognition.stop(); } catch {}
+  }
+
+  // Kliknięcie – start/stop
+  micBtn.addEventListener("mousedown", startSR);
+  micBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); startSR(); }, {passive:false});
+  micBtn.addEventListener("mouseup", stopSR);
+  micBtn.addEventListener("mouseleave", ()=> listening && stopSR());
+  micBtn.addEventListener("touchend", stopSR);
+
+})();

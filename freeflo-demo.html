@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlo • Demo Voice-to-Order</title>
+  <style>
+    :root{ --bg:#0b0f14; --glass:rgba(255,255,255,.06); --muted:#9aa7b5; --txt:#e9eef6; --accent:#ff7a00; }
+    html,body{height:100%}
+    body{margin:0;background:#0b0f14;color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:900px;margin:0 auto;padding:18px}
+    h1{margin:6px 0 4px;font-size:28px}
+    .muted{color:var(--muted)}
+    .card{background:rgba(255,255,255,.08);border:1px solid var(--glass);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.35)}
+    #chat{padding:12px;height:280px;overflow:auto}
+    .line{margin:6px 0}
+    .line.u{color:#00d1ff;text-align:right}
+    .line.b{color:#e9eef6}
+    .controls{display:flex;gap:8px;padding:8px;border-top:1px solid var(--glass)}
+    .controls input{flex:1;border-radius:10px;border:1px solid var(--glass);padding:10px;background:rgba(0,0,0,.25);color:#fff}
+    .controls button{border-radius:10px;border:1px solid var(--glass);padding:10px 14px;background:rgba(0,0,0,.25);color:#fff;cursor:pointer}
+    .badge{display:inline-block;background:rgba(255,122,0,.18);border:1px solid rgba(255,122,0,.35);color:#ffd7b0;padding:.2rem .5rem;border-radius:8px;margin-left:.4rem}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>FreeFlo <span class="badge">demo</span></h1>
+    <div class="muted">Dwie knajpy → menu → ilość → czas → potwierdzenie → e-mail.</div>
+
+    <section id="panel" class="card" style="margin-top:12px">
+      <div id="chat"></div>
+      <div class="controls">
+        <input id="userText" placeholder="Powiedz/napisz: 'włoska, pizza dwie sztuki na 18:30'…" />
+        <button id="sendBtn">Wyślij</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    // 🔧 WPROWADŹ SWOJE KLUCZE:
+    const EMAILJS_PUBLIC_KEY = "PUBLIC_KEY_TUTAJ";
+    const EMAILJS_SERVICE_ID = "SERVICE_ID_TUTAJ";
+    const EMAILJS_TEMPLATE_ID = "template_jun43me";
+    (function(){ emailjs.init(EMAILJS_PUBLIC_KEY); })();
+
+    // ===== Demo dane =====
+    const CITY = "Katowice";
+    const RESTOS = [
+      { id:"it-001", name:"Trattoria Napoli (włoska)", menu:[
+        { code:"pizza",   name:"Pizza Margherita" },
+        { code:"makaron", name:"Makaron Carbonara" }
+      ]},
+      { id:"pl-001", name:"Złota Łyżka (polska)", menu:[
+        { code:"schabowy", name:"Schabowy z ziemniakami" },
+        { code:"bigos",    name:"Bigos staropolski" }
+      ]}
+    ];
+
+    // ===== Stan =====
+    const state = { restaurantId:null, itemCode:null, qty:1, when:"teraz", note:"", keep_data:false, phase:"welcome" };
+
+    // ===== UI =====
+    const chat = document.getElementById("chat");
+    const say = (who, text) => {
+      const div=document.createElement("div");
+      div.className="line " + (who==="bot"?"b":"u");
+      div.textContent=text;
+      chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
+      // prosty TTS (opcjonalnie)
+      if (who==="bot" && "speechSynthesis" in window){
+        const u = new SpeechSynthesisUtterance(text); u.lang="pl-PL"; speechSynthesis.speak(u);
+      }
+    };
+
+    // ===== Parser =====
+    function parseUtterance(txt){
+      txt = (txt||"").toLowerCase();
+
+      if (txt.includes("włos")) state.restaurantId="it-001";
+      if (txt.includes("polsk")) state.restaurantId="pl-001";
+
+      if (txt.includes("pizza")) state.itemCode="pizza";
+      if (txt.includes("makaron") || txt.includes("pasta")) state.itemCode="makaron";
+      if (/(schab|kotlet)/.test(txt)) state.itemCode="schabowy";
+      if (txt.includes("bigos")) state.itemCode="bigos";
+
+      const words = { jeden:1,jedna:1,jedno:1,dwie:2,dwa:2,trzy:3,cztery:4,pięć:5,piec:5,sześć:6,szesc:6,siedem:7,osiem:8,dziewięć:9,dziewiec:9,dziesięć:10,dziesiec:10 };
+      const n = txt.match(/\b(\d{1,2})\b/);
+      if (n) state.qty = parseInt(n[1],10);
+      else for (const [w,v] of Object.entries(words)) if (txt.includes(w)){ state.qty=v; break; }
+
+      if (/teraz|na już|jak najszybciej/.test(txt)) state.when="teraz";
+      const hm = txt.match(/\b(\d{1,2})[:\.](\d{2})\b/); if (hm) state.when = hm[0].replace(".",":");
+
+      const m = txt.match(/bez [a-ząćęłńóśżź ]+/); if (m) state.note=m[0];
+
+      return state;
+    }
+
+    // ===== Sterownik dialogu =====
+    function nextPrompt(){
+      if (!state.restaurantId){
+        const names = RESTOS.map(r=>r.name).join(" i ");
+        return `Jesteśmy w ${CITY}. Do wyboru masz ${names}. Którą knajpę wybierasz – włoską czy polską?`;
+      }
+      if (!state.itemCode){
+        const r = RESTOS.find(x=>x.id===state.restaurantId);
+        const items = r.menu.map(m=>m.name).join(", ");
+        return `Menu ${r.name}: ${items}. Co wybierasz?`;
+      }
+      if (!state.qty) return `Ile porcji przygotować?`;
+
+      const r = RESTOS.find(x=>x.id===state.restaurantId);
+      const item = r.menu.find(m=>m.code===state.itemCode)?.name || state.itemCode;
+      state.phase="confirm";
+      return `Podsumowanie: ${state.qty} × ${item} z ${r.name}, ${state.when}. Potwierdzasz?`;
+    }
+
+    // ===== EmailJS wysyłka =====
+    async function submitOrder(){
+      const r = RESTOS.find(x=>x.id===state.restaurantId);
+      const item = r.menu.find(m=>m.code===state.itemCode)?.name || state.itemCode;
+
+      const payload = {
+        restaurant_name: r?.name || state.restaurantId,
+        items: [{ name:item, qty:state.qty }],
+        when: state.when || "teraz",
+        note: state.note || "-",
+        keep_data: state.keep_data
+      };
+
+      const vars = {
+        city: CITY,
+        restaurant_name: payload.restaurant_name,
+        when: payload.when,
+        note: payload.note,
+        keep_data: payload.keep_data ? "TAK" : "NIE",
+        items_text: payload.items.map(i=>`• ${i.qty} × ${i.name}`).join("\n"),
+        message_json: JSON.stringify(payload, null, 2)
+      };
+
+      try{
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, vars);
+        state.phase="done";
+        say("bot","Dziękuję, zamówienie przyjęte i wysłane e-mailem. Dane usuniemy po realizacji.");
+      }catch(e){
+        console.error(e);
+        say("bot","Nie udało się wysłać e-maila. Sprawdź konfigurację EmailJS (klucze/ID) i spróbuj ponownie.");
+      }
+    }
+
+    // ===== Obsługa wpisu/rozmowy =====
+    async function handleUserText(text){
+      say("user", text);
+
+      if (state.phase==="confirm"){
+        const yes = /\b(tak|potwierdzam|ok|zgoda|można|mozna)\b/.test(text.toLowerCase());
+        const no  = /\b(nie|anuluj|zmień|cofnij)\b/.test(text.toLowerCase());
+        if (yes) return submitOrder();
+        if (no){ state.phase="filling"; return say("bot","Okej, co chcesz zmienić?"); }
+      }
+
+      state.phase="filling";
+      parseUtterance(text);
+      say("bot", nextPrompt());
+    }
+
+    // ===== UI start =====
+    function start(){
+      say("bot", `Witaj w FreeFlo. Dwie knajpy w ${CITY}. Powiedz: "włoska pizza dwie na 18:30" albo "polska schabowy jedna teraz".`);
+    }
+
+    // UI: input
+    document.getElementById("sendBtn").addEventListener("click", ()=>{
+      const t = document.getElementById("userText");
+      if (!t.value.trim()) return;
+      handleUserText(t.value.trim()); t.value="";
+    });
+    document.getElementById("userText").addEventListener("keydown",(e)=>{
+      if (e.key==="Enter"){ e.preventDefault(); document.getElementById("sendBtn").click(); }
+    });
+
+    // start
+    start();
+    // Eksport dla Twojego STT (gdy podłączysz mikrofon):
+    window.freefloDemo = { handleUserText };
+  </script>
+</body>
+</html>

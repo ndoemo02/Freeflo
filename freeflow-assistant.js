@@ -1,115 +1,52 @@
-// === KONFIG ===
-const API_URL = 'https://freeflow-backend-vercel.vercel.app/api/assistant-text';
+/* freeflow-assistant.js — wersja diagnostyczna */
 
-// elementy UI
-const micBtn = document.getElementById('micBtn');
-const transcriptBox = document.getElementById('transcript');
-const player = document.getElementById('ttsPlayer');
+const CONFIG = {
+  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app'
+};
 
-// helper
-function showText(text){ transcriptBox.textContent = text; }
+const $bubble =
+  document.getElementById('transcript') ||
+  document.querySelector('.bubble') ||
+  document.body;
 
-// odtwarzanie MP3 (base64) + fallback Web Speech
-async function playBase64Mp3(base64, fallbackText){
+function say(t){ if($bubble?.textContent !== undefined) $bubble.textContent = t; else alert(t); }
+function apip(p){ return `${CONFIG.BACKEND_URL}${p}`; }
+
+async function healthCheck(){
   try{
-    const src = `data:audio/mpeg;base64,${base64}`;
-    player.src = src;
-    await player.play();
-    return true;
-  }catch(e){
-    console.warn('Autoplay error, fallback to Web Speech:', e);
-    speakWithWebSpeech(fallbackText);
-    return false;
-  }
-}
-function speakWithWebSpeech(text, lang='pl-PL'){
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  }catch(e){ console.warn('speechSynthesis failed:', e); }
+    say('Łączenie: ' + apip('/api/health'));
+    const r = await fetch(apip('/api/health'), { cache:'no-store' });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if(j?.status === 'ok'){ say('✅ Połączono z serwerem. Kliknij logo aby wysłać test do NLU.'); return true; }
+    throw new Error('Zła odpowiedź: ' + JSON.stringify(j));
+  }catch(e){ say('❌ Nie udało się połączyć z serwerem: ' + e.message); console.error(e); return false; }
 }
 
-// wysyłka do backendu
-async function sendToAssistant(userText){
+async function runNLU(text){
   try{
-    showText('… myślę …');
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text: userText })
+    say('Wysyłam do NLU…');
+    const r = await fetch(apip('/api/nlu'), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text })
     });
-    const data = await res.json();
-
-    if(!data?.success){
-      showText('Błąd serwera. Spróbuj ponownie.');
-      speakWithWebSpeech('Wystąpił błąd po stronie serwera.');
-      return;
-    }
-
-    const answer = data.assistantText || 'Nie mam teraz odpowiedzi.';
-    showText(answer);
-
-    if(data.audioBase64){
-      await playBase64Mp3(data.audioBase64, answer);
-    }else{
-      speakWithWebSpeech(answer);
-    }
-
-    // jeśli backend zwrócił propozycję narzędzia (tool-call)
-    if (data.tool && window.FreeFlowCart) {
-      if (data.tool.name === 'cart:add' && data.tool.payload) {
-        window.FreeFlowCart.addToCart(data.tool.payload);
-      }
-      if (data.tool.name === 'cart:clear') {
-        window.FreeFlowCart.clearCart();
-      }
-    }
-  }catch(err){
-    console.error(err);
-    showText('Nie udało się połączyć z serwerem.');
-    speakWithWebSpeech('Nie udało się połączyć z serwerem.');
-  }
+    const raw = await r.text();
+    if(!r.ok) throw new Error(`NLU ${r.status} ${raw}`);
+    const data = JSON.parse(raw);
+    say('🧠 ' + JSON.stringify(data.parsed || data));
+  }catch(e){ say('❌ Błąd NLU: ' + e.message); console.error(e); }
 }
 
-// rozpoznawanie mowy → Web Speech (przeglądarka)
-function startDictation(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ alert('Twoja przeglądarka nie wspiera rozpoznawania mowy. Spróbuj Chrome.'); return; }
+let ready = false;
+window.addEventListener('load', async ()=>{ ready = await healthCheck(); });
 
-  const rec = new SR();
-  rec.lang = 'pl-PL';
-  rec.interimResults = true;
-  rec.maxAlternatives = 1;
+document.getElementById('micBtn')?.addEventListener('click', async ()=>{
+  if(!ready){ ready = await healthCheck(); if(!ready) return; }
+  runNLU('włoska pepperoni dwie na 18:45 bez oliwek');
+});
 
-  rec.onstart = ()=> showText('Słucham…');
-  rec.onresult = (e)=>{
-    // pokazuj interim w czasie rzeczywistym
-    let final = '';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal){ final += t; } else { showText(t); }
-    }
-    if(final.trim()){
-      showText(final.trim());
-      sendToAssistant(final.trim());
-    }
-  };
-  rec.onerror = (e)=> showText('Błąd rozpoznawania: ' + (e.error||'nieznany'));
-  rec.onend = ()=> micBtn.classList.remove('recording');
+document.querySelectorAll('[data-quick]').forEach(b=>{
+  b.addEventListener('click', ()=> runNLU(`Zamówienie: ${b.dataset.quick}`));
+});
 
-  rec.start();
-}
-
-// zdarzenie na przycisku (gest dla autoplay)
-if(micBtn){
-  micBtn.addEventListener('click', ()=>{
-    try{ window.speechSynthesis.cancel(); player.pause(); }catch{}
-    micBtn.classList.add('recording');
-    startDictation();
-  });
-}
-
-// eksport „globalnie" dla quick actions
-window.sendToAssistant = sendToAssistant;
+window.__FREEFLOW__ = { CONFIG, healthCheck, runNLU };

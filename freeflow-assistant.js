@@ -1,52 +1,107 @@
-/* freeflow-assistant.js — wersja diagnostyczna */
+/* freeflow-assistant.js — produkcyjny (ASR -> NLU -> TTS) */
 
 const CONFIG = {
   BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app'
 };
 
-const $bubble =
-  document.getElementById('transcript') ||
-  document.querySelector('.bubble') ||
-  document.body;
+// --- Helpers ---
+const $bubble = document.getElementById('transcript') || document.body;
+const $tts = document.getElementById('ttsPlayer');
+const apip = p => `${CONFIG.BACKEND_URL}${p}`;
+const say = t => { if ($bubble?.textContent !== undefined) $bubble.textContent = t; };
 
-function say(t){ if($bubble?.textContent !== undefined) $bubble.textContent = t; else alert(t); }
-function apip(p){ return `${CONFIG.BACKEND_URL}${p}`; }
-
+// --- Health check, żeby UI pokazał status ---
 async function healthCheck(){
   try{
-    say('Łączenie: ' + apip('/api/health'));
     const r = await fetch(apip('/api/health'), { cache:'no-store' });
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
-    if(j?.status === 'ok'){ say('✅ Połączono z serwerem. Kliknij logo aby wysłać test do NLU.'); return true; }
-    throw new Error('Zła odpowiedź: ' + JSON.stringify(j));
-  }catch(e){ say('❌ Nie udało się połączyć z serwerem: ' + e.message); console.error(e); return false; }
+    if (j?.status === 'ok'){ say('✅ Połączono z serwerem. Kliknij logo i powiedz zamówienie.'); return true; }
+    throw new Error('Zła odpowiedź health');
+  }catch(e){
+    say('❌ Nie udało się połączyć z serwerem.');
+    console.error(e);
+    return false;
+  }
 }
 
-async function runNLU(text){
+// --- ASR (nagrywanie i wysyłka) ---
+let mediaStream, mediaRecorder, chunks = [], recording = false;
+
+async function ensureMic(){
+  if (mediaStream) return mediaStream;
+  mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  return mediaStream;
+}
+function stopRec(){
+  if (mediaRecorder && recording){ mediaRecorder.stop(); recording = false; say('⏹️ Nagrywanie zatrzymane, wysyłam…'); }
+}
+async function startRec(){
   try{
-    say('Wysyłam do NLU…');
-    const r = await fetch(apip('/api/nlu'), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text })
-    });
-    const raw = await r.text();
-    if(!r.ok) throw new Error(`NLU ${r.status} ${raw}`);
-    const data = JSON.parse(raw);
-    say('🧠 ' + JSON.stringify(data.parsed || data));
-  }catch(e){ say('❌ Błąd NLU: ' + e.message); console.error(e); }
+    await ensureMic();
+    chunks = [];
+    mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+    mediaRecorder.ondataavailable = (e)=>{ if(e.data?.size) chunks.push(e.data); };
+    mediaRecorder.onstop = onStopSend;
+    mediaRecorder.start();
+    recording = true;
+    say('🎙️ Nagrywam… (auto stop za ~4.5s)');
+    setTimeout(()=> recording && stopRec(), 4500);
+  }catch(err){
+    say('❌ Brak uprawnień do mikrofonu lub brak wsparcia.');
+    console.error(err);
+  }
 }
 
-let ready = false;
-window.addEventListener('load', async ()=>{ ready = await healthCheck(); });
+async function onStopSend(){
+  try{
+    const blob = new Blob(chunks, { type:'audio/webm' });
+    if (!blob.size){ say('😕 Nie wykryto dźwięku.'); return; }
 
-document.getElementById('micBtn')?.addEventListener('click', async ()=>{
-  if(!ready){ ready = await healthCheck(); if(!ready) return; }
-  runNLU('włoska pepperoni dwie na 18:45 bez oliwek');
+    // 1) ASR
+    const asr = await fetch(apip('/api/asr'), { method:'POST', headers:{'Content-Type':'audio/webm'}, body: blob });
+    const asrJson = await asr.json();
+    const text = asrJson?.text || '';
+    if (!text){ say('😕 ASR nic nie rozpoznał.'); return; }
+    say('🗣️ ' + text);
+
+    // 2) NLU
+    const nlu = await fetch(apip('/api/nlu'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text })});
+    const nluText = await nlu.text(); // czytamy jako text, żeby ładnie logować błędy
+    if (!nlu.ok) throw new Error(`NLU ${nlu.status} ${nluText}`);
+    const nluJson = JSON.parse(nluText);
+    say('🧠 ' + JSON.stringify(nluJson.parsed || nluJson));
+
+    // 3) (opcjonalnie) TTS z podsumowaniem
+    const summary = nluJson?.summary || 'Zamówienie przyjęte.';
+    try{
+      const tts = await fetch(apip('/api/tts'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: summary })});
+      if (tts.ok && $tts){ const buf = await tts.arrayBuffer(); $tts.src = URL.createObjectURL(new Blob([buf])); $tts.play().catch(()=>{}); }
+    }catch(e){ /* TTS opcjonalny */ }
+
+  }catch(e){
+    say('❌ Błąd podczas przetwarzania: ' + e.message);
+    console.error(e);
+  }
+}
+
+// --- UI: przycisk mikrofonu na logo ---
+document.getElementById('micBtn')?.addEventListener('click', ()=>{
+  if (recording) stopRec(); else startRec();
 });
 
-document.querySelectorAll('[data-quick]').forEach(b=>{
-  b.addEventListener('click', ()=> runNLU(`Zamówienie: ${b.dataset.quick}`));
+// --- Quick actions => od razu NLU ---
+document.querySelectorAll('[data-quick]').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const t = `Zamówienie: ${btn.dataset.quick}. Pomóż dokończyć szczegóły.`;
+    try{
+      const r = await fetch(apip('/api/nlu'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: t })});
+      const raw = await r.text();
+      if (!r.ok) throw new Error(raw);
+      const j = JSON.parse(raw);
+      say('🧠 ' + JSON.stringify(j.parsed || j));
+    }catch(e){ say('❌ Błąd NLU: ' + e.message); }
+  });
 });
 
-window.__FREEFLOW__ = { CONFIG, healthCheck, runNLU };
+// start
+window.addEventListener('load', healthCheck);

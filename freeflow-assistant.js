@@ -1,131 +1,217 @@
-// freeflow-assistant.js — wersja minimal+diagnostyka
+/* freeflow-assistant.js
+ * Minimalny asystent: ASR (mowa->tekst) + NLU (backend) + TTS (mowa z tekstu)
+ * Działa mobilnie na Chrome/Edge (Web Speech API). Ma lekki fallback, gdy ASR niedostępny.
+ */
 
 const CONFIG = {
-  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app'
+  // >>> PODMIEŃ na swój backend (masz go na Vercel)
+  BACKEND_URL: "https://freeflow-backend-vercel.vercel.app",
+  // <<< tylko to zmieniasz w razie potrzeby
 };
 
-const $bubble = document.getElementById('transcript');
-const $mic    = document.getElementById('micBtn');
-const $tts    = document.getElementById('ttsPlayer');
+// ---------- Pomocnicze ----------
+const $ = (id) => document.getElementById(id);
+const $bubble = $("transcript");
+const $micBtn = $("micBtn");
+const $tts = $("ttsPlayer"); // w HTML istnieje <audio id="ttsPlayer">
+let recognizing = false;
 
-function say(t){ if($bubble) $bubble.textContent = t; }
-function apip(p){ return `${CONFIG.BACKEND_URL}${p}`; }
+// Uproszczone logowanie do bąbla
+function setBubble(html) {
+  $bubble.innerHTML = html;
+}
+function setBubbleText(txt) {
+  $bubble.textContent = txt;
+}
 
-// 0) Health-check — czy backend żyje
-(async()=>{
-  try{
-    const r = await fetch(apip('/api/health'), {cache: 'no-store'});
-    const j = await r.json().catch(()=>({}));
-    say(j?.status ? `✅ Backend: ${j.status}` : '✅ Backend OK');
-  }catch(e){
-    console.error(e);
-    say('❌ Nie udało się połączyć z serwerem.');
+// Ładna prezentacja zamówienia zamiast surowego JSON
+function renderOrder(parsed) {
+  // oczekiwane pola z Twojego NLU:
+  // { restaurant_name, items:[{name, qty, without?}], when, note?, keep_data? }
+  if (!parsed || !parsed.items) {
+    setBubble("🤔 <b>Nie udało się rozpoznać zamówienia.</b>");
+    return;
   }
+  const itemsList = parsed.items
+    .map(
+      (i) =>
+        `<li>${i.qty || 1} × <b>${i.name}</b>${
+          i.without && i.without.length
+            ? ` <small>(bez: ${i.without.join(", ")})</small>`
+            : ""
+        }</li>`
+    )
+    .join("");
+
+  const when = parsed.when ? parsed.when : "jak najszybciej";
+  const rest = parsed.restaurant_name ? parsed.restaurant_name : "—";
+
+  setBubble(`
+    <div style="line-height:1.35">
+      <div>🟢 <b>Zamówienie przyjęte</b></div>
+      <div>Restauracja: <b>${rest}</b></div>
+      <ul style="margin:8px 0 4px 18px">${itemsList}</ul>
+      <div>Czas: <b>${when}</b></div>
+      ${parsed.note ? `<div>Notatka: ${parsed.note}</div>` : ""}
+    </div>
+  `);
+}
+
+// Mów odpowiedź (proste TTS przeglądarkowe)
+function speak(text) {
+  try {
+    if ("speechSynthesis" in window) {
+      const u = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } else {
+      // Gdybyś wolał backendowe /api/tts – tu możesz zawołać i odtworzyć w <audio>
+      // zostawiam proste przeglądarkowe na teraz
+    }
+  } catch {}
+}
+
+// ---------- HEALTH CHECK ----------
+async function checkHealth() {
+  try {
+    const r = await fetch(`${CONFIG.BACKEND_URL}/api/health`, {
+      cache: "no-store",
+    });
+    const j = await r.json();
+    if (j && j.status === "ok") {
+      setBubble(`✅ Backend: ok`);
+      return true;
+    }
+  } catch (e) {
+    // ignore
+  }
+  setBubble("⚠️ Backend niedostępny");
+  return false;
+}
+
+// ---------- NLU ----------
+async function sendToNLU(text) {
+  const url = `${CONFIG.BACKEND_URL}/api/nlu`;
+  const body = { text };
+
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!r.ok) throw new Error(`NLU HTTP ${r.status}`);
+    const j = await r.json();
+
+    // Spodziewany shape: { ok:true, parsed:{...}, raw:"..." }
+    if (j.ok && j.parsed) {
+      renderOrder(j.parsed);
+      // krótki voice feedback:
+      const firstItem = j.parsed.items?.[0]?.name || "zamówienie";
+      speak(`OK. ${firstItem}. Wysyłam do restauracji.`);
+    } else {
+      setBubble(
+        `🤔 Nie zrozumiałem. <small>${j.error || "spróbuj powiedzieć inaczej"}</small>`
+      );
+      speak("Nie zrozumiałem. Spróbuj jeszcze raz.");
+    }
+  } catch (err) {
+    setBubble(
+      `❌ Błąd NLU. <small>${(err && err.message) || String(err)}</small>`
+    );
+  }
+}
+
+// Udostępniam globalnie – do klików z kafelków
+window.sendToAssistant = (text) => {
+  if (typeof text !== "string" || !text.trim()) return;
+  setBubble(`🧠 ${text}`);
+  sendToNLU(text);
+};
+
+// ---------- ASR (Web Speech API) ----------
+let recognition = null;
+(function prepareASR() {
+  const SR =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition ||
+    window.mozSpeechRecognition ||
+    window.msSpeechRecognition;
+  if (!SR) {
+    // Brak natywnego ASR – fallback: prompt po kliknięciu
+    $micBtn.addEventListener("click", () => {
+      const text = prompt("Powiedz/napisz zamówienie:");
+      if (text && text.trim()) {
+        setBubble(`🧠 ${text}`);
+        sendToNLU(text);
+      } else {
+        setBubble("🙂 ASR niedostępny – wpisz tekst ręcznie.");
+      }
+    });
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = "pl-PL";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    recognizing = true;
+    setBubble("🎤 Słucham...");
+    // wizualny stan mikrofonu (opcjonalnie można dodać klasę CSS)
+  };
+
+  recognition.onresult = (e) => {
+    let interim = "";
+    let final = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const chunk = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += chunk;
+      else interim += chunk;
+    }
+    if (interim) setBubbleText("🎙️ " + interim);
+    if (final) {
+      setBubble("🧠 " + final);
+      sendToNLU(final);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    recognizing = false;
+    setBubble("😕 ASR błąd: " + e.error);
+  };
+
+  recognition.onend = () => {
+    recognizing = false;
+    // nic – czekamy na kolejne kliknięcie
+  };
+
+  // Klik mikrofonu – start/stop
+  $micBtn.addEventListener("click", () => {
+    try {
+      if (!recognizing) {
+        recognition.start();
+      } else {
+        recognition.stop();
+      }
+    } catch (e) {
+      // jeśli "not-allowed" itp.
+      setBubble("⚠️ Nie mam dostępu do mikrofonu.");
+    }
+  });
 })();
 
-// 1) ASR
-let mediaStream, mediaRecorder, chunks=[], recording=false;
+// ---------- Szybkie akcje (kafelki) mogą zawołać window.sendToAssistant ----------
+document.querySelectorAll("[data-quick]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const t = btn.dataset.quick;
+    window.sendToAssistant(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`);
+  });
+});
 
-function pickMime(){
-  const cands=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus',''];
-  for(const t of cands){ try{ if(!t || MediaRecorder.isTypeSupported(t)) return t; }catch{} }
-  return '';
-}
-async function ensureMic(){
-  if (mediaStream) return mediaStream;
-  mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
-  return mediaStream;
-}
-function stopRec(){
-  if(mediaRecorder && recording){ mediaRecorder.stop(); recording=false; say('⏹️ Wysyłam…'); }
-}
-async function startRec(){
-  try{
-    await ensureMic();
-    chunks=[];
-    const mime=pickMime(), opts=mime?{mimeType:mime}:{};
-    mediaRecorder = new MediaRecorder(mediaStream, opts);
-    mediaRecorder.ondataavailable = e=>{ if(e.data?.size) chunks.push(e.data); };
-    mediaRecorder.onerror = e=>{ console.error('MediaRecorder error', e); say('❌ Błąd nagrywania.'); };
-    mediaRecorder.onstop = onStopSend;
-    mediaRecorder.start();
-    recording=true;
-    say('🎙️ Nagrywam… (auto stop ~6s)');
-    setTimeout(()=> recording && stopRec(), 6000);
-  }catch(err){
-    console.error(err);
-    if (err?.name === 'NotAllowedError') say('❌ Brak zgody na mikrofon.');
-    else say('❌ Ta przeglądarka nie wspiera nagrywania.');
-  }
-}
-async function onStopSend(){
-  try{
-    const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
-    if(!blob.size){ say('😕 Cisza. Spróbuj mówić bliżej mikrofonu.'); return; }
-
-    // 2) ASR
-    const asr = await fetch(apip('/api/asr'), {
-      method:'POST',
-      headers:{ 'Content-Type': blob.type || 'audio/webm' },
-      body: blob
-    });
-    const asrText = await asr.text();
-    if(!asr.ok) throw new Error(`ASR ${asr.status} ${asrText}`);
-    const asrJson = JSON.parse(asrText);
-    const text = asrJson?.text || '';
-    if(!text){ say('😕 ASR nic nie rozpoznał.'); return; }
-    say('🗣️ ' + text);
-
-    // 3) NLU
-    const nlu = await fetch(apip('/api/nlu'), {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const nluText = await nlu.text();
-    if(!nlu.ok) throw new Error(`NLU ${nlu.status} ${nluText}`);
-    const nluJson = JSON.parse(nluText);
-    say('🧠 ' + JSON.stringify(nluJson.parsed || nluJson));
-
-    // 4) TTS (opcjonalnie)
-    const summary = nluJson?.summary || 'Zamówienie przyjęte.';
-    try{
-      const tts = await fetch(apip('/api/tts'), {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ text: summary })
-      });
-      if(tts.ok && $tts){
-        const buf=await tts.arrayBuffer();
-        $tts.src = URL.createObjectURL(new Blob([buf]));
-        $tts.play().catch(()=>{});
-      }
-    }catch(e){ console.debug('TTS skipped', e); }
-
-  }catch(e){
-    console.error(e);
-    say('❌ Błąd: ' + e.message);
-  }
-}
-
-// 5) Podpięcie do przycisku (fallback jeśli nie ma innego kodu)
-$mic?.addEventListener('click', ()=> recording ? stopRec() : startRec() );
-
-// 6) Eksport do debugowania
-window._ff = { startRec, stopRec };
-window.sendToAssistant = (txt)=>{
-  (async()=>{
-    try{
-      say('🗣️ ' + txt);
-      const r = await fetch(apip('/api/nlu'), {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text: txt })
-      });
-      const t = await r.text();
-      if(!r.ok) throw new Error(`NLU ${r.status} ${t}`);
-      const j = JSON.parse(t);
-      say('🧠 ' + JSON.stringify(j.parsed || j));
-    }catch(e){ say('❌ ' + e.message); }
-  })();
-};
+// ---------- Start ----------
+(async () => {
+  await checkHealth();
+})();

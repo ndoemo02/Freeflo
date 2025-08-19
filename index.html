@@ -3,164 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFlow • Voice to order (demo)</title>
+  <title>FreeFlow • Voice to order</title>
   <link rel="icon" href="./Freeflow-logo.png" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
   <style>
-    :root{ --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --card:#0f141b; --chip:#151b24; }
+    :root{
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --neon:#00d1ff;
+      --glass-bg: rgba(0,0,0,.18); --glass-b: rgba(255,255,255,.06);
+    }
     html,body{height:100%}
     body{
-      margin:0; font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      color:var(--text); background:#0b0f14 url("./Background.png") center/cover fixed no-repeat;
+      margin:0; color:var(--text);
+      font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background: url("./Background.png") center/cover fixed no-repeat #0b0f14;
     }
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:sticky;top:0;z-index:50;
-      background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.2), rgba(0,0,0,0));backdrop-filter: blur(3px);}
-    .brand{display:flex;align-items:center;gap:10px;font-family:'Poppins',sans-serif;font-weight:700;font-size:26px}
-    .brand img{width:36px;height:36px;border-radius:8px}
+    .wrap{max-width:1100px; margin:0 auto; padding:16px 16px 72px}
+    .top{
+      display:flex; align-items:center; gap:12px; margin-top:4px
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; font-family:'Poppins',sans-serif; font-size:28px; font-weight:700
+    }
+    .brand img{width:36px; height:36px; border-radius:8px}
     .brand .accent{color:var(--brand)}
-    .wrap{max-width:1040px;margin:0 auto;padding:0 16px 48px}
-    h1{font-size:38px;margin:8px 0 6px}
-    .sub{color:var(--muted);margin-bottom:10px}
+    .claim{font-size:12px; color:var(--muted); margin-top:-4px}
 
-    /* Tabs (miasta) */
-    .tabs{display:flex;gap:10px;margin:8px 0 16px;flex-wrap:wrap}
-    .tab{padding:10px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:#0b1118;cursor:pointer}
-    .tab.active{outline:2px solid #ff7a00aa;box-shadow:0 0 16px #ff7a0033 inset}
+    .hero h1{font-size:48px; line-height:1.02; margin:22px 0 8px}
+    .hero .sub{color:var(--muted); font-size:18px; margin-bottom:20px}
 
-    /* Transcript bubble */
-    .bubble{margin:10px 0 16px;padding:14px;border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;background:rgba(0,0,0,.18);box-shadow: inset 0 0 24px #0005}
-    .mic{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:14px;border:1px solid rgba(255,255,255,.08);
-      background:#0b1118;cursor:pointer;margin-left:8px}
+    .glass{ background:var(--glass-bg); border:1px solid var(--glass-b);
+      border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,.35); backdrop-filter: blur(2px)
+    }
 
-    /* Grid knajp */
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px}
-    @media (max-width:800px){ .grid{grid-template-columns:1fr} }
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;box-shadow:0 12px 30px #0006}
-    .card h3{margin:0 0 4px;font-size:20px}
-    .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{background:var(--chip);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:8px 12px;font-size:14px;cursor:pointer}
-    .chip:hover{transform:translateY(-1px)}
+    /* transcript bubble (prawy-górny) */
+    #transcript{
+      position: fixed; right: 12px; top: 84px; z-index: 40;
+      min-width: 240px; max-width: 360px; padding:14px 16px; font-size:18px;
+    }
 
-    .footer-note{color:var(--muted);font-size:12px;margin-top:16px}
+    /* mic pill */
+    #micBtn{
+      position: fixed; right: 12px; top: 28px; z-index: 41;
+      width:54px; height:54px; border-radius:14px; border:1px solid var(--glass-b);
+      display:grid; place-items:center; cursor:pointer; background:var(--glass-bg); color:#cfe2ff;
+      box-shadow:0 8px 34px rgba(0,0,0,.35);
+    }
+
+    /* grid z „menu” do klikania */
+    .grid{ display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); margin-top:18px }
+    .card{ padding:14px; display:flex; flex-direction:column; gap:10px }
+    .title{ font-weight:700; letter-spacing:.2px }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px }
+    .chip{
+      padding:8px 10px; font-size:14px; border-radius:999px; cursor:pointer;
+      border:1px solid var(--glass-b); background:rgba(0,0,0,.22); color:#e8eefb;
+    }
+    .chip:hover{ background:rgba(255,255,255,.08) }
+
+    .hint{margin-top:12px; color:var(--muted)}
+    @media (max-width:520px){
+      .hero h1{font-size:36px}
+      #transcript{left:12px; right:12px; top:auto; bottom:12px}
+      #micBtn{bottom:80px; top:auto}
+    }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><img src="./Freeflow-logo.png" alt="logo"/><span class="accent">Free</span>Flow</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div id="transcript" class="bubble">Powiedz lub kliknij pozycję z menu…</div>
-      <button id="micBtn" class="mic" aria-label="Naciśnij, aby mówić">🎙️</button>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand">
+          <img src="./Freeflow-logo.png" alt="logo"/>
+          <span class="accent">Free</span>Flow
+        </div>
+        <div class="claim">Voice to order</div>
+      </div>
     </div>
-  </header>
 
-  <main class="wrap">
-    <h1>Zamów głosem lub kliknięciem</h1>
-    <div class="sub">Tryb testowy • Kraków & Katowice • Bez zapisywania danych (poza wysłaniem do NLU)</div>
+    <!-- mikrofon i bąbel -->
+    <button id="micBtn" class="glass" aria-label="Naciśnij, aby mówić">🎙️</button>
+    <div id="transcript" class="glass">Powiedz lub kliknij pozycję z menu…</div>
 
-    <!-- Zakładki miast -->
-    <div class="tabs" id="cityTabs"></div>
+    <section class="hero">
+      <h1>Zamów głosem lub kliknięciem</h1>
+      <div class="sub">Tryb testowy • Kraków & Katowice • Bez zapisywania danych (poza wysłaniem do NLU)</div>
+      <div class="hint">Kliknij potrawę, a ja ułożę komendę dla asystenta. Mikrofon — jeśli wolisz powiedzieć: „Ariel, czulent dwie na 19:15, bez cebuli”.</div>
+    </section>
 
-    <!-- Siatka restauracji -->
-    <div class="grid" id="restoGrid"></div>
+    <!-- MENU DEMO -->
+    <section class="grid">
+      <div class="card glass">
+        <div class="title">Kraków • Ariel (Kazimierz)</div>
+        <div class="chips">
+          <button class="chip" data-utterance="Ariel, czulent jeden na 18:45">Czulent</button>
+          <button class="chip" data-utterance="Ariel, kugel jeden na 19:15">Kugel</button>
+          <button class="chip" data-utterance="Ariel, tzimmes jeden na 19:30">Tzimmes</button>
+          <button class="chip" data-utterance="Ariel, czulent dwie na 19:15 bez cebuli">Czulent ×2 (bez cebuli)</button>
+        </div>
+      </div>
 
-    <div class="footer-note">
-      Kliknij potrawę, a ja ułożę komendę dla asystenta. Mikrofon – jeśli wolisz powiedzieć: „Ariel, czulent dwie na 19:15, bez cebuli”.
-    </div>
-  </main>
+      <div class="card glass">
+        <div class="title">Kraków • Klezmer Hois</div>
+        <div class="chips">
+          <button class="chip" data-utterance="Klezmer Hois, czulent jeden na 19:00">Czulent</button>
+          <button class="chip" data-utterance="Klezmer Hois, karp po żydowsku jeden na 20:00">Karp po żydowsku</button>
+          <button class="chip" data-utterance="Klezmer Hois, gefilte fish jedna na 18:45">Gefilte fish</button>
+        </div>
+      </div>
 
-  <!-- Dane (inline JSON, żeby na telefonie nie bawić się w pliki) -->
-  <script id="restoData" type="application/json">
-  {
-    "Kraków": [
-      {
-        "id": "krk-ariel",
-        "name": "Ariel",
-        "area": "Kazimierz",
-        "cuisine": "żydowska/galicyjska",
-        "menu": ["Czulent","Tzimmes","Kugel","Karp po żydowsku","Pierogi z mięsem"]
-      },
-      {
-        "id": "krk-klezmer",
-        "name": "Klezmer Hois",
-        "area": "Szeroka",
-        "cuisine": "żydowska",
-        "menu": ["Czulent","Gęś z jabłkami","Kugel"]
-      }
-    ],
-    "Katowice": [
-      {
-        "id": "ktw-napoli",
-        "name": "Trattoria Napoli",
-        "area": "Centrum",
-        "cuisine": "włoska (test)",
-        "menu": ["Margherita","Pepperoni","Carbonara","Capricciosa"]
-      },
-      {
-        "id": "ktw-slaska",
-        "name": "Złota Łyżka",
-        "area": "Śródmieście",
-        "cuisine": "polska (test)",
-        "menu": ["Schabowy","Pierogi ruskie","Żurek"]
-      }
-    ]
-  }
-  </script>
+      <div class="card glass">
+        <div class="title">Katowice • Trattoria Napoli (demo)</div>
+        <div class="chips">
+          <button class="chip" data-utterance="Trattoria Napoli, pizza pepperoni dwie na 19:30 bez oliwek">Pepperoni ×2 (bez oliwek)</button>
+          <button class="chip" data-utterance="Trattoria Napoli, margherita jedna na 18:45">Margherita</button>
+          <button class="chip" data-utterance="Trattoria Napoli, cztery sery jedna na 20:15">Quattro formaggi</button>
+        </div>
+      </div>
+    </section>
+  </div>
 
-  <!-- Asystent -->
-  <script src="./freeflow-assistant.js?v=ui1"></script>
-
-  <!-- Render UI + akcje -->
+  <script src="./freeflow-assistant.js?v=ui2"></script>
   <script>
-    // wczytaj dane
-    const DATA = JSON.parse(document.getElementById('restoData').textContent);
-    const $tabs = document.getElementById('cityTabs');
-    const $grid = document.getElementById('restoGrid');
-    const $bubble = document.getElementById('transcript');
-
-    let currentCity = Object.keys(DATA)[0];
-
-    function setBubble(t){ $bubble.textContent = t; }
-
-    function renderTabs(){
-      $tabs.innerHTML = '';
-      Object.keys(DATA).forEach(city=>{
-        const b = document.createElement('button');
-        b.className = 'tab' + (city===currentCity?' active':'');
-        b.textContent = city;
-        b.onclick = ()=>{ currentCity = city; renderTabs(); renderGrid(); };
-        $tabs.appendChild(b);
-      });
-    }
-
-    function renderGrid(){
-      $grid.innerHTML = '';
-      (DATA[currentCity]||[]).forEach(r=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${r.name}</h3>
-          <div class="meta">${currentCity} • ${r.area} • ${r.cuisine}</div>
-          <div class="chips"></div>
-        `;
-        const chips = card.querySelector('.chips');
-        r.menu.forEach(m=>{
-          const c = document.createElement('button');
-          c.className = 'chip';
-          c.textContent = m;
-          c.onclick = ()=>{
-            const phrase = `${currentCity}, ${r.name}, ${m} jedna na 18:45`;
-            setBubble(`🗣️ ${phrase}`);
-            if (window.sendToAssistant) window.sendToAssistant(phrase);
-          };
-          chips.appendChild(c);
-        });
-        $grid.appendChild(card);
-      });
-    }
-
-    renderTabs(); renderGrid();
+    // Kliknięcia chipów => wysyłka do asystenta
+    document.querySelectorAll('[data-utterance]').forEach(b=>{
+      b.addEventListener('click', ()=> window.sendToAssistant && window.sendToAssistant(b.dataset.utterance));
+    });
   </script>
 </body>
 </html>

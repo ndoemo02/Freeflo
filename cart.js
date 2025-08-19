@@ -1,18 +1,8 @@
-// cart.js
-const CART_KEY = 'freeflow_cart_v1';
+const KEY = "ff_cart_v1";
+function load(){ try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } }
+function save(a){ localStorage.setItem(KEY, JSON.stringify(a)); window.dispatchEvent(new Event("cart:update")); }
 
-export function getCart() {
-  try { return JSON.parse(localStorage.getItem(CART_KEY)) ?? []; }
-  catch { return []; }
-}
-export function saveCart(items) {
-  localStorage.setItem(CART_KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent('cart:update', { detail: items }));
-}
-export function addToCart(item) {
-  const cart = getCart();
-  cart.push({ id: crypto.randomUUID(), qty: 1, ...item });
-  saveCart(cart);
-}
-export function clearCart(){ saveCart([]); }
-export function cartCount(){ return getCart().reduce((n,i)=>n+(i.qty||1),0); }
+export function getCart(){ return load(); }
+export function cartCount(){ return load().length; }
+export function addToCart(item){ const a = load(); a.push(item); save(a); }
+export function clearCart(){ save([]); }

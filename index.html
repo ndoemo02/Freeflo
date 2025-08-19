@@ -1,254 +1,166 @@
-
 <!doctype html>
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFlow • Voice to order</title>
+  <title>FreeFlow • Voice to order (demo)</title>
   <link rel="icon" href="./Freeflow-logo.png" />
-  <!-- Nowoczesny font dla brandu -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
-      --menu-bg: rgba(0,0,0,.30); --menu-bdr: rgba(255,255,255,.08);
-      --neon:#00d1ff;
-    }
+    :root{ --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --card:#0f141b; --chip:#151b24; }
     html,body{height:100%}
     body{
       margin:0; font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      color:var(--text);
-      /* TŁO z głównego katalogu (bez blur/siatek) */
-      background: url("./Background.png") center/cover fixed no-repeat #0b0f14;
+      color:var(--text); background:#0b0f14 url("./Background.png") center/cover fixed no-repeat;
     }
-
-    /* Transparent UI */
-    .glass{ background: rgba(0,0,0,.18); backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px); border:1px solid rgba(255,255,255,.06);
-      border-radius:14px; box-shadow:0 2px 18px rgba(0,0,0,.25);
-    }
-
-    /* Topbar */
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 16px; position:sticky; top:0; z-index:50;
-      background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.22), rgba(0,0,0,0));
-      backdrop-filter: blur(3px);
-    }
-    .brand{ display:flex; align-items:center; gap:10px; font-family:'Poppins',sans-serif; font-weight:700; font-size:26px; }
-    .brand img{width:36px; height:36px; border-radius:8px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:sticky;top:0;z-index:50;
+      background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.2), rgba(0,0,0,0));backdrop-filter: blur(3px);}
+    .brand{display:flex;align-items:center;gap:10px;font-family:'Poppins',sans-serif;font-weight:700;font-size:26px}
+    .brand img{width:36px;height:36px;border-radius:8px}
     .brand .accent{color:var(--brand)}
-    .claim{font-size:12px; color:var(--muted); margin-top:-6px}
-    .actions{display:flex; gap:10px}
-    .iconbtn{
-      width:44px; height:44px; border-radius:12px; border:1px solid rgba(255,255,255,.06);
-      background: rgba(0,0,0,.18); color:#cfe2ff; display:grid; place-items:center; cursor:pointer;
-      box-shadow: 0 4px 20px rgba(0,0,0,.35);
-    }
-    .badge{
-      position:absolute; margin-top:-28px; margin-left:26px;
-      background:var(--brand); color:#111; font-weight:700; font-size:12px;
-      width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
-      box-shadow:0 0 16px #ff7a0033;
-    }
+    .wrap{max-width:1040px;margin:0 auto;padding:0 16px 48px}
+    h1{font-size:38px;margin:8px 0 6px}
+    .sub{color:var(--muted);margin-bottom:10px}
 
-    /* Dropdown menu (kontekstowe) */
-    .menu-wrap{ position:relative; }
-    .dropdown{ position:absolute; right:0; top:48px; min-width:220px; display:none;
-      background: var(--menu-bg); border:1px solid var(--menu-bdr); border-radius:12px;
-      box-shadow:0 12px 40px rgba(0,0,0,.35); overflow:hidden; z-index:60;
-    }
-    .dropdown.open{ display:block; }
-    .dd-item{ padding:12px 14px; font-size:15px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; }
-    .dd-item:hover{ background: rgba(255,255,255,.06); }
-    .dd-sub{ display:none; border-top:1px solid var(--menu-bdr); }
-    .dd-item.expand::after{ content:'▸'; opacity:.6; }
-    .dd-item.expand.open::after{ content:'▾'; }
-    .dd-sub.open{ display:block; }
-    .dd-sub .dd-item{ padding-left:22px; }
+    /* Tabs (miasta) */
+    .tabs{display:flex;gap:10px;margin:8px 0 16px;flex-wrap:wrap}
+    .tab{padding:10px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:#0b1118;cursor:pointer}
+    .tab.active{outline:2px solid #ff7a00aa;box-shadow:0 0 16px #ff7a0033 inset}
 
-    /* Layout */
-    .wrap{max-width:980px; margin:0 auto; padding: 10px 16px 36px}
-    h1{font-size:42px; line-height:1.05; margin:8px 0 6px}
-    .sub{color:var(--muted); margin-bottom:18px}
+    /* Transcript bubble */
+    .bubble{margin:10px 0 16px;padding:14px;border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;background:rgba(0,0,0,.18);box-shadow: inset 0 0 24px #0005}
+    .mic{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:14px;border:1px solid rgba(255,255,255,.08);
+      background:#0b1118;cursor:pointer;margin-left:8px}
 
-    /* HERO – tylko klikalne logo, bez obwódki/koła */
-    .hero{
-      margin:14px auto 18px; width:min(92vw,640px); aspect-ratio:1/1;
-      display:grid; place-items:center; position:relative; background:transparent; border:none; box-shadow:none;
-    }
-    .logoBtn{ border:none; background:transparent; padding:0; cursor:pointer; display:grid; place-items:center; }
-    .logo{
-      width:76%; max-width:520px; user-select:none; pointer-events:none;
-      /* niebieski, delikatny neon tylko na krawędziach PNG (alpha) */
-      filter: drop-shadow(0 0 0px rgba(0,209,255,.0));
-      animation: neonPulse 2.2s ease-in-out infinite;
-    }
-    @keyframes neonPulse{
-      0%   { filter: drop-shadow(0 0 0px rgba(0,209,255,.0));    transform: scale(1); }
-      50%  { filter: drop-shadow(0 0 14px rgba(0,209,255,.38));  transform: scale(1.012); }
-      100% { filter: drop-shadow(0 0 0px rgba(0,209,255,.0));    transform: scale(1); }
-    }
+    /* Grid knajp */
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px}
+    @media (max-width:800px){ .grid{grid-template-columns:1fr} }
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;box-shadow:0 12px 30px #0006}
+    .card h3{margin:0 0 4px;font-size:20px}
+    .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:var(--chip);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:8px 12px;font-size:14px;cursor:pointer}
+    .chip:hover{transform:translateY(-1px)}
 
-    /* Bąbel transkrypcji – mocno transparentny */
-    .bubble{
-      margin:8px auto 0; max-width:900px; padding:16px 14px; min-height:40px;
-      background: rgba(0,0,0,.18); border:1px solid rgba(255,255,255,.06);
-      border-radius:14px; color:var(--text); font-size:18px;
-      box-shadow: inset 0 0 24px #0005, 0 8px 40px #000a;
-    }
-
-    /* Dolne kafelki (na razie emoji, potem podmienimy na SVG) */
-    .bottom-buttons{
-      display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:14px;
-    }
-    .bottom-buttons button{
-      flex:1 1 calc(33.333% - 12px); max-width:180px; min-width:120px; height:56px;
-      display:flex; align-items:center; justify-content:center; gap:10px;
-      font-size:18px; border-radius:14px;
-      background: rgba(0,0,0,.18); color:#e8eefb; border:1px solid rgba(255,255,255,.06);
-      cursor:pointer; box-shadow: 0 10px 32px rgba(0,0,0,.35);
-      transition: transform .15s ease, background .2s ease;
-    }
-    .bottom-buttons button:hover{ transform: translateY(-1px); background: rgba(0,0,0,.22); }
-    .bottom-buttons .primary{ outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset, 0 10px 32px #000; }
-
-    @media (max-width:480px){
-      h1{font-size:36px}
-      .bottom-buttons button{height:52px; font-size:16px; min-width:110px}
-    }
+    .footer-note{color:var(--muted);font-size:12px;margin-top:16px}
   </style>
 </head>
 <body>
-
-  <!-- Topbar -->
   <header class="topbar">
-    <div>
-      <div class="brand">
-        <img src="./Freeflow-logo.png" alt="logo"/>
-        <span class="accent">Free</span>Flow
-      </div>
-      <div class="claim">Voice to order</div>
-    </div>
-
-    <div class="actions">
-      <!-- Menu kontekstowe -->
-      <div class="menu-wrap">
-        <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
-        <div id="dropdown" class="dropdown glass">
-          <div class="dd-item expand" id="payExpand">Płatność</div>
-          <div class="dd-sub" id="paySub">
-            <div class="dd-item" data-pay="card">Karta</div>
-            <div class="dd-item" data-pay="blik">BLIK</div>
-            <div class="dd-item" data-pay="paypal">PayPal</div>
-          </div>
-          <div class="dd-item" id="ordersBtn">Twoje zamówienia</div>
-          <div class="dd-item" id="settingsBtn">Ustawienia</div>
-          <div class="dd-item" id="helpBtn">Pomoc</div>
-        </div>
-      </div>
-
-      <div style="position:relative">
-        <button class="iconbtn" id="cartBtn" aria-label="Koszyk">🛒</button>
-        <div class="badge" id="cartBadge">0</div>
-      </div>
+    <div class="brand"><img src="./Freeflow-logo.png" alt="logo"/><span class="accent">Free</span>Flow</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="transcript" class="bubble">Powiedz lub kliknij pozycję z menu…</div>
+      <button id="micBtn" class="mic" aria-label="Naciśnij, aby mówić">🎙️</button>
     </div>
   </header>
 
   <main class="wrap">
-    <h1>Złóż zamówienie</h1>
-    <div class="sub">Taxi, posiłek, a może nocleg?</div>
+    <h1>Zamów głosem lub kliknięciem</h1>
+    <div class="sub">Tryb testowy • Kraków & Katowice • Bez zapisywania danych (poza wysłaniem do NLU)</div>
 
-    <!-- Hero: tylko klikalne logo -->
-    <section class="hero">
-      <button id="micBtn" type="button" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <img class="logo" src="./Freeflow-logo.png" alt="FreeFlow" />
-      </button>
-    </section>
+    <!-- Zakładki miast -->
+    <div class="tabs" id="cityTabs"></div>
 
-    <!-- Transkrypcja / odpowiedzi -->
-    <div id="transcript" class="bubble glass">Transkrypcja pojawi się tutaj…</div>
+    <!-- Siatka restauracji -->
+    <div class="grid" id="restoGrid"></div>
 
-    <!-- Przyciski skrótów (placeholdery) -->
-    <div class="bottom-buttons" style="margin-bottom:32px">
-      <button class="primary glass" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
-      <button class="glass" data-quick="Taxi">🚕 <span>Taxi</span></button>
-      <button class="glass" data-quick="Hotel">🏠 <span>Hotel</span></button>
+    <div class="footer-note">
+      Kliknij potrawę, a ja ułożę komendę dla asystenta. Mikrofon – jeśli wolisz powiedzieć: „Ariel, czulent dwie na 19:15, bez cebuli”.
     </div>
   </main>
 
-  <audio id="ttsPlayer" preload="auto"></audio>
-
-  <!-- Asystent (logika SR/ASR/Chat/TTS) -->
-<script src="./freeflow-assistant.js?v=3"></script>
-
-  <!-- Mini logika UI: menu, koszyk, quick actions -->
-  <script type="module">
-    // Dropdown
-    const menuBtn = document.getElementById('menuBtn');
-    const dropdown = document.getElementById('dropdown');
-    const payExpand = document.getElementById('payExpand');
-    const paySub = document.getElementById('paySub');
-
-    menuBtn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      dropdown.classList.toggle('open');
-    });
-    payExpand.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      payExpand.classList.toggle('open');
-      paySub.classList.toggle('open');
-    });
-    document.addEventListener('click', (e)=>{
-      if (!dropdown.contains(e.target) && e.target !== menuBtn) {
-        dropdown.classList.remove('open');
-        payExpand.classList.remove('open');
-        paySub.classList.remove('open');
+  <!-- Dane (inline JSON, żeby na telefonie nie bawić się w pliki) -->
+  <script id="restoData" type="application/json">
+  {
+    "Kraków": [
+      {
+        "id": "krk-ariel",
+        "name": "Ariel",
+        "area": "Kazimierz",
+        "cuisine": "żydowska/galicyjska",
+        "menu": ["Czulent","Tzimmes","Kugel","Karp po żydowsku","Pierogi z mięsem"]
+      },
+      {
+        "id": "krk-klezmer",
+        "name": "Klezmer Hois",
+        "area": "Szeroka",
+        "cuisine": "żydowska",
+        "menu": ["Czulent","Gęś z jabłkami","Kugel"]
       }
-    });
+    ],
+    "Katowice": [
+      {
+        "id": "ktw-napoli",
+        "name": "Trattoria Napoli",
+        "area": "Centrum",
+        "cuisine": "włoska (test)",
+        "menu": ["Margherita","Pepperoni","Carbonara","Capricciosa"]
+      },
+      {
+        "id": "ktw-slaska",
+        "name": "Złota Łyżka",
+        "area": "Śródmieście",
+        "cuisine": "polska (test)",
+        "menu": ["Schabowy","Pierogi ruskie","Żurek"]
+      }
+    ]
+  }
+  </script>
 
-    // Obsługa wyboru płatności (placeholder)
-    dropdown.querySelectorAll('[data-pay]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const method = el.getAttribute('data-pay');
-        alert('Wybrano płatność: ' + method.toUpperCase());
+  <!-- Asystent -->
+  <script src="./freeflow-assistant.js?v=ui1"></script>
+
+  <!-- Render UI + akcje -->
+  <script>
+    // wczytaj dane
+    const DATA = JSON.parse(document.getElementById('restoData').textContent);
+    const $tabs = document.getElementById('cityTabs');
+    const $grid = document.getElementById('restoGrid');
+    const $bubble = document.getElementById('transcript');
+
+    let currentCity = Object.keys(DATA)[0];
+
+    function setBubble(t){ $bubble.textContent = t; }
+
+    function renderTabs(){
+      $tabs.innerHTML = '';
+      Object.keys(DATA).forEach(city=>{
+        const b = document.createElement('button');
+        b.className = 'tab' + (city===currentCity?' active':'');
+        b.textContent = city;
+        b.onclick = ()=>{ currentCity = city; renderTabs(); renderGrid(); };
+        $tabs.appendChild(b);
       });
-    });
+    }
 
-    // Koszyk (prosty localStorage – jak miałeś wcześniej)
-    import { addToCart, getCart, cartCount, clearCart } from './cart.js';
-
-    const badge = document.getElementById('cartBadge');
-    function renderBadge(){ badge.textContent = cartCount(); }
-    renderBadge();
-    window.addEventListener('cart:update', renderBadge);
-
-    document.querySelector('[data-quick="Jedzenie"]')
-      .addEventListener('click', ()=> addToCart({type:'food', name:'Zestaw dnia'}));
-    document.querySelector('[data-quick="Taxi"]')
-      .addEventListener('click', ()=> addToCart({type:'taxi', name:'Kurs standard'}));
-    document.querySelector('[data-quick="Hotel"]')
-      .addEventListener('click', ()=> addToCart({type:'hotel', name:'Pokój 1 noc'}));
-
-    document.getElementById('cartBtn').addEventListener('click', ()=>{
-      const items = getCart();
-      alert(items.length ? items.map(i=>`• ${i.type} – ${i.name}`).join('\n') : 'Koszyk jest pusty');
-    });
-
-    // Placeholdery
-    document.getElementById('ordersBtn').addEventListener('click', ()=> alert('Twoje zamówienia (wkrótce)'));
-    document.getElementById('settingsBtn').addEventListener('click',()=> alert('Ustawienia (wkrótce)'));
-    document.getElementById('helpBtn').addEventListener('click',    ()=> alert('Pomoc (FAQ, kontakt) – wkrótce'));
-
-    // Quick prompt do asystenta
-    document.querySelectorAll('[data-quick]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const t = btn.dataset.quick;
-        if (window.sendToAssistant) {
-          window.sendToAssistant(`Zamówienie: ${t}. Pomóż dokończyć szczegóły.`);
-        }
+    function renderGrid(){
+      $grid.innerHTML = '';
+      (DATA[currentCity]||[]).forEach(r=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${r.name}</h3>
+          <div class="meta">${currentCity} • ${r.area} • ${r.cuisine}</div>
+          <div class="chips"></div>
+        `;
+        const chips = card.querySelector('.chips');
+        r.menu.forEach(m=>{
+          const c = document.createElement('button');
+          c.className = 'chip';
+          c.textContent = m;
+          c.onclick = ()=>{
+            const phrase = `${currentCity}, ${r.name}, ${m} jedna na 18:45`;
+            setBubble(`🗣️ ${phrase}`);
+            if (window.sendToAssistant) window.sendToAssistant(phrase);
+          };
+          chips.appendChild(c);
+        });
+        $grid.appendChild(card);
       });
-    });
+    }
+
+    renderTabs(); renderGrid();
   </script>
 </body>
 </html>

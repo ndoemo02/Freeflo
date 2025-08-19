@@ -1,7 +1,7 @@
-/* Frontend-klient: health-check + NLU z obsługą timeout/retry. */
+/* freeflow-assistant.js — UI + voice → NLU → czytelne podsumowanie (demo) */
 
 const CONFIG = {
-  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app', // <- podmień jeśli inna domena
+  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app', // ← twój backend
   TIMEOUT_MS: 12000,
   NLU_RETRIES: 1,
 };
@@ -9,112 +9,95 @@ const CONFIG = {
 function $(id){ return document.getElementById(id); }
 const $bubble = $('transcript');
 const $micBtn = $('micBtn');
-const $tts = $('ttsPlayer');
 
 function show(t){ if($bubble) $bubble.textContent = t; }
 function apip(p){ return `${CONFIG.BACKEND_URL}${p}`; }
 
-function withTimeout(p, ms=CONFIG.TIMEOUT_MS){
-  return Promise.race([ p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT')), ms)) ]);
+function withTimeout(promise, ms=CONFIG.TIMEOUT_MS){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT')),ms))]);
 }
-
 async function fetchJson(url, opts={}, {retries=0}={}){
-  const run = async ()=>{
-    const res = await withTimeout(fetch(url, {
-      ...opts,
-      headers: { 'Content-Type':'application/json', ...(opts.headers||{}) },
-      cache: 'no-store',
-    }));
-    if(!res.ok){
-      const text = await res.text().catch(()=> '');
-      throw new Error(`HTTP ${res.status} ${res.statusText} ${text || ''}`.trim());
-    }
-    return res.json();
-  };
-  try { return await run(); }
-  catch(e){ if(retries>0) return fetchJson(url, opts, {retries:retries-1}); throw e; }
-}
-
-// Health
-async function healthCheck(){
-  try{
-    const data = await fetchJson(apip('/api/health'));
-    if(data && data.status === 'ok'){ show('✅ Backend: ok'); return true; }
-    show('⚠️ Backend: odpowiedź nieoczekiwana'); return false;
-  }catch(e){
-    show(`❌ Backend niedostępny: ${e.message||e}`); return false;
+  async function run(){
+    const r = await withTimeout(fetch(url, { ...opts, headers:{ 'Content-Type':'application/json', ...(opts.headers||{}) }, cache:'no-store' }));
+    if(!r.ok){ throw new Error(`HTTP ${r.status}`); }
+    return r.json();
   }
+  try{ return await run(); } catch(e){ if(retries>0) return fetchJson(url,opts,{retries:retries-1}); throw e; }
 }
 
-// NLU
+async function health(){
+  try{
+    const j = await fetchJson(apip('/api/health'));
+    return j?.status === 'ok';
+  }catch{ return false; }
+}
+
 async function callNLU(text){
-  const body = JSON.stringify({ text: String(text||'').trim() });
-  return fetchJson(apip('/api/nlu'), { method:'POST', body }, { retries: CONFIG.NLU_RETRIES });
+  return fetchJson(apip('/api/nlu'), { method:'POST', body: JSON.stringify({ text: String(text||'').trim() }) }, { retries: CONFIG.NLU_RETRIES });
 }
 
-function pretty(o){ try{return JSON.stringify(o,null,2)}catch{return String(o)} }
+function renderOrderSummary(parsed){
+  // Obsługa dwóch formatów (stary „danie/ilosc/godzina” i nowy „items/when”)
+  const items = parsed.items?.length
+    ? parsed.items.map(i=>{
+        const nm = i.name || parsed.danie || 'pozycja';
+        const q  = i.qty ?? parsed.ilosc ?? 1;
+        const wo = i.without?.length ? ` (bez: ${i.without.join(', ')})` : '';
+        return `• ${q} × ${nm}${wo}`;
+      }).join('\n')
+    : `• ${(parsed.ilosc??1)} × ${(parsed.danie||'pozycja')}${(parsed.opcje?.length?` (bez: ${parsed.opcje.join(', ')})`:'')}`;
 
-// Public API
+  const resto = parsed.restaurant_name || parsed.restaurant_id || '-';
+  const when  = parsed.when || parsed.godzina || '-';
+
+  return `🧾 Zamówienie:
+Restauracja: ${resto}
+${items}
+Czas: ${when}`;
+}
+
+// Publiczne API – wywołaj np. z „chipów” w UI
 window.sendToAssistant = async function(text){
-  if(!text || !String(text).trim()){ show('🙂 Powiedz lub wpisz, co zamówić…'); return; }
+  if(!text || !String(text).trim()){ show('🙂 Powiedz lub kliknij pozycję…'); return; }
   show('⏳ Przetwarzam…');
 
-  const ok = await healthCheck();
-  if(!ok) return;
+  const ok = await health();
+  if(!ok){ show('❌ Backend niedostępny (health)'); return; }
 
   try{
     const nlu = await callNLU(text);
-    if(nlu && nlu.ok){
-      const r = nlu.parsed || {};
-      const resto = r.restaurant_name || r.restaurant_id || r.danie || '–';
-      const when  = r.when || r.godzina || '–';
-      const items = (r.items || []).map(i=>{
-        const nm = i.name || r.danie || 'pozycja';
-        const q  = i.qty ?? r.ilosc ?? 1;
-        const wo = (i.without && i.without.length) ? ` (bez: ${i.without.join(', ')})` :
-                   (r.opcje && r.opcje.length) ? ` (bez: ${r.opcje.join(', ')})` : '';
-        return `• ${q} × ${nm}${wo}`;
-      }).join('\n') || `• ${(r.ilosc ?? 1)} × ${(r.danie || 'pozycja')}` + ((r.opcje?.length)?` (bez: ${r.opcje.join(', ')})`:'');
-      show(`🧾 Zamówienie:
-Restauracja: ${resto}
-${items}
-Czas: ${when}`);
-      // show('🧠 ' + pretty(nlu.parsed)); // debug
+    if(nlu?.ok){
+      show(renderOrderSummary(nlu.parsed || {}));
     }else{
       show('⚠️ NLU: odpowiedź nieoczekiwana');
     }
   }catch(e){
-    const msg = e?.message || String(e);
-    show(`❌ Błąd NLU. ${msg.includes('Failed to fetch') ? 'Sprawdź adres BACKEND_URL i CORS.' : msg}`);
+    show(`❌ Błąd NLU: ${e.message||e}`);
   }
 };
 
-// Mic (opcjonalnie)
+// Głos (Web Speech API; mobilny Chrome/Android działa, iOS bywa kapryśny)
 (function setupMic(){
-  if(!$micBtn) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){
-    $micBtn.addEventListener('click', ()=> show('🎤 Brak wsparcia rozpoznawania mowy w tej przeglądarce.'));
-    return;
-  }
+  if(!$micBtn) return;
+  if(!SR){ $micBtn.onclick = ()=> show('🎤 Brak wsparcia rozpoznawania mowy w tej przeglądarce.'); return; }
+
   const rec = new SR();
   rec.lang = 'pl-PL'; rec.interimResults = false; rec.maxAlternatives = 1;
-  let listening = false;
-  const setLabel = t => $micBtn.setAttribute('aria-label', t);
 
-  rec.onstart = ()=>{ listening=true; setLabel('Nasłuchiwanie…'); show('🎙️ Słucham…'); };
-  rec.onerror = e => { listening=false; setLabel('Błąd mikrofonu'); show(`🎤 Błąd: ${e.error||e.message||e}`); };
-  rec.onend   = ()=>{ listening=false; setLabel('Naciśnij, aby mówić'); };
-  rec.onresult= e => {
+  let listening = false;
+  function setLabel(t){ $micBtn.setAttribute('aria-label', t); }
+
+  rec.onstart = ()=>{ listening = true; setLabel('Nasłuchiwanie…'); show('🎙️ Słucham…'); };
+  rec.onerror = e => { listening = false; setLabel('Błąd mikrofonu'); show(`🎤 Błąd: ${e.error||e}`); };
+  rec.onend = ()=>{ listening = false; setLabel('Naciśnij, aby mówić'); };
+  rec.onresult = e => {
     const t = e.results?.[0]?.[0]?.transcript;
     if(t) window.sendToAssistant(t); else show('🙂 Nic nie zrozumiałem, spróbuj jeszcze raz.');
   };
 
-  $micBtn.addEventListener('click', ()=>{
-    if(listening){ try{ rec.stop(); }catch{} return; }
+  $micBtn.onclick = ()=>{
+    if(listening){ try{ rec.stop(); }catch{}; return; }
     try{ rec.start(); }catch(e){ show(`🎤 Nie mogę uruchomić: ${e.message||e}`); }
-  });
+  };
 })();
-
-// Auto-health
-healthCheck().catch(()=>{});

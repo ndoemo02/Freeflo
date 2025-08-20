@@ -87,4 +87,141 @@ const BUBBLE_HELPERS = `
     };
 
     _ff.renderOrder = function(r){
-      var o
+      var o = $('ff-order'); if (!o) return;
+      if (!r){ o.hidden = true; o.textContent=''; return; }
+      var items = (r.items||[]).map(function(i){
+        var wo = (i.without && i.without.length) ? (' (bez: ' + i.without.join(', ') + ')') : '';
+        return '• ' + (i.qty || 1) + ' × ' + (i.name || 'pozycja') + wo;
+      }).join('\\n') || '• (brak pozycji)';
+      o.textContent = 'Restauracja: ' + (r.restaurant_name || r.restaurant_id || '–')
+        + '\\n' + items + '\\nCzas: ' + (r.when || '–');
+      o.hidden = false;
+    };
+  })();
+</script>
+`;
+
+/* ------------------ Patcher index.html ------------------ */
+function patchIndex(){
+  let html = read(INDEX);
+  if(!html) return false;
+
+  // 1) Dymek HTML
+  html = upsert(html, 'FF:BUBBLE-START', 'FF:BUBBLE-END', BUBBLE_HTML.trim());
+
+  // 2) CSS i anty-highlight
+  html = upsert(html, 'FF:UI-CSS-START', 'FF:UI-CSS-END', UI_CSS.trim());
+
+  // 3) Helpery JS
+  html = upsert(html, 'FF:UI-HELPERS-START', 'FF:UI-HELPERS-END', BUBBLE_HELPERS.trim());
+
+  // 4) Dodaj id do logo jeśli go brak (pierwszy obrazek z nazwą freeflow)
+  html = html.replace(
+    /<img([^>]*)(src="[^"]*freeflow[^"]*png"[^>]*)>/i,
+    (m,g1,g2)=> `<img${g1.replace(/\s+id="ff-logo"/,'')} id="ff-logo" ${g2}>`
+  );
+
+  write(INDEX, html);
+  return true;
+}
+
+/* ------------------ Patcher app.js / assistant.js ------------------ */
+
+function ensureMicHooks(filePath){
+  if (!fs.existsSync(filePath)) return false;
+  let js = read(filePath);
+
+  // onstart/onend – ustaw/usuń klasę .listening + komunikaty
+  if (!/onstart\s*=\s*/.test(js) || !/onend\s*=\s*/.test(js)){
+    // Pragmatycznie: próbujemy dodać wrapper nad start/stop Web Speech API
+    // Szukamy konstrukcji rozpoznawania mowy
+    if (!/new\s+webkitSpeechRecognition|new\s+SpeechRecognition/i.test(js)){
+      // nic nie robimy – projekt może mieć inny mechanizm
+    }
+  }
+
+  // Uniwersalne hooki – dodamy globalne funkcje jeżeli są wołane w Twoim kodzie
+  if (!js.includes('function ffOnSpeechStart()')){
+    js += `
+
+/* FF hooks – nasłuch */
+function ffOnSpeechStart(){
+  try{ document.documentElement.classList.add('listening'); }catch(e){}
+  if (window._ff && _ff.show) _ff.show('🎙️ Słucham…');
+}
+function ffOnSpeechEnd(){
+  try{ document.documentElement.classList.remove('listening'); }catch(e){}
+}
+function ffOnPartialTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}
+function ffOnFinalTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}
+`;
+  }
+
+  write(filePath, js);
+  return true;
+}
+
+function wireOrderPreviewTargets(){
+  // renderOrder wywołamy w asystencie: po NLU i po zmianie koszyka
+  // Spróbujmy podedytować freeflow-assistant.js i cart.js
+  let touched = false;
+
+  if (fs.existsSync(ASSIST)){
+    let a = read(ASSIST);
+
+    if (!/renderOrder\s*\(/.test(a)){
+      // heurystyka: po funkcji, która zwraca wynik NLU / sendToAssistant
+      a = a.replace(/(function\s+sendToAssistant\s*\([^\)]*\)\s*\{[\s\S]*?)(\n\})/,
+        (m,g1,g2)=> g1 + `\n  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(result); }catch(e){}\n` + g2
+      );
+      // inne miejsce: gdy wynik NLU dostępny jako 'r'
+      a = a.replace(/(\br\s*=\s*await\s+[^\n;]+;[^\n]*\n)/,
+        `$1  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(r); }catch(e){}\n`
+      );
+      write(ASSIST, a);
+      touched = true;
+    }
+  }
+
+  if (fs.existsSync(CART)){
+    let c = read(CART);
+    if (!/renderOrder\s*\(/.test(c)){
+      c = c.replace(/(function\s+updateCartUI\s*\([^\)]*\)\s*\{)/,
+        `$1\n  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(window.currentOrder); }catch(e){}\n`
+      );
+      write(CART, c);
+      touched = true;
+    }
+  }
+
+  return touched;
+}
+
+/* ------------------ Główne sterowanie ------------------ */
+function applyAll(){
+  const a = patchIndex();
+  const b = ensureMicHooks(APP);
+  const c = ensureMicHooks(ASSIST);
+  const d = wireOrderPreviewTargets();
+
+  console.log('codemod done:', {index:a, app:b, assistant:c, orderPreview:d});
+}
+
+function help(){
+  console.log(`
+Usage:
+  node .github/scripts/codemod.js "/ui bubble"
+  node .github/scripts/codemod.js "/ui full"
+
+Komendy:
+  /ui bubble   – dymek + CSS + helpery + hooki (zalecane)
+  /ui full     – to samo (alias)
+`.trim());
+}
+
+if (/^\/ui\s+(bubble|full)/.test(CMD)) applyAll();
+else help();

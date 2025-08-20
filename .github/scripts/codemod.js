@@ -1,177 +1,90 @@
 // .github/scripts/codemod.js
+// ChatOps codemod – wstrzykuje dymek (transkrypcja + podgląd zamówienia),
+// pulsowanie logo/mic podczas nasłuchu i fix tap-highlight na Androidzie.
+
 const fs   = require('fs');
 const path = require('path');
 
-const CMD = (process.argv[2] || '/help').trim();
-
-// Helpers
-const read  = (p) => fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
-const write = (p, s) => fs.writeFileSync(p, s, 'utf8');
-const ROOT  = process.cwd();
-
-// Pliki projektu – dopasuj nazwę jeśli u Ciebie inaczej
+const CMD  = (process.argv[2] || '').trim();
+const ROOT = process.cwd();
 const INDEX = path.join(ROOT, 'index.html');
-const ASSIST= path.join(ROOT, 'freeflow-assistant.js');
+const APP   = path.join(ROOT, 'app.js');          // główny skrypt UI
+const ASSIST= path.join(ROOT, 'freeflow-assistant.js'); // asystent/NLU (jeśli masz)
+const CART  = path.join(ROOT, 'cart.js');         // opcjonalnie
 
-// ---- Patches ----
+function read(p){ return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : ''; }
+function write(p,s){ fs.writeFileSync(p, s, 'utf8'); }
 
-/** Nadaje klasę .glass kafelkom + wstrzykuje styl gdy brak */
-function ensureGlassChips(html, enable = true) {
-  // 1) Dopisz klasę "glass" na przyciski szybkich akcji
-  html = html.replace(
-    /(<div class="bottom-buttons"[^>]*>[\s\S]*?)(<\/div>\s*<\/main>)/,
-    (m, g1, g2) => {
-      let section = g1;
-      section = section.replace(/<button([^>]*?)class="([^"]*?)"([^>]*)>/g, (_m, a1, cls, a3) => {
-        const has = cls.includes('glass');
-        const newCls = enable ? (has ? cls : (cls + ' glass')) : cls.replace(/\bglass\b/g, '').replace(/\s{2,}/g,' ').trim();
-        return `<button${a1}class="${newCls}"${a3}>`;
-      });
-      return section + g2;
+function upsert(str, markerStart, markerEnd, payload){
+  const s = `<!-- ${markerStart} -->`;
+  const e = `<!-- ${markerEnd} -->`;
+  let out = str;
+  const has = str.includes(s) && str.includes(e);
+  if (has){
+    out = out.replace(
+      new RegExp(`${s}[\\s\\S]*?${e}`,'m'),
+      `${s}\n${payload}\n${e}`
+    );
+  } else {
+    // próbujemy tuż przed </body> lub na końcu
+    if (out.includes('</body>')){
+      out = out.replace('</body>', `${s}\n${payload}\n${e}\n</body>`);
+    } else {
+      out += `\n${s}\n${payload}\n${e}\n`;
     }
-  );
-
-  // 2) Dorzuć definicję .glass jeśli nie istnieje
-  const hasGlass = /\.glass\s*\{/.test(html);
-  if (enable && !hasGlass) {
-    html = html.replace(/<\/style>/, `
-    .glass{
-      background: rgba(0,0,0,.18);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      border:1px solid rgba(255,255,255,.06);
-      box-shadow:0 10px 32px rgba(0,0,0,.35), inset 0 0 24px rgba(0,0,0,.25);
-    }
-    </style>`);
   }
-  return html;
+  return out;
 }
 
-/** Przywraca topbar z menu i koszykiem (jeśli brakuje) */
-function ensureMenuCart(html) {
-  if (/id="menuBtn"/.test(html) && /id="cartBtn"/.test(html)) {
-    return html; // wygląda, że już jest
+/* ------------------ Wstrzyknięcia do index.html ------------------ */
+
+const BUBBLE_HTML = `
+<div id="ff-bubble" aria-live="polite" aria-atomic="true" class="bubble">
+  <div id="ff-transcript">Powiedz lub kliknij pozycję z menu…</div>
+  <pre id="ff-order" hidden></pre>
+</div>
+`;
+
+const UI_CSS = `
+<style id="ff-ui-patch">
+  /* Dymek */
+  .bubble {
+    position: fixed; right: 1rem; top: 6.5rem; z-index: 50;
+    padding: .9rem 1rem; border-radius: 1rem; backdrop-filter: blur(10px);
+    background: rgba(0,0,0,.45); color:#fff; max-width: min(88vw,520px);
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
   }
-  // Wstawiam uproszczony blok topbaru tuż po <body>
-  return html.replace(/<body[^>]*>/, (m) => m + `
-  <header class="topbar">
-    <div>
-      <div class="brand">
-        <img src="./Freeflow-logo.png" alt="logo" style="width:36px;height:36px;border-radius:8px"/>
-        <span class="accent">Free</span>Flow
-      </div>
-      <div class="claim">Voice to order</div>
-    </div>
-    <div class="actions">
-      <div class="menu-wrap">
-        <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
-        <div id="dropdown" class="dropdown glass">
-          <div class="dd-item expand" id="payExpand">Płatność</div>
-          <div class="dd-sub" id="paySub">
-            <div class="dd-item" data-pay="card">Karta</div>
-            <div class="dd-item" data-pay="blik">BLIK</div>
-            <div class="dd-item" data-pay="paypal">PayPal</div>
-          </div>
-          <div class="dd-item" id="ordersBtn">Twoje zamówienia</div>
-          <div class="dd-item" id="settingsBtn">Ustawienia</div>
-          <div class="dd-item" id="helpBtn">Pomoc</div>
-        </div>
-      </div>
-      <div style="position:relative">
-        <button class="iconbtn" id="cartBtn" aria-label="Koszyk">🛒</button>
-        <div class="badge" id="cartBadge">0</div>
-      </div>
-    </div>
-  </header>
-  `);
-}
+  #ff-order { margin:.25rem 0 0; white-space: pre-wrap;
+     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-/** Szybsza transkrypcja – najpierw pokaż tekst użytkownika, potem dopiero wynik NLU */
-function tweakAssistant(js, fast = true) {
-  if (!js) return js;
-  // show(...) tuż po kliknięciu/rozpoznaniu — wyświetl input usera
-  js = js.replace(
-    /window\.sendToAssistant\s*=\s*async function\s*\(text\)\s*\{[\s\S]*?show\('[^']*'\);\s*\/\/ upewnij się, że backend żyje/,
-    (m) => m.replace(/show\('[^']*'\);/, fast
-      ? `show(text || '…'); // fast transcript`
-      : `show('⏳ Przetwarzam…'); // normal`
-    )
-  );
-  return js;
-}
-
-/** Pasek podsumowania zamówienia (czytelne ładowanie when/items) */
-function summarizeBox(html) {
-  if (/id="transcript"/.test(html)) return html;
-  return html.replace(/<main class="wrap">/, (m)=> m + `
-    <div id="transcript" class="bubble glass">Powiedz lub kliknij pozycję z menu…</div>
-  `);
-}
-
-// ---- Router komend ----
-
-function applyCommand(cmd) {
-  const base = cmd.split(/\s+/)[0];
-
-  if (base === '/help') {
-    console.log(`
-Dostępne komendy:
-/ui glass on        – szklane (przezroczyste) kafelki
-/ui glass off       – wyłącz szklane kafelki
-/ui menu            – przywróć topbar z menu i koszykiem
-/ui fast on         – szybkie echo transkryptu (najpierw pokazuje tekst usera)
-/ui fast off        – klasyczne "Przetwarzam..."
-/ui summary         – upewnij się, że jest bąbel z podsumowaniem
-    `.trim());
-    return;
+  /* Pulsowanie podczas nasłuchu */
+  @keyframes ff-pulse {
+    from { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,140,0,.55) }
+    to   { transform: scale(1.03); box-shadow: 0 0 20px 12px rgba(255,140,0,0) }
+  }
+  .listening #ff-logo, .listening #micBtn {
+    animation: ff-pulse 900ms ease-in-out infinite alternate;
   }
 
-  if (base === '/ui') {
-    const [, feature, state] = cmd.split(/\s+/);
-    // Operujemy na index.html / freeflow-assistant.js
-    let html = read(INDEX);
-    let js   = read(ASSIST);
+  /* Tap highlight / zaznaczanie – Android */
+  * { -webkit-tap-highlight-color: transparent; }
+  a, button { outline: none; }
+  img, svg { -webkit-user-drag: none; user-select: none; }
+  body { -webkit-user-select:none; -ms-user-select:none; user-select:none; }
+  input, textarea, [contenteditable="true"] { user-select:text !important; }
+</style>
+`;
 
-    if (!html) {
-      console.log('index.html nie znaleziony – nic do zrobienia.');
-      return;
-    }
+/* ------------------ Wstrzyki JS (helpery w indexie) ------------------ */
+const BUBBLE_HELPERS = `
+<script id="ff-ui-helpers">
+  (function(){
+    function $(id){ return document.getElementById(id); }
+    window._ff = window._ff || {};
 
-    switch (feature) {
-      case 'glass': {
-        const on = (state || '').toLowerCase() !== 'off';
-        html = ensureGlassChips(html, on);
-        write(INDEX, html);
-        console.log(`OK: glass ${on ? 'ON' : 'OFF'}`);
-        break;
-      }
-      case 'menu': {
-        html = ensureMenuCart(html);
-        write(INDEX, html);
-        console.log('OK: menu + koszyk dopięte');
-        break;
-      }
-      case 'fast': {
-        const on = (state || '').toLowerCase() !== 'off';
-        js = tweakAssistant(js, on);
-        if (js) write(ASSIST, js);
-        console.log(`OK: fast transcript ${on ? 'ON' : 'OFF'}`);
-        break;
-      }
-      case 'summary': {
-        html = summarizeBox(html);
-        write(INDEX, html);
-        console.log('OK: transcript / summary box dopięty');
-        break;
-      }
-      default:
-        console.log('Nieznana opcja /ui. Użyj: /help');
-    }
-    return;
-  }
+    _ff.show = function(text){
+      var t = $('ff-transcript'); if (t) t.textContent = text || '';
+    };
 
-  console.log('Nieznana komenda. Użyj /help.');
-}
-
-// ---- Run ----
-applyCommand(CMD);
+    _ff.renderOrder = function(r){
+      var o

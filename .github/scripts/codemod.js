@@ -1,227 +1,177 @@
 // .github/scripts/codemod.js
-// ChatOps codemod – wstrzykuje dymek (transkrypcja + podgląd zamówienia),
-// pulsowanie logo/mic podczas nasłuchu i fix tap-highlight na Androidzie.
-
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 
-const CMD  = (process.argv[2] || '').trim();
+const CMD = (process.argv[2] || '').trim();
+
+// Helpers
 const ROOT = process.cwd();
-const INDEX = path.join(ROOT, 'index.html');
-const APP   = path.join(ROOT, 'app.js');          // główny skrypt UI
-const ASSIST= path.join(ROOT, 'freeflow-assistant.js'); // asystent/NLU (jeśli masz)
-const CART  = path.join(ROOT, 'cart.js');         // opcjonalnie
+const INDEX = ['index.html','Index.html','INDEX.html']
+  .map(f => path.join(ROOT, f)).find(p => fs.existsSync(p));
+const APPJS = ['app.js','App.js','scripts/app.js','assets/app.js']
+  .map(f => path.join(ROOT, f)).find(p => fs.existsSync(p));
 
-function read(p){ return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : ''; }
-function write(p,s){ fs.writeFileSync(p, s, 'utf8'); }
+function read(p){ return fs.existsSync(p) ? fs.readFileSync(p,'utf8') : ''; }
+function write(p,s){ fs.writeFileSync(p,s,'utf8'); console.log('write', path.relative(ROOT,p)); }
 
-function upsert(str, markerStart, markerEnd, payload){
-  const s = `<!-- ${markerStart} -->`;
-  const e = `<!-- ${markerEnd} -->`;
-  let out = str;
-  const has = str.includes(s) && str.includes(e);
-  if (has){
-    out = out.replace(
-      new RegExp(`${s}[\\s\\S]*?${e}`,'m'),
-      `${s}\n${payload}\n${e}`
-    );
-  } else {
-    // próbujemy tuż przed </body> lub na końcu
-    if (out.includes('</body>')){
-      out = out.replace('</body>', `${s}\n${payload}\n${e}\n</body>`);
-    } else {
-      out += `\n${s}\n${payload}\n${e}\n`;
-    }
+// ---- Patches ----
+function ensureMicButton(html){
+  if (!html) return html;
+  // usuń anchor/overlay na całą stronę (powód "niebieskiego" podświetlenia)
+  html = html.replace(/<a([^>]*?)id=["']?micBtn["']?([^>]*)>([\s\S]*?)<\/a>/i, '<button id="micBtn" class="mic-btn no-tap">$3</button>');
+  if (!/id=["']micBtn["']/.test(html)){
+    // wstaw przycisk mikrofonu w okolice nagłówka/logo
+    html = html.replace(/(<body[^>]*>)/i, `$1
+      <button id="micBtn" class="mic-btn no-tap" aria-label="Mikrofon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19v3h2v-3h-2z"/>
+        </svg>
+      </button>
+    `);
   }
-  return out;
+  // dymki: transkrypcja + zamówienie
+  if (!/id=["']liveTranscript["']/.test(html) || !/id=["']orderSummary["']/.test(html)){
+    html = html.replace(/(<\/body>)/i, `
+      <div id="liveTranscript" class="glass-bubble" aria-live="polite" style="display:none"></div>
+      <div id="orderSummary" class="glass-bubble small" style="display:none"></div>
+      $1
+    `);
+  }
+  return html;
 }
 
-/* ------------------ Wstrzyknięcia do index.html ------------------ */
+function ensureStyles(html){
+  if (!html) return html;
+  if (html.includes('/* freeflow-voice-styles */')) return html;
+  const css = `
+  <style id="freeflow-voice-styles">
+  /* freeflow-voice-styles */
+  .no-tap{ -webkit-tap-highlight-color:transparent; }
+  .mic-btn{ position:fixed; top:20px; right:20px; z-index:50; border:0; outline:0;
+    width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,.06);
+    color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(0,0,0,.25);
+    display:flex; align-items:center; justify-content:center; }
+  .mic-btn.pulse::after{ content:""; position:absolute; inset:0; border-radius:16px;
+    animation:pulse 1.3s ease-out infinite; box-shadow:0 0 0 0 rgba(255,153,0,.55); }
+  @keyframes pulse { to { box-shadow:0 0 0 18px rgba(255,153,0,0); } }
 
-const BUBBLE_HTML = `
-<div id="ff-bubble" aria-live="polite" aria-atomic="true" class="bubble">
-  <div id="ff-transcript">Powiedz lub kliknij pozycję z menu…</div>
-  <pre id="ff-order" hidden></pre>
-</div>
-`;
+  .glass-bubble{ position:fixed; left:16px; right:16px; bottom:124px; z-index:45;
+    padding:14px 16px; border-radius:18px; background:rgba(20,20,20,.55); color:#fff;
+    backdrop-filter:blur(14px); box-shadow:0 10px 30px rgba(0,0,0,.25); font-size:15px; }
+  .glass-bubble.small{ bottom:64px; opacity:.95; }
+  </style>`;
+  // wstrzykniemy tuż przed </head> lub na początku <body>
+  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, css + '\n</head>');
+  return html.replace(/(<body[^>]*>)/i, '$1\n' + css);
+}
 
-const UI_CSS = `
-<style id="ff-ui-patch">
-  /* Dymek */
-  .bubble {
-    position: fixed; right: 1rem; top: 6.5rem; z-index: 50;
-    padding: .9rem 1rem; border-radius: 1rem; backdrop-filter: blur(10px);
-    background: rgba(0,0,0,.45); color:#fff; max-width: min(88vw,520px);
-    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+function ensureSpeechJS(appJs){
+  if (!appJs) return appJs;
+  if (appJs.includes('handleFinalTranscript(')) return appJs; // już wstawione
+
+  const block = `
+// === FreeFlow Voice (interim + final) ===
+(function(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('micBtn');
+  const live = document.getElementById('liveTranscript');
+  const orderBox = document.getElementById('orderSummary');
+
+  function show(el, text){ if(!el) return; el.style.display = text ? 'block':'none'; el.textContent = text || ''; }
+  function addToCartSimple(item){
+    try {
+      window.cart = window.cart || [];
+      window.cart.push(item);
+      // jeżeli masz własny renderer koszyka – wywołaj go tutaj:
+      if (window.updateCartBadge) window.updateCartBadge();
+    } catch(e){}
   }
-  #ff-order { margin:.25rem 0 0; white-space: pre-wrap;
-     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-  /* Pulsowanie podczas nasłuchu */
-  @keyframes ff-pulse {
-    from { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,140,0,.55) }
-    to   { transform: scale(1.03); box-shadow: 0 0 20px 12px rgba(255,140,0,0) }
+  function handleFinalTranscript(text){
+    const lower = text.toLowerCase();
+    const qty = (lower.match(/\\b(\\d+)\\s*x?\\b/) || [, '1'])[1];
+    const time = (lower.match(/\\b([01]?\\d|2[0-3]):[0-5]\\d\\b/) || [, '—'])[1];
+    let dish = lower.replace(/\\b(\\d+)\\s*x?\\b/, '').replace(/\\bna\\s+[01]?\\d:[0-5]\\d\\b/,'').trim();
+    if (!dish) dish = 'pozycja';
+    show(orderBox, \`Zamówienie: \${qty} × \${dish} • Czas: \${time}\`);
+    addToCartSimple({ name: dish, qty: Number(qty), time });
   }
-  .listening #ff-logo, .listening #micBtn {
-    animation: ff-pulse 900ms ease-in-out infinite alternate;
+
+  function ensureSR(){
+    if (!SR){ show(live, 'Ta przeglądarka nie wspiera rozpoznawania mowy.'); return null; }
+    const r = new SR();
+    r.lang = 'pl-PL';
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+    return r;
   }
 
-  /* Tap highlight / zaznaczanie – Android */
-  * { -webkit-tap-highlight-color: transparent; }
-  a, button { outline: none; }
-  img, svg { -webkit-user-drag: none; user-select: none; }
-  body { -webkit-user-select:none; -ms-user-select:none; user-select:none; }
-  input, textarea, [contenteditable="true"] { user-select:text !important; }
-</style>
-`;
+  function startListen(){
+    const r = ensureSR(); if (!r) return;
+    micBtn && micBtn.classList.add('pulse');
+    show(live, 'Słucham…');
 
-/* ------------------ Wstrzyki JS (helpery w indexie) ------------------ */
-const BUBBLE_HELPERS = `
-<script id="ff-ui-helpers">
-  (function(){
-    function $(id){ return document.getElementById(id); }
-    window._ff = window._ff || {};
+    let finalText = '';
 
-    _ff.show = function(text){
-      var t = $('ff-transcript'); if (t) t.textContent = text || '';
+    r.onresult = (e)=>{
+      let interim=''; 
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const t = e.results[i][0].transcript.trim();
+        if (e.results[i].isFinal) finalText += (finalText?' ':'') + t; else interim += t + ' ';
+      }
+      if (interim) show(live, interim);
+      if (finalText){
+        show(live, finalText + ' ✔');
+        handleFinalTranscript(finalText);
+        finalText = '';
+      }
     };
+    r.onerror = (e)=> show(live, 'Błąd: '+e.error);
+    r.onend   = ()=> { micBtn && micBtn.classList.remove('pulse'); setTimeout(()=>show(live,''), 1200); };
+    r.start();
+  }
 
-    _ff.renderOrder = function(r){
-      var o = $('ff-order'); if (!o) return;
-      if (!r){ o.hidden = true; o.textContent=''; return; }
-      var items = (r.items||[]).map(function(i){
-        var wo = (i.without && i.without.length) ? (' (bez: ' + i.without.join(', ') + ')') : '';
-        return '• ' + (i.qty || 1) + ' × ' + (i.name || 'pozycja') + wo;
-      }).join('\\n') || '• (brak pozycji)';
-      o.textContent = 'Restauracja: ' + (r.restaurant_name || r.restaurant_id || '–')
-        + '\\n' + items + '\\nCzas: ' + (r.when || '–');
-      o.hidden = false;
-    };
-  })();
-</script>
+  if (micBtn) micBtn.addEventListener('click', startListen);
+})();
+  // === /FreeFlow Voice ===
 `;
+  return appJs + '\n' + block;
+}
 
-/* ------------------ Patcher index.html ------------------ */
-function patchIndex(){
+// ---- Driver ----
+function runVoiceOn(){
+  if (!INDEX) throw new Error('Nie znaleziono index.html');
   let html = read(INDEX);
-  if(!html) return false;
-
-  // 1) Dymek HTML
-  html = upsert(html, 'FF:BUBBLE-START', 'FF:BUBBLE-END', BUBBLE_HTML.trim());
-
-  // 2) CSS i anty-highlight
-  html = upsert(html, 'FF:UI-CSS-START', 'FF:UI-CSS-END', UI_CSS.trim());
-
-  // 3) Helpery JS
-  html = upsert(html, 'FF:UI-HELPERS-START', 'FF:UI-HELPERS-END', BUBBLE_HELPERS.trim());
-
-  // 4) Dodaj id do logo jeśli go brak (pierwszy obrazek z nazwą freeflow)
-  html = html.replace(
-    /<img([^>]*)(src="[^"]*freeflow[^"]*png"[^>]*)>/i,
-    (m,g1,g2)=> `<img${g1.replace(/\s+id="ff-logo"/,'')} id="ff-logo" ${g2}>`
-  );
-
+  html = ensureMicButton(html);
+  html = ensureStyles(html);
   write(INDEX, html);
-  return true;
-}
 
-/* ------------------ Patcher app.js / assistant.js ------------------ */
-
-function ensureMicHooks(filePath){
-  if (!fs.existsSync(filePath)) return false;
-  let js = read(filePath);
-
-  // onstart/onend – ustaw/usuń klasę .listening + komunikaty
-  if (!/onstart\s*=\s*/.test(js) || !/onend\s*=\s*/.test(js)){
-    // Pragmatycznie: próbujemy dodać wrapper nad start/stop Web Speech API
-    // Szukamy konstrukcji rozpoznawania mowy
-    if (!/new\s+webkitSpeechRecognition|new\s+SpeechRecognition/i.test(js)){
-      // nic nie robimy – projekt może mieć inny mechanizm
-    }
+  let js = APPJS ? read(APPJS) : '';
+  if (APPJS){
+    js = ensureSpeechJS(js);
+    write(APPJS, js);
+  } else {
+    // jeśli brak app.js – utwórz minimalny
+    const target = path.join(ROOT, 'app.js');
+    write(target, ensureSpeechJS('// app bootstrap\\n'));
   }
+}
 
-  // Uniwersalne hooki – dodamy globalne funkcje jeżeli są wołane w Twoim kodzie
-  if (!js.includes('function ffOnSpeechStart()')){
-    js += `
-
-/* FF hooks – nasłuch */
-function ffOnSpeechStart(){
-  try{ document.documentElement.classList.add('listening'); }catch(e){}
-  if (window._ff && _ff.show) _ff.show('🎙️ Słucham…');
-}
-function ffOnSpeechEnd(){
-  try{ document.documentElement.classList.remove('listening'); }catch(e){}
-}
-function ffOnPartialTranscript(t){
-  if (window._ff && _ff.show) _ff.show(t||'');
-}
-function ffOnFinalTranscript(t){
-  if (window._ff && _ff.show) _ff.show(t||'');
-}
-`;
+function main(){
+  console.log('CMD:', CMD);
+  if (CMD.startsWith('/ui voice-on')) {
+    runVoiceOn();
+    return;
   }
-
-  write(filePath, js);
-  return true;
-}
-
-function wireOrderPreviewTargets(){
-  // renderOrder wywołamy w asystencie: po NLU i po zmianie koszyka
-  // Spróbujmy podedytować freeflow-assistant.js i cart.js
-  let touched = false;
-
-  if (fs.existsSync(ASSIST)){
-    let a = read(ASSIST);
-
-    if (!/renderOrder\s*\(/.test(a)){
-      // heurystyka: po funkcji, która zwraca wynik NLU / sendToAssistant
-      a = a.replace(/(function\s+sendToAssistant\s*\([^\)]*\)\s*\{[\s\S]*?)(\n\})/,
-        (m,g1,g2)=> g1 + `\n  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(result); }catch(e){}\n` + g2
-      );
-      // inne miejsce: gdy wynik NLU dostępny jako 'r'
-      a = a.replace(/(\br\s*=\s*await\s+[^\n;]+;[^\n]*\n)/,
-        `$1  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(r); }catch(e){}\n`
-      );
-      write(ASSIST, a);
-      touched = true;
-    }
+  if (CMD.startsWith('/ui test')){
+    // przykładowa mała modyfikacja sprawdzająca działanie
+    if (!INDEX) throw new Error('Nie znaleziono index.html');
+    let html = read(INDEX).replace(/Złóż zamówienie/,'Złóż zamówienie 🚀');
+    write(INDEX, html);
+    return;
   }
-
-  if (fs.existsSync(CART)){
-    let c = read(CART);
-    if (!/renderOrder\s*\(/.test(c)){
-      c = c.replace(/(function\s+updateCartUI\s*\([^\)]*\)\s*\{)/,
-        `$1\n  try{ if(window._ff && _ff.renderOrder) _ff.renderOrder(window.currentOrder); }catch(e){}\n`
-      );
-      write(CART, c);
-      touched = true;
-    }
-  }
-
-  return touched;
+  // brak dopasowania — nic nie rób, żeby job nie padł
+  console.log('Nieznane polecenie, brak zmian.');
 }
 
-/* ------------------ Główne sterowanie ------------------ */
-function applyAll(){
-  const a = patchIndex();
-  const b = ensureMicHooks(APP);
-  const c = ensureMicHooks(ASSIST);
-  const d = wireOrderPreviewTargets();
-
-  console.log('codemod done:', {index:a, app:b, assistant:c, orderPreview:d});
-}
-
-function help(){
-  console.log(`
-Usage:
-  node .github/scripts/codemod.js "/ui bubble"
-  node .github/scripts/codemod.js "/ui full"
-
-Komendy:
-  /ui bubble   – dymek + CSS + helpery + hooki (zalecane)
-  /ui full     – to samo (alias)
-`.trim());
-}
-
-if (/^\/ui\s+(bubble|full)/.test(CMD)) applyAll();
-else help();
+main();

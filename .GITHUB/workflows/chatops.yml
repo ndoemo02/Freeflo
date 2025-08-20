@@ -2,17 +2,17 @@ name: ChatOps Codemods
 
 on:
   issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
-  workflow_dispatch: {}
+    types: [created]     # uruchamia się, gdy DODASZ komentarz
+  workflow_dispatch: {}  # można też puścić ręcznie z Actions
 
 permissions:
-  contents: write   # pozwala GITHUB_TOKEN robić commit
+  contents: write        # pozwala pushać commit z joba
+  issues: read
+  pull-requests: read
 
 jobs:
   codemod:
-    if: contains(github.event.comment.body, '/ui ') || contains(github.event.comment.body, '/menu ')
+    if: contains(github.event.comment.body, '/ui ') || contains(github.event_name, 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,17 +20,25 @@ jobs:
           fetch-depth: 0
 
       - name: Parse command
-        id: parse
-        run: echo "CMD<<EOF" >> $GITHUB_OUTPUT && echo "${{ github.event.comment.body }}" >> $GITHUB_OUTPUT && echo "EOF" >> $GITHUB_OUTPUT
+        id: cmd
+        run: |
+          echo "RAW=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
+          # Bezpieczny fallback na ręczne uruchomienie
+          echo "CMD=$(echo "${{ github.event.comment.body }}" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
 
       - name: Run codemod
-        run: |
-          node -v || sudo apt-get update && sudo apt-get install -y nodejs npm
-          mkdir -p .github/scripts
-          node .github/scripts/codemod.js "${{ steps.parse.outputs.CMD }}"
+        run: node .github/scripts/codemod.js "${{ steps.cmd.outputs.CMD || '/ui help' }}"
 
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: chatops codemod -> ${{ steps.parse.outputs.CMD }}"
-          branch: ${{ github.ref_name }}
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chatops: apply ${{
+              steps.cmd.outputs.CMD
+            }}"
+            git push
+          else
+            echo "No changes."
+          fi

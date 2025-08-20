@@ -2,22 +2,18 @@ name: ChatOps Codemods
 
 on:
   issue_comment:
-    types: [created]     # odpala się po DODANIU komentarza
-  workflow_dispatch: {}  # można uruchomić ręcznie z zakładki Actions
+    types: [created]
+  workflow_dispatch: {}
 
 permissions:
-  contents: write        # pozwala commitować na branch
+  contents: write
   issues: read
   pull-requests: write
 
 jobs:
   codemod:
-    # Działa tylko, gdy przyszła komenda zaczynająca się od "/"
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.event.comment.body, '/')
+    if: contains(github.event.comment.body, '/ui ')
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,58 +21,36 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Zainstaluj zależności (jeśli są)
-        run: |
-          if [ -f package.json ]; then
-            npm ci || true
-          fi
-
-      - name: Ustal polecenie
+      - name: Parse command
         id: cmd
         run: |
-          RAW="${{ github.event.comment.body }}"
-          # Fallback dla ręcznego uruchomienia bez komentarza
-          if [ -z "$RAW" ]; then RAW="/help"; fi
-          echo "cmd=$(echo "$RAW" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
+          echo "CMD=$(echo "${{ github.event.comment.body }}" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
+          echo "BR=chatops/$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-      - name: Uruchom codemod
+      - name: Run codemod
+        run: node .github/scripts/codemod.js "${{ steps.cmd.outputs.CMD }}"
+
+      - name: Create branch if changes
         run: |
-          node .github/scripts/codemod.js "${{ steps.cmd.outputs.cmd }}"
-
-      - name: Commit do gałęzi dev
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Upewnij się, że branch "dev" istnieje
-          if git show-ref --verify --quiet refs/heads/dev; then
-            git checkout dev
-            git merge --no-edit -s ours origin/dev || true
-            git checkout -
-          else
-            git checkout -b dev
-            git checkout -
-          fi
-
-          # Jeśli są zmiany — commit do dev
           if [ -n "$(git status --porcelain)" ]; then
+            git switch -c "${{ steps.cmd.outputs.BR }}"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "chatops: ${{ steps.cmd.outputs.cmd }}"
-            git push -u origin HEAD:dev
+            git commit -m "chatops: apply ${{ steps.cmd.outputs.CMD }}"
+            git push --set-upstream origin "${{ steps.cmd.outputs.BR }}"
           else
-            echo "Brak zmian."
+            echo "No changes."
+            exit 0
           fi
 
-      - name: Otwórz/odśwież Pull Request do main
+      - name: Open PR
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.cmd.outputs.BR }}
+          title: "ChatOps: ${{ steps.cmd.outputs.CMD }}"
+          body: "Automatyczny PR z ChatOps."
           base: main
-          title: "ChatOps: ${{ steps.cmd.outputs.cmd }}"
-          body: |
-            Zmiany wygenerowane przez ChatOps.
-            Komenda: `${{ steps.cmd.outputs.cmd }}`
-          labels: chatops, automatyczne
-          draft: false

@@ -1,0 +1,44 @@
+name: ChatOps Codemods
+
+on:
+  issue_comment:
+    types: [created]     # uruchamia się, gdy DODASZ komentarz
+  workflow_dispatch: {}  # można też puścić ręcznie z Actions
+
+permissions:
+  contents: write        # pozwala pushać commit z joba
+  issues: read
+  pull-requests: read
+
+jobs:
+  codemod:
+    if: contains(github.event.comment.body, '/ui ') || contains(github.event_name, 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse command
+        id: cmd
+        run: |
+          echo "RAW=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
+          # Bezpieczny fallback na ręczne uruchomienie
+          echo "CMD=$(echo "${{ github.event.comment.body }}" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
+
+      - name: Run codemod
+        run: node .github/scripts/codemod.js "${{ steps.cmd.outputs.CMD || '/ui help' }}"
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chatops: apply ${{
+              steps.cmd.outputs.CMD
+            }}"
+            git push
+          else
+            echo "No changes."
+          fi

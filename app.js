@@ -103,3 +103,19 @@ for(const p of el.pills){
 
 // Optional: expose config on window for quick override in console
 window.__FREEFLOW__ = { CONFIG };
+
+
+/* FF hooks – nasłuch */
+function ffOnSpeechStart(){
+  try{ document.documentElement.classList.add('listening'); }catch(e){}
+  if (window._ff && _ff.show) _ff.show('🎙️ Słucham…');
+}
+function ffOnSpeechEnd(){
+  try{ document.documentElement.classList.remove('listening'); }catch(e){}
+}
+function ffOnPartialTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}
+function ffOnFinalTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}

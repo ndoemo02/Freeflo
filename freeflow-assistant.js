@@ -192,3 +192,19 @@ function openConfirm(r){
 
 // Auto health
 healthCheck().catch(()=>{});
+
+
+/* FF hooks – nasłuch */
+function ffOnSpeechStart(){
+  try{ document.documentElement.classList.add('listening'); }catch(e){}
+  if (window._ff && _ff.show) _ff.show('🎙️ Słucham…');
+}
+function ffOnSpeechEnd(){
+  try{ document.documentElement.classList.remove('listening'); }catch(e){}
+}
+function ffOnPartialTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}
+function ffOnFinalTranscript(t){
+  if (window._ff && _ff.show) _ff.show(t||'');
+}

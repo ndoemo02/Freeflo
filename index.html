@@ -97,7 +97,7 @@
   <header class="topbar">
     <div>
       <div class="brand">
-        <img src="./Freeflow-logo.png" alt="logo"/>
+        <img  id="ff-logo" src="./Freeflow-logo.png" alt="logo"/>
         <span class="accent">Free</span>Flow
       </div>
       <div class="claim">Voice to order — tryb testowy, bez profilowania</div>
@@ -194,5 +194,64 @@
     document.getElementById('helpBtn').addEventListener('click',    ()=> alert('Pomoc (FAQ, kontakt) – demo'));
     document.getElementById('privacyBtn').addEventListener('click', ()=> alert('Prywatność: zero profilowania, dane kasowane po realizacji'));
   </script>
+<!-- FF:BUBBLE-START -->
+<div id="ff-bubble" aria-live="polite" aria-atomic="true" class="bubble">
+  <div id="ff-transcript">Powiedz lub kliknij pozycję z menu…</div>
+  <pre id="ff-order" hidden></pre>
+</div>
+<!-- FF:BUBBLE-END -->
+<!-- FF:UI-CSS-START -->
+<style id="ff-ui-patch">
+  /* Dymek */
+  .bubble {
+    position: fixed; right: 1rem; top: 6.5rem; z-index: 50;
+    padding: .9rem 1rem; border-radius: 1rem; backdrop-filter: blur(10px);
+    background: rgba(0,0,0,.45); color:#fff; max-width: min(88vw,520px);
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+  }
+  #ff-order { margin:.25rem 0 0; white-space: pre-wrap;
+     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* Pulsowanie podczas nasłuchu */
+  @keyframes ff-pulse {
+    from { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,140,0,.55) }
+    to   { transform: scale(1.03); box-shadow: 0 0 20px 12px rgba(255,140,0,0) }
+  }
+  .listening #ff-logo, .listening #micBtn {
+    animation: ff-pulse 900ms ease-in-out infinite alternate;
+  }
+
+  /* Tap highlight / zaznaczanie – Android */
+  * { -webkit-tap-highlight-color: transparent; }
+  a, button { outline: none; }
+  img, svg { -webkit-user-drag: none; user-select: none; }
+  body { -webkit-user-select:none; -ms-user-select:none; user-select:none; }
+  input, textarea, [contenteditable="true"] { user-select:text !important; }
+</style>
+<!-- FF:UI-CSS-END -->
+<!-- FF:UI-HELPERS-START -->
+<script id="ff-ui-helpers">
+  (function(){
+    function $(id){ return document.getElementById(id); }
+    window._ff = window._ff || {};
+
+    _ff.show = function(text){
+      var t = $('ff-transcript'); if (t) t.textContent = text || '';
+    };
+
+    _ff.renderOrder = function(r){
+      var o = $('ff-order'); if (!o) return;
+      if (!r){ o.hidden = true; o.textContent=''; return; }
+      var items = (r.items||[]).map(function(i){
+        var wo = (i.without && i.without.length) ? (' (bez: ' + i.without.join(', ') + ')') : '';
+        return '• ' + (i.qty || 1) + ' × ' + (i.name || 'pozycja') + wo;
+      }).join('\n') || '• (brak pozycji)';
+      o.textContent = 'Restauracja: ' + (r.restaurant_name || r.restaurant_id || '–')
+        + '\n' + items + '\nCzas: ' + (r.when || '–');
+      o.hidden = false;
+    };
+  })();
+</script>
+<!-- FF:UI-HELPERS-END -->
 </body>
 </html>

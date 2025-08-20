@@ -1,93 +1,124 @@
 // .github/scripts/codemod.js
 const fs = require('fs');
+const path = require('path');
 
 const CMD = (process.argv[2] || '').trim();
 
-function read(p) { return fs.existsSync(p) ? fs.readFileSync(p,'utf8') : ''; }
-function write(p, s) { fs.writeFileSync(p, s, 'utf8'); }
+// Helpers
+const read = (p) => fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+const write = (p, s) => fs.writeFileSync(p, s, 'utf8');
 
-function patchIndexHtmlGlass(html, on=true) {
-  // Dodaj klasę .glass do kafelków dolnych (buttons) i unifikuj ich styl
-  // 1) upewnij się, że przyciski mają klasę 'glass'
-  html = html.replace(/(<div class="bottom-buttons"[\s\S]*?<button)( class="([^"]*)")?/g, (m, g1, g2, g3)=>{
-    const cls = g3 || '';
-    return g1 + ' class="' + (cls.includes('glass') ? cls : (cls ? cls+' glass' : 'glass')) + '"';
+const ROOT = process.cwd();
+const INDEX = path.join(ROOT, 'index.html');
+const ASSIST = path.join(ROOT, 'freeflow-assistant.js');
+
+// --- Patches ---
+
+function ensureGlassChips(html, on = true) {
+  // 1) Nadaj klasę "glass" przyciskom kafelków
+  html = html.replace(/(<div class="bottom-buttons"[^>]*>[\s\S]*?<\/div>)/, (m) => {
+    let section = m;
+    if (on) {
+      section = section.replace(/(<button\b[^>]*)(class="[^"]*")?/g, (g1, gOpen, gClass) => {
+        const cls = gClass ? gClass.replace(/"$/, ' glass"') : 'class="glass"';
+        return g1 + (gClass ? cls : ' ' + cls);
+      });
+    } else {
+      section = section.replace(/\bglass\b/g, '').replace(/\s{2,}/g, ' ');
+    }
+    return section;
   });
 
-  // 2) W sekcji <style> – wstrzyknij/zmień definicję .glass i hover
-  // jeśli już jest .glass, zostaw; inaczej dodaj
-  if (!/\.glass\{/.test(html)) {
-    html = html.replace(/<\/style>/, `
+  // 2) Wstrzyknij (albo usuń) definicję .glass w <style>
+  if (on) {
+    if (!/\.glass\s*\{/.test(html)) {
+      html = html.replace(/<\/style>/, `
     .glass{
       background: rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      border:1px solid rgba(255,255,255,.06);
       border-radius:14px;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      box-shadow:0 8px 34px rgba(0,0,0,.35);
+      box-shadow:0 6px 24px rgba(0,0,0,.35);
     }
-    </style>`);
-  } else if (on) {
-    // podmień tło i border, dołóż blur
-    html = html.replace(/\.glass\{[^}]*\}/m, `.glass{
-      background: rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:14px;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      box-shadow:0 8px 34px rgba(0,0,0,.35);
-    }`);
+  </style>`);
+    }
   }
-
   return html;
 }
 
-function addMenuItem(html, label, id='myOrdersBtn') {
-  // Znajdź dropdown
-  if (!/id="dropdown"/.test(html)) return html;
-  if (html.includes(`id="${id}"`)) return html; // już dodane
+function toggleCartUI(html, on = true) {
+  // Badge koszyka (id="cartBadge") i przycisk (id="cartBtn")
+  if (on && !/id="cartBtn"/.test(html)) {
+    html = html.replace(/<\/header>/, `
+      <div style="position:relative">
+        <button class="iconbtn" id="cartBtn" aria-label="Koszyk">🛒</button>
+        <div class="badge" id="cartBadge">0</div>
+      </div>
+    </header>`);
+  }
+  if (!on) {
+    html = html.replace(/<div style="position:relative">[\s\S]*?<\/div>\s*<\/header>/, `</header>`);
+    html = html.replace(/id="cartBadge"[\s\S]*?<\/div>/, '');
+  }
+  return html;
+}
 
-  html = html.replace(
-    /(id="dropdown"[^>]*>)/,
-    `$1\n          <div class="dd-item" id="${id}">${label}</div>`
+function setBackendUrl(js, url) {
+  return js.replace(
+    /(BACKEND_URL:\s*['"])([^'"]+)(['"])/,
+    (_m, p1, _old, p3) => p1 + url + p3
   );
-
-  // dodaj prosty handler na dole (jeśli nie istnieje)
-  if (!new RegExp(`getElementById\\('${id}'\\)`).test(html)) {
-    html = html.replace(/<\/script>\s*<\/body>/i, `
-<script>
-  document.getElementById('${id}')?.addEventListener('click', ()=>{
-    alert('${label} (tryb demo)');
-  });
-</script>
-</body>`);
-  }
-  return html;
 }
 
-(function main(){
-  const indexPath = 'index.html';
-  let html = read(indexPath);
-  if (!html) {
-    console.error('index.html not found');
-    process.exit(1);
-  }
+// --- Router komend ---
 
-  if (/^\/ui\s+glass-chips\s+(on|off)/i.test(CMD)) {
-    const on = /on$/i.test(CMD);
-    html = patchIndexHtmlGlass(html, on);
-    write(indexPath, html);
-    console.log(`[codemod] glass-chips -> ${on ? 'ON' : 'OFF'}`);
+function apply(cmd) {
+  // Normalizacja
+  const c = (cmd || '').trim();
+
+  if (/^\/ui\s+help/i.test(c)) {
+    console.log(`Available:
+  /ui glass-chips on|off
+  /ui cart on|off
+  /ui backend https://example.com
+`);
     return;
   }
 
-  if (/^\/menu\s+add\s+["“](.+?)["”]/i.test(CMD)) {
-    const label = CMD.match(/^\/menu\s+add\s+["“](.+?)["”]/i)[1].trim();
-    html = addMenuItem(html, label);
-    write(indexPath, html);
-    console.log(`[codemod] added menu item -> ${label}`);
+  if (/^\/ui\s+glass-chips\s+on/i.test(c)) {
+    const html = read(INDEX);
+    write(INDEX, ensureGlassChips(html, true));
+    console.log('✓ glass chips ON');
+    return;
+  }
+  if (/^\/ui\s+glass-chips\s+off/i.test(c)) {
+    const html = read(INDEX);
+    write(INDEX, ensureGlassChips(html, false));
+    console.log('✓ glass chips OFF');
     return;
   }
 
-  console.log('[codemod] no-op. Commands:\n  /ui glass-chips on|off\n  /menu add "Twoje zamówienia"');
-})();
+  if (/^\/ui\s+cart\s+on/i.test(c)) {
+    write(INDEX, toggleCartUI(read(INDEX), true));
+    console.log('✓ cart ON');
+    return;
+  }
+  if (/^\/ui\s+cart\s+off/i.test(c)) {
+    write(INDEX, toggleCartUI(read(INDEX), false));
+    console.log('✓ cart OFF');
+    return;
+  }
+
+  const m = c.match(/^\/ui\s+backend\s+(https?:\/\/\S+)/i);
+  if (m) {
+    write(ASSIST, setBackendUrl(read(ASSIST), m[1]));
+    console.log('✓ backend set to', m[1]);
+    return;
+  }
+
+  console.log('No matching command:', c);
+}
+
+// --- Run ---
+apply(CMD);

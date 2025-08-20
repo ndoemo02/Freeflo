@@ -1,114 +1,95 @@
-
 name: ChatOps Apply (diff / replace / append / delete)
 
 on:
   issue_comment:
     types: [created]
-  workflow_dispatch: {}
 
 permissions:
   contents: write
-  pull-requests: write
   issues: read
+  pull-requests: read
 
-env:
-  # tryb tworzenia PR (recommended) — wymaga PAT_TOKEN
-  CREATE_PR: "true"
-  BASE_BRANCH: "main"
+concurrency:
+  group: chatops-apply
+  cancel-in-progress: false
 
 jobs:
   apply:
-    # odpalaj tylko, gdy komentarz zaczyna się od naszych komend, albo ręczny dispatch
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' &&
-       (startsWith(github.event.comment.body, '/apply-diff') ||
-        startsWith(github.event.comment.body, '/replace-file') ||
-        startsWith(github.event.comment.body, '/append-file') ||
-        startsWith(github.event.comment.body, '/delete-file')))
+    # Odpalamy tylko gdy w komentarzu jest jedna z komend
+    if: contains(github.event.comment.body, 'apply-diff') ||
+        startsWith(github.event.comment.body, '/replace-file ') ||
+        startsWith(github.event.comment.body, '/append-to ')  ||
+        startsWith(github.event.comment.body, '/delete-file ')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check author association (security)
-        if: github.event_name == 'issue_comment'
-        run: |
-          A="${{ github.event.comment.author_association }}"
-          echo "author_association=$A"
-          case "$A" in
-            OWNER|MEMBER|COLLABORATOR) echo "Authorized." ;;
-            *) echo "Not authorized to run ChatOps."; exit 1 ;;
-          esac
-
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ env.BASE_BRANCH }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Parse comment → przygotuj payloady
+        id: parse
+        uses: actions/github-script@v7
         with:
-          node-version: 20
+          script: |
+            const fs = require('fs');
+            const body = context.payload.comment.body || '';
 
-      - name: Prepare inputs
-        id: prep
-        run: |
-          RAW_BODY="${{ github.event_name == 'issue_comment' && github.event.comment.body || '' }}"
-          echo "raw<<'EOF'" >> $GITHUB_OUTPUT
-          echo "${RAW_BODY}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "branch=chatops-${{ github.run_id }}" >> $GITHUB_OUTPUT
+            // helper: bierz pierwszy fenced code block ``` ... ```
+            function takeFenced() {
+              const m = body.match(/```[\s\S]*?```/);
+              if (!m) return null;
+              return m[0].replace(/^```[^\n]*\n/, '').replace(/\n```$/, '');
+            }
 
-      - name: Apply from comment
-        run: |
-          node .github/scripts/apply-from-comment.js <<'EOF'
-          ${{ steps.prep.outputs.raw }}
-          EOF
+            // tryby
+            if (body.includes('apply-diff')) {
+              const code = takeFenced();
+              if (!code) core.setFailed('Brak fenced code block z diffem.');
+              fs.writeFileSync('patch.diff', code);
+              core.setOutput('mode', 'diff');
+            } else if (body.startsWith('/replace-file ')) {
+              const path = body.split('\n')[0].replace('/replace-file','').trim();
+              const code = takeFenced();
+              if (!path) core.setFailed('Brak ścieżki w /replace-file');
+              fs.mkdirSync(require('path').dirname(path), { recursive: true });
+              fs.writeFileSync(path, code ?? '');
+              core.setOutput('mode','replace');
+              core.setOutput('path', path);
+            } else if (body.startsWith('/append-to ')) {
+              const path = body.split('\n')[0].replace('/append-to','').trim();
+              const code = takeFenced() ?? '';
+              fs.mkdirSync(require('path').dirname(path), { recursive: true });
+              fs.appendFileSync(path, code);
+              core.setOutput('mode','append');
+              core.setOutput('path', path);
+            } else if (body.startsWith('/delete-file ')) {
+              const path = body.split('\n')[0].replace('/delete-file','').trim();
+              try { fs.unlinkSync(path); } catch(e) { /* OK jeśli brak */ }
+              core.setOutput('mode','delete');
+              core.setOutput('path', path);
+            }
 
-      - name: Configure git
+      - name: Apply diff
+        if: steps.parse.outputs.mode == 'diff'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Create branch & commit if changes
-        id: diff
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            BR="${{ steps.prep.outputs.branch }}"
-            git checkout -b "$BR"
-            git add -A
-            git commit -m "chatops: apply from comment"
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "branch=$BR" >> $GITHUB_OUTPUT
-          else
-            echo "No changes detected."
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Push branch
-        if: steps.diff.outputs.changed == 'true'
-        run: |
-          git push --set-upstream origin "${{ steps.diff.outputs.branch }}"
-
-      - name: Create Pull Request
-        if: steps.diff.outputs.changed == 'true' && env.CREATE_PR == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          branch: ${{ steps.diff.outputs.branch }}
-          base: ${{ env.BASE_BRANCH }}
-          title: "ChatOps: apply from comment"
-          body: |
-            Automatyczny PR z ChatOps.
-            **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Direct commit to main (fallback)
-        if: steps.diff.outputs.changed == 'true' && env.CREATE_PR != 'true'
-        run: |
-          git checkout ${{ env.BASE_BRANCH }}
-          git merge --no-ff -m "chatops: merge ${{ steps.diff.outputs.branch }}" "${{ steps.diff.outputs.branch }}"
+          git apply --whitespace=nowarn patch.diff
+          git add -A
+          git commit -m "chatops: apply-diff from #${{ github.event.issue.number }}"
           git push
 
-      - name: Done / no changes
-        if: steps.diff.outputs.changed != 'true'
-        run: echo "Nothing to do."
+      - name: Commit changes (replace/append/delete)
+        if: steps.parse.outputs.mode != 'diff'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A || true
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chatops: ${{ steps.parse.outputs.mode }} ${{ steps.parse.outputs.path }} from #${{ github.event.issue.number }}"
+            git push
+          else
+            echo "No changes to commit."
+          fi

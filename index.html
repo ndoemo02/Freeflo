@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --neon:#00d1ff;
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
       --glass-bg: rgba(0,0,0,.18); --glass-b: rgba(255,255,255,.06);
     }
     html,body{height:100%}
@@ -17,60 +17,76 @@
       font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
       background: url("./Background.png") center/cover fixed no-repeat #0b0f14;
     }
-    .wrap{max-width:1100px; margin:0 auto; padding:16px 16px 72px}
-    .top{
-      display:flex; align-items:center; gap:12px; margin-top:4px
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px; font-family:'Poppins',sans-serif; font-size:28px; font-weight:700
-    }
+    .wrap{max-width:980px; margin:0 auto; padding: 10px 16px 48px}
+
+    /* TOP */
+    .topbar{ display:flex; align-items:center; justify-content:space-between; margin-top:8px }
+    .brand{ display:flex; align-items:center; gap:10px; font-family:'Poppins',sans-serif; font-weight:700; font-size:26px; }
     .brand img{width:36px; height:36px; border-radius:8px}
     .brand .accent{color:var(--brand)}
-    .claim{font-size:12px; color:var(--muted); margin-top:-4px}
+    .claim{font-size:12px; color:var(--muted); margin-top:-6px}
 
-    .hero h1{font-size:48px; line-height:1.02; margin:22px 0 8px}
-    .hero .sub{color:var(--muted); font-size:18px; margin-bottom:20px}
+    /* HERO */
+    h1{font-size:46px; line-height:1.06; margin:18px 0 6px}
+    .sub{color:var(--muted); margin-bottom:14px}
+    .hero{
+      margin:10px auto 12px; width:min(92vw,640px); aspect-ratio:1/1;
+      display:grid; place-items:center; position:relative; background:transparent; border:none; box-shadow:none;
+    }
+    .logoBtn{ border:none; background:transparent; padding:0; cursor:pointer; display:grid; place-items:center; }
+    .logo{
+      width:76%; max-width:520px; user-select:none; pointer-events:none;
+      filter: drop-shadow(0 0 0px rgba(0,209,255,.0));
+      animation: neonPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes neonPulse{
+      0%   { filter: drop-shadow(0 0 0px rgba(0,209,255,.0)); transform: scale(1); }
+      50%  { filter: drop-shadow(0 0 14px rgba(0,209,255,.38)); transform: scale(1.012); }
+      100% { filter: drop-shadow(0 0 0px rgba(0,209,255,.0)); transform: scale(1); }
+    }
 
+    /* MIC + TRANSCRIPT */
     .glass{ background:var(--glass-bg); border:1px solid var(--glass-b);
       border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,.35); backdrop-filter: blur(2px)
     }
-
-    /* transcript bubble (prawy-górny) */
-    #transcript{
-      position: fixed; right: 12px; top: 84px; z-index: 40;
-      min-width: 240px; max-width: 360px; padding:14px 16px; font-size:18px;
-    }
-
-    /* mic pill */
     #micBtn{
-      position: fixed; right: 12px; top: 28px; z-index: 41;
+      position: fixed; right: 12px; top: 18px; z-index: 41;
       width:54px; height:54px; border-radius:14px; border:1px solid var(--glass-b);
       display:grid; place-items:center; cursor:pointer; background:var(--glass-bg); color:#cfe2ff;
       box-shadow:0 8px 34px rgba(0,0,0,.35);
     }
-
-    /* grid z „menu” do klikania */
-    .grid{ display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); margin-top:18px }
-    .card{ padding:14px; display:flex; flex-direction:column; gap:10px }
-    .title{ font-weight:700; letter-spacing:.2px }
-    .chips{ display:flex; flex-wrap:wrap; gap:8px }
-    .chip{
-      padding:8px 10px; font-size:14px; border-radius:999px; cursor:pointer;
-      border:1px solid var(--glass-b); background:rgba(0,0,0,.22); color:#e8eefb;
+    #transcript{
+      margin:10px auto 0; max-width:900px; padding:16px 14px; min-height:40px;
+      background: var(--glass-bg); border:1px solid var(--glass-b);
+      border-radius:14px; color:var(--text); font-size:18px;
+      box-shadow: inset 0 0 24px #0005, 0 8px 40px #000a;
     }
-    .chip:hover{ background:rgba(255,255,255,.08) }
 
-    .hint{margin-top:12px; color:var(--muted)}
+    /* DOLNE KAFELKI */
+    .bottom-buttons{
+      display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:14px;
+    }
+    .bottom-buttons button{
+      flex:1 1 calc(33.333% - 12px); max-width:180px; min-width:120px; height:56px;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      font-size:18px; border-radius:14px;
+      background: rgba(0,0,0,.18); color:#e8eefb; border:1px solid var(--glass-b);
+      cursor:pointer; box-shadow: 0 10px 32px rgba(0,0,0,.35);
+      transition: transform .15s ease, background .2s ease;
+    }
+    .bottom-buttons button:hover{ transform: translateY(-1px); background: rgba(0,0,0,.22); }
+    .bottom-buttons .primary{ outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset, 0 10px 32px #000; }
+
     @media (max-width:520px){
-      .hero h1{font-size:36px}
-      #transcript{left:12px; right:12px; top:auto; bottom:12px}
-      #micBtn{bottom:80px; top:auto}
+      h1{font-size:36px}
+      .bottom-buttons button{height:52px; font-size:16px; min-width:110px}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
+    <!-- top -->
+    <div class="topbar">
       <div>
         <div class="brand">
           <img src="./Freeflow-logo.png" alt="logo"/>
@@ -80,53 +96,55 @@
       </div>
     </div>
 
-    <!-- mikrofon i bąbel -->
+    <!-- mic + transcript -->
     <button id="micBtn" class="glass" aria-label="Naciśnij, aby mówić">🎙️</button>
-    <div id="transcript" class="glass">Powiedz lub kliknij pozycję z menu…</div>
 
+    <!-- hero logo -->
     <section class="hero">
-      <h1>Zamów głosem lub kliknięciem</h1>
-      <div class="sub">Tryb testowy • Kraków & Katowice • Bez zapisywania danych (poza wysłaniem do NLU)</div>
-      <div class="hint">Kliknij potrawę, a ja ułożę komendę dla asystenta. Mikrofon — jeśli wolisz powiedzieć: „Ariel, czulent dwie na 19:15, bez cebuli”.</div>
+      <button id="logoBtn" type="button" class="logoBtn" aria-label="Naciśnij, aby mówić">
+        <img class="logo" src="./Freeflow-logo.png" alt="FreeFlow" />
+      </button>
     </section>
 
-    <!-- MENU DEMO -->
-    <section class="grid">
-      <div class="card glass">
-        <div class="title">Kraków • Ariel (Kazimierz)</div>
-        <div class="chips">
-          <button class="chip" data-utterance="Ariel, czulent jeden na 18:45">Czulent</button>
-          <button class="chip" data-utterance="Ariel, kugel jeden na 19:15">Kugel</button>
-          <button class="chip" data-utterance="Ariel, tzimmes jeden na 19:30">Tzimmes</button>
-          <button class="chip" data-utterance="Ariel, czulent dwie na 19:15 bez cebuli">Czulent ×2 (bez cebuli)</button>
-        </div>
-      </div>
+    <h1>Złóż zamówienie</h1>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
 
-      <div class="card glass">
-        <div class="title">Kraków • Klezmer Hois</div>
-        <div class="chips">
-          <button class="chip" data-utterance="Klezmer Hois, czulent jeden na 19:00">Czulent</button>
-          <button class="chip" data-utterance="Klezmer Hois, karp po żydowsku jeden na 20:00">Karp po żydowsku</button>
-          <button class="chip" data-utterance="Klezmer Hois, gefilte fish jedna na 18:45">Gefilte fish</button>
-        </div>
-      </div>
+    <!-- bąbel -->
+    <div id="transcript" class="glass">Powiedz lub kliknij, co zamówić…</div>
 
-      <div class="card glass">
-        <div class="title">Katowice • Trattoria Napoli (demo)</div>
-        <div class="chips">
-          <button class="chip" data-utterance="Trattoria Napoli, pizza pepperoni dwie na 19:30 bez oliwek">Pepperoni ×2 (bez oliwek)</button>
-          <button class="chip" data-utterance="Trattoria Napoli, margherita jedna na 18:45">Margherita</button>
-          <button class="chip" data-utterance="Trattoria Napoli, cztery sery jedna na 20:15">Quattro formaggi</button>
-        </div>
-      </div>
-    </section>
+    <!-- dolne 3 kafelki -->
+    <div class="bottom-buttons" style="margin-bottom:32px">
+      <button class="primary glass" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
+      <button class="glass" data-quick="Taxi">🚕 <span>Taxi</span></button>
+      <button class="glass" data-quick="Hotel">🏠 <span>Hotel</span></button>
+    </div>
   </div>
 
-  <script src="./freeflow-assistant.js?v=ui2"></script>
+  <audio id="ttsPlayer" preload="auto"></audio>
+
+  <!-- logika asystenta (nie zmieniamy) -->
+  <script src="./freeflow-assistant.js?v=classic1"></script>
+
   <script>
-    // Kliknięcia chipów => wysyłka do asystenta
-    document.querySelectorAll('[data-utterance]').forEach(b=>{
-      b.addEventListener('click', ()=> window.sendToAssistant && window.sendToAssistant(b.dataset.utterance));
+    // Klik logo = start/stop mikrofon (jak przycisk mic)
+    const logo = document.getElementById('logoBtn');
+    const micBtn = document.getElementById('micBtn');
+    if (logo && micBtn) logo.addEventListener('click', ()=> micBtn.click());
+
+    // Quick actions -> przykładowe prompty do NLU
+    document.querySelectorAll('[data-quick]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const t = btn.dataset.quick;
+        if (window.sendToAssistant) {
+          // lekki prompt do testów
+          const text = (t === 'Jedzenie')
+            ? 'Trattoria Napoli, pizza pepperoni dwie na 19:30 bez oliwek'
+            : (t === 'Taxi')
+              ? 'Taxi z Rynku do Bronowic za 15 minut'
+              : 'Hotel w centrum Krakowa na jutro, jedna noc';
+          window.sendToAssistant(text);
+        }
+      });
     });
   </script>
 </body>

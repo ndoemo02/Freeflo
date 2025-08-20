@@ -2,51 +2,81 @@ name: ChatOps Codemods
 
 on:
   issue_comment:
-    types: [created]         # uruchamia się po dodaniu KOMENTARZA w Issue/PR
-  workflow_dispatch: {}      # można odpalić ręcznie z karty Actions
+    types: [created]     # odpala się po DODANIU komentarza
+  workflow_dispatch: {}  # można uruchomić ręcznie z zakładki Actions
 
 permissions:
-  contents: write            # workflow może commitować zmiany
+  contents: write        # pozwala commitować na branch
   issues: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   codemod:
-    # Działa gdy: komentarz zaczyna się od "/" LUB uruchomiono ręcznie
-    if: startsWith(github.event.comment.body, '/') || github.event_name == 'workflow_dispatch'
+    # Działa tylko, gdy przyszła komenda zaczynająca się od "/"
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.comment.body, '/')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Parse command
-        id: parse
+      - name: Zainstaluj zależności (jeśli są)
+        run: |
+          if [ -f package.json ]; then
+            npm ci || true
+          fi
+
+      - name: Ustal polecenie
+        id: cmd
         run: |
           RAW="${{ github.event.comment.body }}"
-          RAW="${RAW//$'\r'/}"                          # usuń CR
-          CMD="$(echo "$RAW" | head -n1 | sed 's#^/##')" # pierwsza linia bez wiodącego "/"
-          echo "cmd=$CMD" >> $GITHUB_OUTPUT
+          # Fallback dla ręcznego uruchomienia bez komentarza
+          if [ -z "$RAW" ]; then RAW="/help"; fi
+          echo "cmd=$(echo "$RAW" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
 
-      - name: Run codemod
-        run: node .github/scripts/codemod.js "${{ steps.parse.outputs.cmd || 'help' }}"
+      - name: Uruchom codemod
+        run: |
+          node .github/scripts/codemod.js "${{ steps.cmd.outputs.cmd }}"
 
-      - name: Commit & push changes
+      - name: Commit do gałęzi dev
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Upewnij się, że branch "dev" istnieje
+          if git show-ref --verify --quiet refs/heads/dev; then
+            git checkout dev
+            git merge --no-edit -s ours origin/dev || true
+            git checkout -
+          else
+            git checkout -b dev
+            git checkout -
+          fi
+
+          # Jeśli są zmiany — commit do dev
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
-            git commit -m "chatops: ${{ steps.parse.outputs.cmd }}"
-            git push
-            echo "Changes committed."
+            git commit -m "chatops: ${{ steps.cmd.outputs.cmd }}"
+            git push -u origin HEAD:dev
           else
-            echo "No changes."
+            echo "Brak zmian."
           fi
+
+      - name: Otwórz/odśwież Pull Request do main
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: dev
+          base: main
+          title: "ChatOps: ${{ steps.cmd.outputs.cmd }}"
+          body: |
+            Zmiany wygenerowane przez ChatOps.
+            Komenda: `${{ steps.cmd.outputs.cmd }}`
+          labels: chatops, automatyczne
+          draft: false

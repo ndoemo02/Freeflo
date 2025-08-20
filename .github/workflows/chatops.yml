@@ -2,43 +2,51 @@ name: ChatOps Codemods
 
 on:
   issue_comment:
-    types: [created]     # uruchamia się, gdy DODASZ komentarz
-  workflow_dispatch: {}  # można też puścić ręcznie z Actions
+    types: [created]         # uruchamia się po dodaniu KOMENTARZA w Issue/PR
+  workflow_dispatch: {}      # można odpalić ręcznie z karty Actions
 
 permissions:
-  contents: write        # pozwala pushać commit z joba
+  contents: write            # workflow może commitować zmiany
   issues: read
   pull-requests: read
 
 jobs:
   codemod:
-    if: contains(github.event.comment.body, '/ui ') || contains(github.event_name, 'workflow_dispatch')
+    # Działa gdy: komentarz zaczyna się od "/" LUB uruchomiono ręcznie
+    if: startsWith(github.event.comment.body, '/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Parse command
-        id: cmd
+        id: parse
         run: |
-          echo "RAW=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
-          # Bezpieczny fallback na ręczne uruchomienie
-          echo "CMD=$(echo "${{ github.event.comment.body }}" | tr -d '\r' | head -n1)" >> $GITHUB_OUTPUT
+          RAW="${{ github.event.comment.body }}"
+          RAW="${RAW//$'\r'/}"                          # usuń CR
+          CMD="$(echo "$RAW" | head -n1 | sed 's#^/##')" # pierwsza linia bez wiodącego "/"
+          echo "cmd=$CMD" >> $GITHUB_OUTPUT
 
       - name: Run codemod
-        run: node .github/scripts/codemod.js "${{ steps.cmd.outputs.CMD || '/ui help' }}"
+        run: node .github/scripts/codemod.js "${{ steps.parse.outputs.cmd || 'help' }}"
 
-      - name: Commit & push
+      - name: Commit & push changes
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
-            git commit -m "chatops: apply ${{
-              steps.cmd.outputs.CMD
-            }}"
+            git commit -m "chatops: ${{ steps.parse.outputs.cmd }}"
             git push
+            echo "Changes committed."
           else
             echo "No changes."
           fi

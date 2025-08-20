@@ -1,1 +1,114 @@
 
+name: ChatOps Apply (diff / replace / append / delete)
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+env:
+  # tryb tworzenia PR (recommended) — wymaga PAT_TOKEN
+  CREATE_PR: "true"
+  BASE_BRANCH: "main"
+
+jobs:
+  apply:
+    # odpalaj tylko, gdy komentarz zaczyna się od naszych komend, albo ręczny dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       (startsWith(github.event.comment.body, '/apply-diff') ||
+        startsWith(github.event.comment.body, '/replace-file') ||
+        startsWith(github.event.comment.body, '/append-file') ||
+        startsWith(github.event.comment.body, '/delete-file')))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check author association (security)
+        if: github.event_name == 'issue_comment'
+        run: |
+          A="${{ github.event.comment.author_association }}"
+          echo "author_association=$A"
+          case "$A" in
+            OWNER|MEMBER|COLLABORATOR) echo "Authorized." ;;
+            *) echo "Not authorized to run ChatOps."; exit 1 ;;
+          esac
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.BASE_BRANCH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Prepare inputs
+        id: prep
+        run: |
+          RAW_BODY="${{ github.event_name == 'issue_comment' && github.event.comment.body || '' }}"
+          echo "raw<<'EOF'" >> $GITHUB_OUTPUT
+          echo "${RAW_BODY}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "branch=chatops-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Apply from comment
+        run: |
+          node .github/scripts/apply-from-comment.js <<'EOF'
+          ${{ steps.prep.outputs.raw }}
+          EOF
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch & commit if changes
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            BR="${{ steps.prep.outputs.branch }}"
+            git checkout -b "$BR"
+            git add -A
+            git commit -m "chatops: apply from comment"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "branch=$BR" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push branch
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git push --set-upstream origin "${{ steps.diff.outputs.branch }}"
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true' && env.CREATE_PR == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          branch: ${{ steps.diff.outputs.branch }}
+          base: ${{ env.BASE_BRANCH }}
+          title: "ChatOps: apply from comment"
+          body: |
+            Automatyczny PR z ChatOps.
+            **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Direct commit to main (fallback)
+        if: steps.diff.outputs.changed == 'true' && env.CREATE_PR != 'true'
+        run: |
+          git checkout ${{ env.BASE_BRANCH }}
+          git merge --no-ff -m "chatops: merge ${{ steps.diff.outputs.branch }}" "${{ steps.diff.outputs.branch }}"
+          git push
+
+      - name: Done / no changes
+        if: steps.diff.outputs.changed != 'true'
+        run: echo "Nothing to do."

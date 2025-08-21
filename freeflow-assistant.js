@@ -1,194 +1,134 @@
-/* freeflow-assistant.js — Voice + NLU + Confirm Modal (test mode) */
+// === NOWA ZAWARTOŚĆ PLIKU freeflow-assistant.js ===
 
-const CONFIG = {
-  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app', // ← PODMIEŃ na swój backend
-  TIMEOUT_MS: 12000,
-  NLU_RETRIES: 1,
-};
+document.addEventListener('DOMContentLoaded', () => {
+    // --- 1. Pobieranie elementów z Twojego HTML ---
+    const micBtn = document.getElementById('micBtn');
+    const logoImg = micBtn.querySelector('.logo'); // Obrazek logo wewnątrz przycisku
+    const transcriptBubble = document.getElementById('transcript');
+    
+    // Na razie nie używamy modala, ale zostawiamy na przyszłość
+    // const confirmModal = document.getElementById('confirmModal');
 
-function $(id){ return document.getElementById(id); }
-const $bubble = $('transcript');
-const $micBtn = $('micBtn');
-const $tts    = $('ttsPlayer');
-
-function show(txt){ if ($bubble) $bubble.textContent = txt; }
-function apip(path){ return `${CONFIG.BACKEND_URL}${path}`; }
-
-function withTimeout(p, ms = CONFIG.TIMEOUT_MS){
-  return Promise.race([ p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('TIMEOUT')), ms)) ]);
-}
-async function fetchJson(url, opts={}, {retries=0}={}){
-  const run = async ()=>{
-    const res = await withTimeout(fetch(url, {
-      ...opts, headers:{ 'Content-Type':'application/json', ...(opts.headers||{}) }, cache:'no-store'
-    }));
-    if(!res.ok){ const t = await res.text().catch(()=> ''); throw new Error(`HTTP ${res.status} ${res.statusText} ${t}`.trim()); }
-    return res.json();
-  };
-  try { return await run(); } catch(e){ if(retries>0) return fetchJson(url,opts,{retries:retries-1}); throw e; }
-}
-
-async function healthCheck(){
-  try{
-    const data = await fetchJson(apip('/api/health'));
-    if(data && (data.status==='ok' || data.ok)) { show('✅ Backend: ok'); return true; }
-    show('⚠️ Backend: odpowiedź nieoczekiwana'); return false;
-  }catch(e){ show(`❌ Backend niedostępny: ${e.message||e}`); return false; }
-}
-
-// --- ASR sanity filters (śmieci, cisza, fantomy) ---
-const BAD_PHRASES = [
-  'napisy stworzone przez społeczność amara.org',
-  'amara.org',
-  'napisy stworzone przez społeczność amara',
-];
-function cleanTranscript(t){
-  let s = (t || '').toLowerCase().trim();
-  for(const bad of BAD_PHRASES){ if(s.includes(bad)) s = s.replaceAll(bad,'').trim(); }
-  if(!s || s.length < 2) return '';
-  return s;
-}
-
-// --- NLU ---
-async function callNLU(text){
-  const body = JSON.stringify({ text: String(text||'').trim() });
-  return fetchJson(apip('/api/nlu'), { method:'POST', body }, { retries: CONFIG.NLU_RETRIES });
-}
-
-// --- ORDER (test mode) ---
-async function sendOrder(payload){
-  return fetchJson(apip('/api/order'), { method:'POST', body: JSON.stringify(payload) });
-}
-
-// Public API
-window.sendToAssistant = async function(text){
-  const cleaned = cleanTranscript(text);
-  if(!cleaned){ show('🤫 Cisza — nic nie wysyłam.'); return; }
-  show(cleaned); // szybkie echo
-
-  const ok = await healthCheck(); if(!ok) return;
-
-  try{
-    const nlu = await callNLU(cleaned);
-    if(!(nlu && nlu.ok)){ show('⚠️ NLU: odpowiedź nieoczekiwana'); return; }
-    const r = nlu.parsed || {};
-
-    const items = (r.items || []).map(i=>{
-      const nm = i.name || 'pozycja';
-      const q  = i.qty ?? 1;
-      const wo = (i.without && i.without.length) ? ` (bez: ${i.without.join(', ')})` : '';
-      return `• ${q} × ${nm}${wo}`;
-    }).join('\n');
-
-    show(`🧾 Zamówienie (podgląd)
-Restauracja: ${r.restaurant_name || r.restaurant_id || '–'}
-${items || '• (brak pozycji)'}
-Czas: ${r.when || '–'}`);
-
-    openConfirm(r);
-  }catch(e){
-    const msg = e?.message || String(e);
-    show(`❌ Błąd NLU. ${msg.includes('Failed to fetch') ? 'Sprawdź BACKEND_URL i CORS.' : msg}`);
-  }
-};
-
-// --- Confirm modal ---
-function openConfirm(r){
-  const modal = $('confirmModal');
-  if(!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
-
-  $('m_rest').textContent  = r.restaurant_name || r.restaurant_id || '–';
-  $('m_items').textContent = (r.items||[]).map(i=>{
-    const wo = (i.without && i.without.length) ? ` (bez: ${i.without.join(', ')})` : '';
-    return `${i.qty ?? 1} × ${i.name || 'pozycja'}${wo}`;
-  }).join('\n') || '—';
-  $('m_when').textContent  = r.when || '—';
-  $('m_note').textContent  = r.note || '—';
-
-  const close = ()=> { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); };
-  modal.querySelectorAll('[data-close]').forEach(el=> el.onclick = close);
-
-  $('confirmBtn').onclick = async ()=>{
-    try{
-      const keep = !!$('keepData').checked;
-      const payload = {
-        restaurant_id: r.restaurant_id || null,
-        restaurant_name: r.restaurant_name || null,
-        items: r.items || [],
-        when: r.when || null,
-        note: r.note || '-',
-        keep_data: keep
-      };
-      const res = await sendOrder(payload);
-      if(res && res.ok){
-        show(`✅ Przyjęto (tryb testowy). ID: ${res.id || '—'}`);
-      }else{
-        show('⚠️ Order: odpowiedź nieoczekiwana');
-      }
-    }catch(e){
-      show('❌ Order błąd: ' + (e?.message || e));
-    }finally{
-      close();
+    // --- 2. Konfiguracja rozpoznawania mowy (Web Speech API) ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        updateTranscript("Twoja przeglądarka nie wspiera rozpoznawania mowy.", true);
+        return;
     }
-  };
-}
 
-// --- Mic setup ---
-(function setupMic(){
-  if(!$micBtn) return;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){
-    $micBtn.addEventListener('click', ()=> show('🎤 Brak wsparcia rozpoznawania mowy w tej przeglądarce.'));
-    return;
-  }
-  const rec = new SR();
-  rec.lang = 'pl-PL';
-  rec.interimResults = false;
-  rec.maxAlternatives = 3;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pl-PL';
+    recognition.interimResults = false; // Wyniki dopiero po zakończeniu mówienia
+    recognition.continuous = false;     // Zakończ po jednej frazie
 
-  let listening=false, heardSpeech=false, silenceTimer=null;
-  const SILENCE_MS=2200, MIN_CONF=0.65;
-  const setLabel = (t)=> $micBtn.setAttribute('aria-label', t);
-  const armSilence = ()=>{
-    clearTimeout(silenceTimer);
-    silenceTimer = setTimeout(()=>{
-      if(listening && !heardSpeech){ try{ rec.stop(); }catch{}; show('🤫 Cisza — nic nie wysyłam.'); }
-    }, SILENCE_MS);
-  };
+    let isRecording = false;
 
-  rec.onaudiostart = ()=>{ heardSpeech=false; armSilence(); };
-  rec.onsoundstart = ()=> armSilence();
-  rec.onspeechstart= ()=>{ heardSpeech=true; clearTimeout(silenceTimer); };
-  rec.onaudioend   = ()=> clearTimeout(silenceTimer);
+    // --- 3. Obsługa zdarzeń ---
+    micBtn.addEventListener('click', () => {
+        if (isRecording) {
+            recognition.stop(); // Zatrzymanie na żądanie
+        } else {
+            recognition.start();
+        }
+    });
 
-  rec.onstart = ()=>{ listening=true; setLabel('Nasłuchiwanie…'); show('🎙️ Słucham…'); };
-  rec.onerror= (e)=>{ listening=false; setLabel('Błąd mikrofonu'); show(`🎤 Błąd: ${e.error||e.message||e}`); };
-  rec.onend  = ()=>{ listening=false; setLabel('Naciśnij, aby mówić'); };
+    recognition.onstart = () => {
+        isRecording = true;
+        logoImg.style.animation = 'neonPulse 1.5s ease-in-out infinite'; // Używamy Twojej animacji
+        updateTranscript("Słucham...");
+    };
 
-  rec.onresult = (e)=>{
-    if(!heardSpeech){ show('🤫 Cisza — nic nie wysyłam.'); return; }
-    const alts = Array.from(e.results?.[0] || []);
-    let chosen='';
-    for(const alt of alts){
-      const orig = alt.transcript || '';
-      const conf = typeof alt.confidence==='number' ? alt.confidence : 1.0;
-      const cleaned = cleanTranscript(orig);
-      const hasBad = BAD_PHRASES.some(p => orig.toLowerCase().includes(p));
-      if(cleaned && !hasBad && conf >= MIN_CONF){ chosen = cleaned; break; }
-      if(!chosen && cleaned && !hasBad) chosen = cleaned;
+    recognition.onend = () => {
+        isRecording = false;
+        logoImg.style.animation = 'none'; // Zatrzymanie animacji
+        // Nie zmieniamy tekstu, aby użytkownik widział ostatni wynik
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Błąd rozpoznawania mowy: ", event.error);
+        updateTranscript(`Błąd: ${event.error}`, true);
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        updateTranscript(`Rozpoznano: „${transcript}”`);
+        processCommand(transcript);
+    };
+
+    // --- 4. Przetwarzanie poleceń ---
+    function processCommand(command) {
+        const searchKeywords = ['znajdź', 'pokaż', 'wyszukaj', 'gdzie jest', 'gdzie zjem'];
+        const orderKeywords = ['zamów', 'zamawiam', 'chciałbym', 'poproszę', 'chcę'];
+
+        // Sprawdzamy, czy polecenie pasuje do słów kluczowych
+        const isSearchCommand = searchKeywords.some(keyword => command.toLowerCase().startsWith(keyword));
+        const isOrderCommand = orderKeywords.some(keyword => command.toLowerCase().startsWith(keyword));
+
+        if (isSearchCommand) {
+            // Usuwamy słowo kluczowe, aby uzyskać czyste zapytanie (np. "pizzerie w Warszawie")
+            const query = command.replace(new RegExp(`^(${searchKeywords.join('|')})\\s*`, 'i'), '');
+            searchForPlaces(query);
+        } else if (isOrderCommand) {
+            // Na razie tylko potwierdzamy, że usłyszeliśmy zamówienie
+            speak(`Przyjąłem do wiadomości zamówienie: ${command}. Funkcja realizacji jest w budowie.`);
+            updateTranscript(`OK, przyjąłem: "${command}"`);
+        } else {
+            // Jeśli nie pasuje do niczego, traktujemy to jako potencjalne zamówienie
+            speak(`OK, zanotowałem: ${command}.`);
+            updateTranscript(`Zanotowano: "${command}"`);
+        }
     }
-    if(chosen) window.sendToAssistant(chosen);
-    else show('🙂 Nic sensownego nie usłyszałem, spróbuj jeszcze raz.');
-  };
 
-  $micBtn.addEventListener('click', ()=>{
-    if(listening){ try{ rec.stop(); }catch{}; return; }
-    try{ heardSpeech=false; clearTimeout(silenceTimer); rec.start(); armSilence(); }
-    catch(e){ show(`🎤 Nie mogę uruchomić: ${e.message||e}`); }
-  });
-})();
+    // --- 5. Komunikacja z backendem (Vercel) ---
+    async function searchForPlaces(query) {
+        updateTranscript(`Szukam: „${query}”...`);
+        speak(`Dobrze, szukam ${query}`);
 
-// Auto health
-healthCheck().catch(()=>{});
+        // Upewnij się, że backend na Vercel działa i jest dostępny
+        const backendUrl = `https://freeflow-backend-vercel.vercel.app/api/search?query=${encodeURIComponent(query)}`;
+
+        try {
+            const response = await fetch(backendUrl);
+            if (!response.ok) {
+                throw new Error(`Błąd serwera: ${response.status}`);
+            }
+            const results = await response.json();
+
+            if (results.length > 0) {
+                speak("Oto co udało mi się znaleźć.");
+                // Zamiast tworzyć nowe elementy, wyświetlimy wyniki w "bańce"
+                const resultsHtml = results.slice(0, 3) // Pokaż pierwsze 3 wyniki
+                    .map(r => `• <a href="${r.link}" target="_blank">${r.title}</a>`)
+                    .join('<br>');
+                updateTranscript(`<b>Oto co znalazłem:</b><br>${resultsHtml}`, false, true);
+            } else {
+                speak("Niestety, nic nie znalazłem.");
+                updateTranscript(`Nie znaleziono wyników dla: "${query}"`);
+            }
+
+        } catch (error) {
+            console.error("Błąd podczas wyszukiwania:", error);
+            speak("Przepraszam, wystąpił błąd podczas wyszukiwania.");
+            updateTranscript("Wystąpił błąd serwera. Spróbuj ponownie później.", true);
+        }
+    }
+
+    // --- 6. Funkcje pomocnicze ---
+    function updateTranscript(text, isError = false, allowHtml = false) {
+        if (allowHtml) {
+            transcriptBubble.innerHTML = text;
+        } else {
+            transcriptBubble.textContent = text;
+        }
+        transcriptBubble.style.color = isError ? '#ff8a8a' : 'var(--text)';
+    }
+
+    function speak(text) {
+        // Anuluj poprzednie wypowiedzi, aby się nie nakładały
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pl-PL';
+        // Możesz tu dodać więcej opcji, np. zmiana głosu, prędkości
+        window.speechSynthesis.speak(utterance);
+    }
+});

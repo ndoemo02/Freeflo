@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow – Demo 3 opcji</title>
+  <style>
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+      background:#0b0c10; color:#fff;
+      min-height:100dvh; display:flex; align-items:center; justify-content:center;
+    }
+    .wrap{ width:min(900px,92vw); padding:20px; }
+    .logo{ font-weight:800; font-size:28px; letter-spacing:.3px; opacity:.95 }
+    .subtitle{ opacity:.8; margin:6px 0 18px; }
+    .panel{
+      background:rgba(22,22,28,.75); border-radius:18px; padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35); backdrop-filter:blur(8px);
+    }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
+    input[type=text]{
+      flex:1 1 420px; padding:12px 14px; border-radius:12px; border:0; outline:0;
+      background:#14151b; color:#fff; font-size:16px;
+    }
+    button.primary{
+      padding:12px 16px; border-radius:12px; border:0; cursor:pointer; font-weight:700;
+      background:linear-gradient(45deg,#ff8a00,#ff4d00 70%,#e60073); color:#fff;
+    }
+    .bubble{ margin:12px 0 4px; opacity:.9 }
+    .ff-options{
+      margin:14px 0 0;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px;
+    }
+    .ff-option{
+      background:rgba(18,18,24,.85);
+      border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:8px;
+      border:1px solid rgba(255,255,255,.06);
+    }
+    .ff-option h4{ margin:0; font-size:16px }
+    .ff-option .meta{ font-size:13px; opacity:.85 }
+    .ff-option button{
+      margin-top:auto; width:100%; border:0; border-radius:10px; padding:10px;
+      background:linear-gradient(45deg,#00c2ff,#0077ff); color:#fff; font-weight:700; cursor:pointer;
+    }
+    .hint{ opacity:.6; font-size:13px; margin-top:10px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">Free<strong>Flow</strong></div>
+    <div class="subtitle">Demo: „3 opcje → dopytaj → potwierdź”</div>
+
+    <div class="panel">
+      <div class="row">
+        <input id="q" type="text" placeholder='np. „najlepsze pizzerie w Warszawie”' />
+        <button id="go" class="primary">Szukaj</button>
+      </div>
+
+      <div id="ffTranscript" class="bubble"></div>
+      <div id="ffOptions" class="ff-options" hidden></div>
+
+      <div class="hint">Tip: wpisz lub powiedz kiedy podłączymy STT. Możesz też wpisać
+        <code>ffTestPizza()</code> w konsoli dev, by odpalić demo.</div>
+    </div>
+  </div>
+
+  <script>
+  (()=> {
+    function mockSearchPizzerie(miasto){
+      const base = [
+        {name:'Pizzeria Trattoria', dist:'1.2 km', rating:4.7, eta:'25–35 min'},
+        {name:'Napoli Artisan Pizza', dist:'2.0 km', rating:4.6, eta:'20–30 min'},
+        {name:'Verona Slice House', dist:'0.9 km', rating:4.5, eta:'30–40 min'},
+      ];
+      return base.map(x=>({...x, city: miasto}));
+    }
+
+    const optionsWrap = document.getElementById('ffOptions');
+    const bubble = document.getElementById('ffTranscript');
+    const q = document.getElementById('q');
+    const go = document.getElementById('go');
+
+    function say(text){
+      bubble.textContent = text;
+      bubble.style.opacity = .95;
+    }
+    function clearOptions(){
+      optionsWrap.innerHTML = '';
+      optionsWrap.hidden = true;
+    }
+    function presentOptions(opts){
+      optionsWrap.hidden = false;
+      optionsWrap.innerHTML = `
+        <div style="grid-column:1/-1;font-weight:700;margin:4px 0 2px">Masz ochotę na to, to czy to?</div>
+        ${opts.map((o,i)=>`
+          <div class="ff-option">
+            <h4>${o.name}</h4>
+            <div class="meta">Ocena ${o.rating} • ${o.dist} • dostawa ${o.eta}</div>
+            <button data-choose="${i}">Wybieram</button>
+          </div>
+        `).join('')}
+      `;
+      optionsWrap.querySelectorAll('button[data-choose]').forEach(btn=>{
+        btn.addEventListener('click', e=>{
+          const idx = Number(e.currentTarget.dataset.choose);
+          chooseOption(opts[idx]);
+        });
+      });
+    }
+    function chooseOption(opt){
+      say(`Wybrałeś: ${opt.name}. Finalizuję zamówienie…`);
+      setTimeout(()=> {
+        clearOptions();
+        say(`Dodano ${opt.name} do zamówienia. Chcesz coś jeszcze?`);
+      }, 800);
+    }
+
+    async function handleQuery(text){
+      const low = (text||'').toLowerCase().trim();
+      const m = low.match(/(najlepsze\s+)?pizzerie\s+w\s+([a-ząćęłńóśźż\- ]+)/i);
+      if(m){
+        const miasto = m[2].trim().replace(/\s+/g,' ');
+        say(`Szukam pizzerii w ${miasto}…`);
+        const results = mockSearchPizzerie(miasto).slice(0,3);
+        if(results.length){ say(`Znalazłem trzy opcje w ${miasto}.`); presentOptions(results); }
+        else { say(`Nie znalazłem dobrych opcji w ${miasto}.`); clearOptions(); }
+      } else {
+        say('Powiedz lub wpisz: „najlepsze pizzerie w <miasto>”.');
+        clearOptions();
+      }
+    }
+
+    go.addEventListener('click', ()=>handleQuery(q.value));
+    q.addEventListener('keydown', (e)=>{ if(e.key==='Enter') handleQuery(q.value); });
+
+    // do szybkiego testu z konsoli
+    window.ffTestPizza = (txt)=>handleQuery(txt || 'najlepsze pizzerie w Warszawie');
+  })();
+  </script>
+</body>
+</html>

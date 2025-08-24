@@ -1,12 +1,9 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <!-- Pulsująca poświata (działa w <img src="...svg"> na Chrome/Safari/Firefox) -->
     <filter id="ffGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <!-- Cień/poświata -->
       <feDropShadow dx="0" dy="0" stdDeviation="0"
                     flood-color="#ff6a00" flood-opacity="0.85">
         <animate attributeName="stdDeviation"
@@ -17,8 +14,7 @@
     </filter>
   </defs>
 
-  <!-- Twoje logo PNG w tej samej paczce (assets/Freeflowlogo.png) -->
-  <!-- Uwaga: ten SVG ma leżeć w /assets, więc ścieżka poniżej to tylko nazwa pliku -->
+  <!-- Uwaga: tutaj NAZWA musi być identyczna jak plik w repo -->
   <image x="0" y="0" width="1024" height="1024"
          xlink:href="Freeflowlogo.png"
          filter="url(#ffGlow)"/>

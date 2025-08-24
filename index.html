@@ -1,38 +1,179 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FreeFlow • Voice to order</title>
-  <div class="ff-logo-wrap">
-  <img src="assets/freeflow-logo.svg?v=1" alt="FreeFlow logo"/>
-</div>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow – zamów głosem</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
   <style>
-    :root{ --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; }
-    body{ margin:0; font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; color:var(--text);
-      background:#0b0f14 url("./Background.png") center/cover fixed no-repeat; }
-    .wrap{max-width:980px;margin:0 auto;padding:16px}
-    .bubble{margin:8px auto 0;max-width:900px;padding:16px 14px;min-height:48px;background:rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.06);border-radius:14px;font-size:18px}
-    .hero{margin:14px auto 18px;width:min(92vw,640px);aspect-ratio:1/1;display:grid;place-items:center}
-    .logoBtn{border:none;background:transparent;cursor:pointer}
-    .logo{width:76%;max-width:520px;transition:transform .2s ease}
-    .logo.listening{animation: pulse 1.2s ease-in-out infinite}
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
-    .option{cursor:pointer;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin:6px 0}
+    :root{
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --glass: rgba(0,0,0,.18);
+      --border: rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
+    }
+
+    /* top bar */
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    h1{
+      font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font-weight:700; letter-spacing:.2px; margin:0; font-size: clamp(24px, 4.2vw, 44px);
+      text-shadow: 0 4px 30px rgba(0,0,0,.45);
+    }
+    nav{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border:1px solid var(--border); border-radius:999px;
+      background: var(--glass); color:var(--text); cursor:pointer; user-select:none;
+      backdrop-filter:saturate(120%) blur(8px);
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .chip:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.14);}
+    .chip:active{ transform: translateY(0); }
+    .chip i{font-style:normal; opacity:.9}
+
+    /* hero + logo */
+    .hero{margin:20px auto 14px; width:min(92vw,640px); aspect-ratio:1/1; display:grid; place-items:center}
+    .logoBtn{border:none; background:transparent; padding:0; cursor:pointer}
+    .logo-core{ width:78%; max-width:520px; display:block; filter:drop-shadow(0 10px 40px rgba(0,0,0,.55)); transition: transform .22s ease }
+    .logo-core.listening{ animation:ff-pulse 1.2s ease-in-out infinite }
+    @keyframes ff-pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.035)} 100%{transform:scale(1)} }
+
+    /* bubbles */
+    .bubble{
+      margin:10px auto 0; max-width:900px; padding:14px 16px; min-height:48px;
+      background:var(--glass); border:1px solid var(--border); border-radius:14px;
+      line-height:1.5; font-size:18px; backdrop-filter: blur(8px) saturate(120%);
+      box-shadow: 0 6px 28px rgba(0,0,0,.25);
+    }
+    .note{ color:var(--muted); font-size:14px; margin-top:8px }
+
+    /* toast (na komunikaty) */
+    .toast{
+      position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+      background:#0f1520; color:#dfe7f3; border:1px solid rgba(255,255,255,.12);
+      padding:10px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+      opacity:0; pointer-events:none; transition:opacity .18s ease;
+    }
+    .toast.show{opacity:1}
+
+    /* małe ekrany */
+    @media (max-width:640px){
+      nav{ width:100%; margin-left:0 }
+    }
   </style>
 </head>
+
 <body>
-  <main class="wrap">
-    <h1>FreeFlow – zamów głosem</h1>
+  <div class="wrap">
+    <header>
+      <h1>FreeFlow – zamów głosem</h1>
+      <nav aria-label="Szybkie skróty">
+        <button class="chip" data-intent="restaurant"><i>🍽️</i> Restauracja</button>
+        <button class="chip" data-intent="taxi"><i>🚕</i> Taxi</button>
+        <button class="chip" data-intent="hotel"><i>🏨</i> Hotel</button>
+      </nav>
+    </header>
+
     <section class="hero">
       <button id="micBtn" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <img class="logo" src="./freeflow-logo.svg" alt="FreeFlow" />
+        <!-- Używamy SVG (pulsuje) -->
+        <img class="logo-core" src="assets/freeflow-logo.svg?v=7" alt="FreeFlow logo" />
+      </button>
     </section>
+
     <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
-    <div id="results" class="bubble" style="margin-top:10px;display:none"></div>
-  </main>
-  <script src="./freeflow-assistant.js?v=4"></script>
+    <div class="note">Wskazówka: działa w Chrome/Edge (Web Speech API). Na iOS Safari użyj otwarcia w Chrome lub „Dodaj do ekranu głównego”.</div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // szybkie podpowiedzi – tylko wsadzamy tekst do bąbla
+    document.querySelectorAll('.chip').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const map = {
+          restaurant: "Zarezerwuj stolik na dziś 19:30 w Katowicach, kuchnia włoska.",
+          taxi: "Zamów taksówkę na 20:00 z Rynku w Katowicach do Pyrzowic.",
+          hotel: "Znajdź pokój 2-osobowy na dziś w centrum Krakowa."
+        };
+        const t = map[btn.dataset.intent] || "";
+        if(t) document.getElementById('transcript').textContent = t;
+      });
+    });
+
+    // TOAST helper
+    const toast = (msg) => {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), 1800);
+    };
+
+    // Web Speech API – czysta transkrypcja
+    const micBtn = document.getElementById('micBtn');
+    const logo   = document.querySelector('.logo-core');
+    const transcriptEl = document.getElementById('transcript');
+
+    let recognition;
+    let listening = false;
+
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = 'pl-PL';
+      recognition.continuous = false;       // 1 fraza → stop
+      recognition.interimResults = true;    // pokazuj „na żywo”
+
+      recognition.onstart = () => {
+        listening = true;
+        logo.classList.add('listening');
+        transcriptEl.textContent = "Słucham… 🎤";
+      };
+
+      recognition.onresult = (event) => {
+        let interim = '', final = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i][0].transcript;
+          if (event.results[i].isFinal) final += res;
+          else interim += res;
+        }
+        transcriptEl.textContent = final || interim || "Słucham… 🎤";
+      };
+
+      recognition.onerror = (e) => {
+        logo.classList.remove('listening');
+        listening = false;
+        const msg = (e.error === 'not-allowed')
+          ? "Brak zgody na mikrofon. Przyznaj uprawnienie w przeglądarce."
+          : "Błąd mikrofonu / rozpoznawania mowy.";
+        toast(msg);
+      };
+
+      recognition.onend = () => {
+        logo.classList.remove('listening');
+        listening = false;
+      };
+    } else {
+      // brak wsparcia
+      document.querySelector('.note').textContent =
+        "Twoja przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome/Edge lub Android.";
+    }
+
+    // start/stop nasłuchu
+    micBtn.addEventListener('click', () => {
+      if (!recognition) return;
+      if (listening) recognition.stop();
+      else           recognition.start();
+    });
+  </script>
 </body>
 </html>

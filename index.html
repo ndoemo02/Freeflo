@@ -3,98 +3,102 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FreeFlow • Voice to order</title>
-  <link rel="icon" href="./Freeflow-logo.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+  <title>FreeFlow • voice to order</title>
+  <link rel="icon" href="./assets/freeflow-logo.svg"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
-      --menu-bg: rgba(0,0,0,.30); --menu-bdr: rgba(255,255,255,.08);
-      --neon:#00d1ff;
+      --text:#eef3fb; --muted:#a9b6c9; --brand:#ff7a00;
+      --glass: rgba(0,0,0,.22); --bdr: rgba(255,255,255,.08);
     }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
-      margin:0;
+      margin:0; color:var(--text);
       font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      color:var(--text);
-      background:#0b0f14 url("./Background.png") center/cover fixed no-repeat;
+      background:#0b0f14 url("./assets/Background.png") center/cover fixed no-repeat;
     }
-    .wrap{max-width:980px;margin:0 auto;padding:16px}
-    h1{font-size:42px;line-height:1.05;margin:8px 0 6px}
-    .sub{color:var(--muted);margin-bottom:18px}
+    .wrap{max-width:980px;margin:0 auto;padding:18px}
+    h1{font-family:Poppins,system-ui;font-size:44px;line-height:1.06;margin:8px 0 6px}
+    .sub{color:var(--muted);margin:0 0 16px 0}
+
     /* HERO */
     .hero{
-      margin:14px auto 0;
-      width:min(92vw,640px);aspect-ratio:1/1;
-      display:grid;place-items:center;
-      position:relative;
+      margin:10px auto 0;
+      width:min(92vw,640px); aspect-ratio:1/1;
+      display:grid; place-items:center; position:relative;
     }
-    .logoBtn{border:none;background:transparent;cursor:pointer}
-    .logo{width:76%;max-width:520px;transition:transform .2s ease}
-    .logo.listening{animation:pulse 1.2s ease-in-out infinite}
+    .logoBtn{border:none;background:transparent;cursor:pointer;padding:0}
+    .logo{width:76%;max-width:520px;display:block;user-select:none}
+    .listening{animation:pulse 1.2s ease-in-out infinite}
     @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+
     /* BUBBLES */
     .bubble{
-      margin:12px auto 0;
-      max-width:900px;
-      padding:16px 14px;
-      min-height:48px;
-      background:rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:14px;
-      font-size:18px;
+      margin:12px auto 0; max-width:900px; min-height:52px;
+      padding:16px 14px; font-size:18px;
+      background:var(--glass); border:1px solid var(--bdr); border-radius:14px;
+      backdrop-filter: blur(10px);
     }
+    .bubble.small{font-size:16px;padding:10px 12px}
+
     /* BOTTOM BUTTONS */
-    .bottom-buttons{
-      display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:14px
-    }
-    .bottom-buttons button{
-      flex:1 1 calc(33.333% - 12px);
-      max-width:180px;min-width:120px;height:56px;
+    .buttons{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:14px 0 38px}
+    .btn{
+      flex:1 1 calc(33.333% - 12px); max-width:200px; min-width:120px; height:56px;
       display:flex;align-items:center;justify-content:center;gap:10px;
-      font-size:18px;border-radius:14px;
-      background:rgba(0,0,0,.18);color:#e8eefb;
-      border:1px solid rgba(255,255,255,.06);
-      cursor:pointer;box-shadow:0 10px 32px rgba(0,0,0,.35);
-      transition:transform .15s ease,background .2s ease;
+      font-size:18px; border-radius:14px; cursor:pointer;
+      color:#eaf1ff; background:var(--glass); border:1px solid var(--bdr);
+      box-shadow:0 10px 32px rgba(0,0,0,.35);
+      transition:transform .15s ease, background .2s ease;
     }
-    .bottom-buttons button:hover{
-      transform:translateY(-1px);background:rgba(0,0,0,.22);
-    }
-    .bottom-buttons .primary{
-      outline:2px solid #ff7a00aa;
-      box-shadow:0 0 20px #ff7a0033 inset,0 10px 32px #000;
-    }
+    .btn:hover{transform:translateY(-1px); background:rgba(0,0,0,.28)}
+    .primary{outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset,0 10px 32px #000}
+
+    /* ALERT */
+    .alert{display:none;margin-top:12px}
+    .alert.error{display:block;border-color:#ff3b30;background:rgba(255,59,48,.12)}
+    .rightMenu{position:fixed;right:12px;top:96px;display:flex;flex-direction:column;gap:10px;z-index:10}
+    .chip{width:64px;height:64px;border-radius:18px;background:var(--glass);border:1px solid var(--bdr);display:grid;place-items:center}
   </style>
 </head>
 <body>
+  <div class="rightMenu" aria-hidden="true">
+    <div class="chip">⋮</div>
+    <div class="chip">🔔</div>
+    <div class="chip">🌙</div>
+  </div>
+
   <main class="wrap">
-    <h1>FreeFlow – zamów głosem</h1>
-    <div class="sub">Taxi, posiłek, a może nocleg?</div>
+    <h1>FreeFlow — zamów głosem</h1>
+    <p class="sub">Taxi, posiłek, a może nocleg? Powiedz lub kliknij.</p>
 
     <!-- Logo/kropla -->
     <section class="hero">
       <button id="micBtn" type="button" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <img class="logo" src="./freeflow-logo.svg" alt="FreeFlow"/>
+        <!-- UPEWNIJ SIĘ, że ten plik istnieje: ./assets/freeflow-logo.svg -->
+        <img id="logo" class="logo" src="./assets/freeflow-logo.svg" alt="FreeFlow logo"/>
       </button>
     </section>
 
-    <!-- Transkrypcja POD kroplą -->
-    <div id="transcript" class="bubble glass">
-      Powiedz, co chcesz zamówić…
-    </div>
+    <!-- Transkrypcja (pod kroplą) -->
+    <div id="transcript" class="bubble" aria-live="polite">Powiedz, co chcesz zamówić…</div>
 
-    <!-- Wyniki -->
-    <div id="results" class="bubble" style="margin-top:10px;display:none"></div>
+    <!-- Podsumowanie / wynik -->
+    <div id="resultCard" class="bubble small" style="display:none"></div>
+
+    <!-- Alert backend -->
+    <div id="alert" class="bubble alert"></div>
 
     <!-- Kafelki -->
-    <div class="bottom-buttons" style="margin-bottom:32px">
-      <button class="primary glass" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
-      <button class="glass" data-quick="Taxi">🚕 <span>Taxi</span></button>
-      <button class="glass" data-quick="Hotel">🏠 <span>Hotel</span></button>
+    <div class="buttons">
+      <button class="btn primary" data-quick="food">🍽️ Jedzenie</button>
+      <button class="btn" data-quick="taxi">🚕 Taxi</button>
+      <button class="btn" data-quick="hotel">🏠 Hotel</button>
     </div>
   </main>
 
   <audio id="ttsPlayer" preload="auto"></audio>
-  <script src="./freeflow-assistant.js?v=5"></script>
+  <script src="./freeflow-assistant.js?v=6"></script>
 </body>
 </html>

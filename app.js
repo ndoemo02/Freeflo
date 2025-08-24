@@ -1,105 +1,51 @@
-/* FREEFLOW minimal ASR client */
-const CONFIG = {
-  BACKEND_URL: (window.FREEFLOW_BACKEND || 'https://freeflow-backend-vercel.vercel.app').replace(/\/+$/,'')
-};
+// Minimalny „kontroler” UI.
+// 1) przełączanie kategorii
+// 2) pokaz panelu z błędem (gdy backend offline)
+// 3) gotowe pod podmianę na realne API
 
-const el = {
-  micBtn: document.getElementById('micBtn'),
-  console: document.getElementById('console'),
-  pills: Array.from(document.querySelectorAll('.pill')),
-  cartCount: document.getElementById('cartCount')
-};
+const catsEl = document.getElementById('cats');
+const panelEl = document.getElementById('panel');
+const panelText = document.getElementById('panelText');
+const panelIcon = document.getElementById('panelIcon');
 
-function log(role, text){
-  const row = document.createElement('div');
-  row.className = 'row';
-  row.innerHTML = `<span class="role">${role}:</span> ${text}`;
-  el.console.appendChild(row);
-  el.console.scrollTop = el.console.scrollHeight;
-}
-log('Asystent', 'Kliknij logo, aby mówić. Sprawdzam backend…');
+// aktywacja cat buttonów
+catsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.cat');
+  if (!btn) return;
+  document.querySelectorAll('.cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
 
-// Health check
-(async () => {
-  try{
-    const r = await fetch(`${CONFIG.BACKEND_URL}/api/health`, { cache:'no-store' });
-    const j = await r.json().catch(()=>({}));
-    if(r.ok && j?.ok) log('Asystent', `Backend OK (${new Date(j.ts||Date.now()).toLocaleTimeString()})`);
-    else log('Asystent', 'Backend działa, ale odpowiedź niepełna.');
-  }catch(e){
-    log('Asystent', 'Nie mogę dotrzeć do /api/health – sprawdź domenę.');
-  }
-})();
-
-// --- Recording (WebAudio/MediaRecorder) ---
-let media, recorder, chunks = [], recActive = false;
-
-async function ensureStream(){
-  if(media) return media;
-  media = await navigator.mediaDevices.getUserMedia({ audio: true });
-  return media;
-}
-
-function stopRec(){
-  if(recorder && recActive){
-    recorder.stop();
-    recActive = false;
-    log('Asystent', 'Nagrywanie wyłączone.');
-  }
-}
-
-async function startRec(){
-  try{
-    const stream = await ensureStream();
-    chunks = [];
-    recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    recorder.ondataavailable = (e)=> { if(e.data?.size) chunks.push(e.data); };
-    recorder.onstop = onStopSend;
-    recorder.start();
-    recActive = true;
-    log('Asystent', 'Nagrywanie włączone.');
-    // auto stop after 4.5s to reduce payload
-    setTimeout(() => { if(recActive) stopRec(); }, 4500);
-  }catch(err){
-    log('Asystent', 'Brak uprawnień do mikrofonu lub przeglądarka nie wspiera.');
-    console.error(err);
-  }
-}
-
-async function onStopSend(){
-  try{
-    const blob = new Blob(chunks, { type: 'audio/webm' });
-    if(!blob.size){ log('Asystent', 'Brak dźwięku.'); return; }
-    const resp = await fetch(`${CONFIG.BACKEND_URL}/api/asr`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'audio/webm' },
-      body: blob
-    });
-    if(!resp.ok){
-      const t = await resp.text();
-      log('Asystent', `ASR błąd: ${resp.status} ${t.slice(0,140)}`);
-      return;
-    }
-    const data = await resp.json();
-    const text = data?.text || '';
-    if(text) log('Ty', text);
-    else log('Asystent', 'Nie udało się rozpoznać mowy.');
-  }catch(e){
-    log('Asystent', 'ASR błąd sieci: ' + e.message);
-  }
-}
-
-// UI wiring
-el.micBtn.addEventListener('click', () => {
-  if(recActive) stopRec(); else startRec();
+  // demo: pokaż krótką notyfikację, że „tryb testowy”
+  showInfo(`Wybrano: ${btn.textContent.trim()} — tryb testowy (mock).`, 'info');
 });
 
-for(const p of el.pills){
-  p.addEventListener('click', ()=>{
-    // for now just log the intent; you can hook to /api/chat or /api/order
-    log('Ty', p.dataset.intent);
-  });
+// helper: panel info/err
+function showInfo(text, type='info'){
+  panelText.textContent = text;
+  panelEl.classList.remove('hidden', 'err');
+  if(type==='err'){
+    panelEl.classList.add('err');
+    panelIcon.textContent = '✖';
+  }else{
+    panelIcon.textContent = 'ℹ️';
+  }
+  // auto-hide po 4.5s
+  clearTimeout(showInfo._t);
+  showInfo._t = setTimeout(() => panelEl.classList.add('hidden'), 4500);
 }
 
-// Optional: expose config on window for quick override in console
-window.__FREEFLOW__ = { CONFIG };
+// ====== tu podpinamy backend ======
+// Przykład: spróbuj odpytać zdrowie backendu. Jeśli padnie, pokaż ładny błąd.
+// Zastąp URL swoim (np. z Vercel).
+(async function pingBackend(){
+  const url = 'https://snd-vercel.vercel.app/api/health'; // PRZYKŁAD
+  try{
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 3000);
+    const res = await fetch(url, {signal: ctrl.signal});
+    if(!res.ok) throw new Error('status ' + res.status);
+    // jeśli OK, można w tle schować poprzedni błąd
+  }catch(err){
+    showInfo('Order błąd: Failed to fetch (tryb offline / mock).', 'err');
+  }
+})();

@@ -1,109 +1,487 @@
 <!doctype html>
 <html lang="pl">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Free Flow — zamów głosem</title>
-  <meta name="theme-color" content="#0b0f14"/>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>FreeFlow — zamów głosem</title>
+    <meta name="theme-color" content="#0b0f14" />
 
-  <style>
-    :root{
-      --bg:#0b0f14; --glass:rgba(0,0,0,.36); --glass-strong:rgba(0,0,0,.5);
-      --border:rgba(255,255,255,.10); --txt:#eef3fa; --muted:#a9b5c7;
-      --brand:#ff7a00; --accent:#00d4ff; --ok:#2bd67b; --radius:18px;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; color:var(--txt);
-      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background:var(--bg) url("./assets/Background.png") center/cover fixed no-repeat;
-    }
-    .page{min-height:100dvh; display:flex; flex-direction:column}
-    .wrap{width:min(1100px,92vw); margin-inline:auto}
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
 
-    header{position:sticky; top:0; z-index:20; backdrop-filter:blur(6px);
-      background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,.1) 70%,transparent)}
-    .bar{display:flex; align-items:center; justify-content:space-between; padding:16px 0 6px}
-    .brand{display:flex; gap:8px; font-weight:800; letter-spacing:.2px; font-size:28px}
-    .brand .dot{color:var(--brand)}
-    .brand-sub{display:block; color:var(--muted); margin-top:2px; font-size:12px}
-    .actions{display:flex; gap:12px}
-    .iconbtn{border:1px solid var(--border); background:var(--glass); padding:10px 12px; border-radius:14px; display:flex; align-items:center; gap:10px; box-shadow:var(--shadow)}
-    .iconbtn b{background:#ff8a00;color:#111;border-radius:10px;padding:2px 6px}
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --text: #eef3fb;
+        --muted: #a6b2c3;
+        --glass: rgba(0, 0, 0, 0.35);
+        --stroke: rgba(255, 255, 255, 0.08);
+        --brand: #ff7a00;
+        --ring: rgba(0, 214, 255, 0.35);
+      }
 
-    h1{font-size:clamp(28px,5vw,56px); line-height:1.04; margin:0 0 6px; text-shadow:0 10px 30px rgba(0,0,0,.4)}
-    .lead{color:var(--muted); margin:0 0 8px; font-size:clamp(14px,2.6vw,20px)}
+      /* Reset & base */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        color: var(--text);
+        background: var(--bg) url("assets/Background.png") center/cover fixed
+          no-repeat;
+        font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica,
+          Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      button {
+        font: inherit;
+      }
 
-    .cats{display:flex; gap:12px; flex-wrap:wrap; margin:18px 0 24px}
-    .cat{
-      flex:1 1 160px; max-width:220px; border:1px solid var(--border); background:var(--glass);
-      color:var(--txt); border-radius:20px; padding:14px 18px; display:flex; align-items:center;
-      gap:10px; justify-content:center; cursor:pointer; box-shadow:var(--shadow);
-      transition:transform .12s ease, background .2s ease, border-color .2s ease; backdrop-filter:blur(4px)
-    }
-    .cat:hover{transform:translateY(-2px); border-color:rgba(255,255,255,.18)}
-    .cat.active{outline:2px solid rgba(0,212,255,.35); background:rgba(0,0,0,.55)}
+      /* Top bar */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        background: linear-gradient(
+          to bottom,
+          rgba(11, 15, 20, 0.9),
+          rgba(11, 15, 20, 0.65),
+          transparent
+        );
+        backdrop-filter: saturate(120%) blur(4px);
+      }
+      .brand {
+        line-height: 1.05;
+      }
+      .brand-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .brand--free {
+        color: var(--brand);
+        font-weight: 700;
+        font-size: clamp(22px, 4.5vw, 28px);
+        letter-spacing: 0.2px;
+      }
+      .brand--flow {
+        font-weight: 700;
+        font-size: clamp(22px, 4.5vw, 28px);
+      }
+      .brand-sub {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+        opacity: 0.9;
+      }
+      .top-actions {
+        display: flex;
+        gap: 10px;
+      }
+      .ghost {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--stroke);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 14px;
+        display: inline-grid;
+        place-items: center;
+        transition: transform 120ms ease, background 120ms ease;
+      }
+      .ghost:active {
+        transform: translateY(1px) scale(0.98);
+      }
+      .badge {
+        margin-left: 6px;
+        background: #111;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
 
-    .hero{display:grid; place-items:center; padding:8px 0}
-    .logo-big{width:min(520px,70vw); height:auto; display:block; filter:drop-shadow(0 10px 20px rgba(0,0,0,.6)); cursor:pointer}
-    /* animacja słuchania */
-    .logo-big.listening{
-      animation: pulse 1.2s ease-in-out infinite;
-      filter: drop-shadow(0 0 8px rgba(0,212,255,.55)) drop-shadow(0 0 18px rgba(255,122,0,.45));
-    }
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+      /* Main container */
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 16px 40px;
+      }
+      .hero-copy {
+        margin: 8px 0 6px;
+      }
+      .hero-copy h1 {
+        font-family: Poppins, system-ui, sans-serif;
+        font-size: clamp(28px, 7vw, 44px);
+        margin: 8px 0 4px;
+        letter-spacing: 0.2px;
+      }
+      .hero-copy p {
+        color: var(--muted);
+        margin: 0 0 10px;
+        font-size: clamp(14px, 2.8vw, 18px);
+      }
 
-    .panel{
-      margin:10px auto 0; width:min(100%,980px); border:1px solid var(--border);
-      border-radius:var(--radius); background:var(--glass-strong); box-shadow:var(--shadow);
-      padding:14px 16px; display:flex; align-items:center; gap:12px
-    }
-    .panel.hidden{display:none}
-    .panel.err{border-color:rgba(255,90,90,.25)}
-    .pill{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:rgba(0,0,0,.35);border:1px solid var(--border)}
-    .panel.err .pill{background:rgba(255,90,90,.15); border-color:rgba(255,90,90,.35)}
-  </style>
-</head>
-<body>
-  <div class="page">
-    <header>
-      <div class="wrap bar">
-        <div>
-          <div class="brand"><span class="dot">Free</span><span>Flow</span></div>
-          <small class="brand-sub">Voice to order — tryb testowy, bez profilowania</small>
+      /* Pills (menu) */
+      .pill-row {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin: 8px 0 12px;
+      }
+      .pill {
+        cursor: pointer;
+        padding: 14px 18px;
+        border-radius: 22px;
+        font-size: 16px;
+        background: var(--glass);
+        border: 1px solid var(--stroke);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+        transition: box-shadow 160ms ease, transform 120ms ease,
+          outline-color 160ms ease;
+        outline: 2px solid transparent;
+      }
+      .pill:active {
+        transform: translateY(1px);
+      }
+      .pill.active {
+        outline: 2px solid var(--ring);
+        box-shadow: 0 0 0 6px rgba(0, 214, 255, 0.08) inset;
+      }
+
+      /* Logo + waves */
+      .logo-wrap {
+        display: grid;
+        place-items: center;
+        margin: 10px 0 18px;
+      }
+      .logo-btn {
+        position: relative;
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        border-radius: 24px;
+        overflow: visible;
+        isolation: isolate;
+      }
+      #ffLogo {
+        width: min(84vw, 560px);
+        height: auto;
+        display: block;
+        border-radius: 20px;
+        pointer-events: none;
+        user-select: none;
+      }
+      .rings {
+        position: absolute;
+        width: 52%;
+        aspect-ratio: 1/1;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0;
+        box-shadow: 0 0 0 2px rgba(0, 214, 255, 0.25),
+          0 0 34px rgba(255, 122, 0, 0.28) inset;
+        transition: opacity 160ms ease;
+      }
+      .logo-btn.listening .rings {
+        animation: ping 1200ms ease-in-out infinite;
+        opacity: 1;
+      }
+      @keyframes ping {
+        0% {
+          transform: scale(0.92);
+        }
+        50% {
+          transform: scale(1.03);
+        }
+        100% {
+          transform: scale(0.92);
+        }
+      }
+
+      /* Transcript + results */
+      .bubble {
+        margin: 10px auto 0;
+        max-width: 1000px;
+        background: var(--glass);
+        border: 1px solid var(--stroke);
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 18px;
+        line-height: 1.35;
+        backdrop-filter: blur(2px);
+      }
+
+      .cards {
+        display: grid;
+        gap: 14px;
+        margin: 12px 0 2px;
+      }
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--stroke);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+      .card h3 {
+        margin: 0 0 8px;
+        font-family: Poppins, system-ui, sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      /* Toast */
+      .toast {
+        position: fixed;
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        z-index: 30;
+        background: var(--glass);
+        border: 1px solid var(--stroke);
+        border-radius: 16px;
+        padding: 14px 16px;
+        line-height: 1.35;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+
+      /* Desktop tuning */
+      @media (min-width: 980px) {
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+          align-items: start;
+        }
+        .logo-wrap {
+          margin: 6px 0 6px;
+        }
+        .bubble {
+          font-size: 19px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-row">
+          <span class="brand--free">Free</span>
+          <span class="brand--flow">Flow</span>
         </div>
-        <div class="actions">
-          <div class="iconbtn" aria-label="Menu">☰</div>
-          <div class="iconbtn" aria-label="Koszyk">🛒 <b id="cartBadge">11</b></div>
-        </div>
+        <div class="brand-sub">Voice to order — tryb testowy, bez profilowania</div>
       </div>
+
+      <nav class="top-actions">
+        <button class="ghost" aria-label="Menu">≡</button>
+        <button class="ghost" aria-label="Koszyk">
+          🛒<span class="badge">11</span>
+        </button>
+      </nav>
     </header>
 
-    <main class="wrap">
-      <section>
+    <!-- Main -->
+    <main class="container">
+      <section class="hero-copy">
         <h1>Złóż zamówienie</h1>
-        <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
-        <div class="cats" id="cats">
-          <button class="cat active" data-type="food">🍽️ Jedzenie</button>
-          <button class="cat" data-type="taxi">🚕 Taxi</button>
-          <button class="cat" data-type="hotel">🏡 Hotel</button>
-        </div>
+        <p>Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
       </section>
 
-      <section class="hero" aria-label="Logo FreeFlow — kliknij, aby mówić">
-        <img id="logo" class="logo-big" src="./assets/Freeflowlogo.png" alt="FreeFlow logo (kliknij, aby mówić)"/>
+      <section class="pill-row" id="pillRow">
+        <button class="pill" data-cat="food">🍽️ Jedzenie</button>
+        <button class="pill" data-cat="taxi">🚕 Taxi</button>
+        <button class="pill" data-cat="hotel">🏡 Hotel</button>
       </section>
 
-      <div id="panel" class="panel hidden">
-        <div class="pill" id="panelIcon">ℹ️</div>
-        <div id="panelText">Komunikat…</div>
-      </div>
+      <section class="hero-grid">
+        <section class="logo-wrap">
+          <button id="micBtn" class="logo-btn" aria-label="Naciśnij i mów">
+            <!-- Upewnij się, że to PNG z przezroczystością -->
+            <img id="ffLogo" src="assets/Freeflowlogo.png?v=9" alt="FreeFlow logo" />
+            <span class="rings"></span>
+          </button>
+        </section>
+
+        <section class="cards" id="cardFeed">
+          <!-- Ostatnie wyniki (renderowane JS-em) -->
+        </section>
+      </section>
+
+      <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
     </main>
-    <footer></footer>
-  </div>
 
-  <script src="./app.js"></script>
-</body>
+    <!-- Toast -->
+    <div id="toast" class="toast" hidden></div>
+
+    <script>
+      /* ---------- helpers ---------- */
+      const toastEl = document.getElementById("toast");
+      function toast(msg, ms = 3200) {
+        toastEl.textContent = msg;
+        toastEl.hidden = false;
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => (toastEl.hidden = true), ms);
+      }
+
+      const transEl = document.getElementById("transcript");
+      const cardFeed = document.getElementById("cardFeed");
+      function card(title, lines) {
+        const el = document.createElement("article");
+        el.className = "card";
+        el.innerHTML = \`<h3>\${title}</h3><ul>\${lines
+          .map((li) => \`<li>\${li}</li>\`)
+          .join("")}</ul>\`;
+        cardFeed.prepend(el);
+      }
+
+      /* ---------- pills ---------- */
+      const pills = [...document.querySelectorAll(".pill")];
+      const presets = {
+        food: "Zamów capriciosę na wieczór do Demo Partner.",
+        taxi: "Zamów taksówkę na 20:00 do Katowic.",
+        hotel: "Zarezerwuj pokój dla dwóch osób w centrum Katowic."
+      };
+      function setActive(cat) {
+        pills.forEach((p) =>
+          p.classList.toggle("active", p.dataset.cat === cat)
+        );
+      }
+      pills.forEach((p) =>
+        p.addEventListener("click", () => {
+          const cat = p.dataset.cat;
+          setActive(cat);
+          const q = presets[cat] || "Złóż zamówienie.";
+          transEl.textContent = q;
+          handleOrder(q); // od razu pokażemy wynik (mock/real)
+        })
+      );
+      // domyślnie food
+      setActive("food");
+
+      /* ---------- microphone ---------- */
+      const micBtn = document.getElementById("micBtn");
+      function speechSupported() {
+        return (
+          "webkitSpeechRecognition" in window ||
+          "SpeechRecognition" in window
+        );
+      }
+
+      let rec = null;
+      function startRec() {
+        if (!speechSupported()) {
+          toast("Rozpoznawanie mowy dostępne w Chrome/Edge (Web Speech API).");
+          return;
+        }
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        rec = new SR();
+        rec.lang = "pl-PL";
+        rec.continuous = false;
+        rec.interimResults = true;
+
+        micBtn.classList.add("listening");
+        transEl.textContent = "⏺️ Słucham… mów śmiało.";
+
+        let final = "";
+        rec.onresult = (e) => {
+          let interim = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) final += t + " ";
+            else interim += t;
+          }
+          transEl.textContent = (final + interim).trim();
+        };
+        rec.onerror = () => {
+          micBtn.classList.remove("listening");
+          toast("Błąd mikrofonu lub uprawnień.");
+        };
+        rec.onend = () => {
+          micBtn.classList.remove("listening");
+          const query = transEl.textContent.trim();
+          if (query && !query.startsWith("⏺️")) handleOrder(query);
+        };
+        rec.start();
+      }
+      micBtn.addEventListener("click", startRec);
+
+      /* ---------- handleOrder (backend + mock) ---------- */
+      async function handleOrder(query) {
+        const MOCK = {
+          title: "Propozycja (demo)",
+          lines: [
+            "✅ Status: gotowe do realizacji",
+            "🏬 Miejsce: Demo Partner",
+            "⏱️ Czas: 15–20 min",
+            "💵 Cena: PLN 38",
+            "ℹ️ Info: wersja testowa (mock)."
+          ]
+        };
+
+        transEl.textContent = query;
+
+        try {
+          // podmień na docelowy backend, gdy będzie stały
+          const url =
+            "https://ffend-vercel.vercel.app/api/order?query=" +
+            encodeURIComponent(query);
+          const res = await fetch(url, { mode: "cors" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json(); // {title, lines[]}
+          if (data && data.title && Array.isArray(data.lines)) {
+            card(data.title, data.lines);
+          } else {
+            card(MOCK.title, MOCK.lines);
+          }
+        } catch (e) {
+          // nie psujemy UI — spokojny fallback
+          console.log("Backend niedostępny, używam mock:", e.message);
+          card(MOCK.title, MOCK.lines);
+        }
+      }
+
+      /* ---------- first paint: pokaż drobny hint tylko raz ---------- */
+      (function firstHint() {
+        try {
+          const k = "ff_hint_v1";
+          if (!localStorage.getItem(k)) {
+            if (!speechSupported()) {
+              toast(
+                "Wskazówka: mikrofon działa najlepiej w Chrome/Edge (Web Speech API)."
+              );
+            }
+            localStorage.setItem(k, "1");
+          }
+        } catch {}
+      })();
+    </script>
+  </body>
 </html>

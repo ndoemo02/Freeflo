@@ -1,203 +1,145 @@
-/* freeflow-assistant.js v4 – natychmiastowa transkrypcja, NLU, Google Places, potwierdzenie i testowe zamówienie */
+/* freeflow-assistant.js
+ * UI + ASR + NLU: pokazuj od razu transkrypcję, animacje start/stop.
+ * Ustaw BACKEND_URL na swój backend.
+ */
 
 const CONFIG = {
-  BACKEND_URL: (window.FREEFLOW_BACKEND || 'https://freeflow-backend-vercel.vercel.app').replace(/\/+$/,''),
-  TIMEOUT_MS: 12000
+  BACKEND_URL: 'https://freeflow-backend-vercel.vercel.app',
+  TIMEOUT_MS: 12000,
+  NLU_RETRIES: 1,
 };
 
-const $t = id => document.getElementById(id);
-const $bubble = $t('transcript');
-const $results = $t('results');
-const $micBtn = $t('micBtn');
-const $logo = document.querySelector('.logo');
+function $(id){ return document.getElementById(id) }
+const $bubble = $('transcript');
+const $micBtn = $('micBtn');
 
-function showTranscript(txt){ if($bubble){ $bubble.textContent = txt; } }
-function showResults(html){ if($results){ $results.style.display='block'; $results.innerHTML = html; } }
-function apip(p){ return `${CONFIG.BACKEND_URL}${p}`; }
+function show(txt){
+  if ($bubble) $bubble.textContent = txt;
+}
 
-async function fetchJson(url, opts={}, timeout=CONFIG.TIMEOUT_MS){
-  const res = await Promise.race([
-    fetch(url, { ...opts, headers:{ 'Content-Type':'application/json', ...(opts.headers||{}) }, cache:'no-store' }),
-    new Promise((_,rej)=> setTimeout(()=>rej(new Error('TIMEOUT')), timeout))
+function apip(path){ return `${CONFIG.BACKEND_URL}${path}` }
+
+function withTimeout(promise, ms = CONFIG.TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject)=> setTimeout(()=> reject(new Error('TIMEOUT')), ms))
   ]);
-  if(!res.ok){
-    const text = await res.text().catch(()=> '');
-    throw new Error(`HTTP ${res.status} ${res.statusText} ${text||''}`);
-  }
-  return res.json();
 }
 
-async function callNLU(text){
-  return fetchJson(apip('/api/nlu'), { method:'POST', body: JSON.stringify({ text }) });
-}
-async function searchPlaces(q, city, limit=3){
-  const u = new URL(apip('/api/places'));
-  u.searchParams.set('q', q||'pizza');
-  if(city) u.searchParams.set('city', city);
-  u.searchParams.set('limit', String(limit));
-  return fetchJson(u.toString());
-}
-async function sendOrderTest(payload){
-  return fetchJson(apip('/api/order-test'), { method:'POST', body: JSON.stringify(payload) });
-}
-
-function renderPlaceList(items){
-  if(!items || !items.length) return '<div>Brak propozycji miejsc.</div>';
-  return `
-    <div>Wybierz lokal (powiedz lub kliknij):</div>
-    ${items.map((it,idx)=>`
-      <div class="option" data-idx="${idx+1}">
-        ${idx+1}. <strong>${it.name}</strong> — ${it.address || 'adres —'}
-        ${it.score ? ` ★${it.score}` : ''}
-      </div>
-    `).join('')}
-    <div style="opacity:.7;margin-top:6px">Powiedz „jedynka/dwójka/trójka” lub kliknij.</div>
-  `;
-}
-
-function renderSummary(o){
-  const lines = [];
-  lines.push(`🧾 <strong>Podsumowanie</strong>`);
-  if(o.restaurant) lines.push(`Lokal: ${o.restaurant}`);
-  if(o.city) lines.push(`Miasto: ${o.city}`);
-  if(o.items?.length){
-    lines.push('Pozycje:');
-    for(const it of o.items){
-      const wo = it.without?.length ? ` (bez: ${it.without.join(', ')})` : '';
-      lines.push(`• ${it.qty||1} × ${it.name}${wo}`);
+async function fetchJson(url, opts={}, {retries=0}={}){
+  const run = async ()=>{
+    const res = await withTimeout(fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) },
+      cache: 'no-store',
+    }));
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error(`HTTP ${res.status} ${res.statusText} ${t||''}`.trim());
     }
-  }
-  lines.push(`Czas: ${o.time || '-'}`);
-  lines.push(`<button id="confirmBtn">Potwierdź (TEST)</button> <button id="editBtn">Popraw</button>`);
-  return lines.join('<br>');
-}
-
-function pickNumberFromText(t){
-  t = ` ${t.toLowerCase()} `;
-  if(t.includes('jedyn')) return 1;
-  if(t.includes('dwój') || t.includes('dwa')) return 2;
-  if(t.includes('trój') || t.includes('trzy')) return 3;
-  const m = t.match(/(?:^|\s)([1-3])(?:\s|$)/); 
-  return m ? parseInt(m[1],10) : null;
-}
-
-async function handleTextFlow(rawText){
-  showTranscript(rawText);
-
-  // 1) NLU
-  let nlu;
-  try {
-    nlu = await callNLU(rawText);
-  } catch(e){
-    showResults(`<div>❌ NLU błąd: ${e.message}</div>`);
-    return;
-  }
-  if(!nlu.ok){ showResults(`<div>⚠️ NLU problem: ${nlu.error||'?'}</div>`); return; }
-
-  const r = nlu.parsed || {};
-  const dish = r.dish || 'Danie';
-  const qty  = r.qty || 1;
-  const without = r.without || [];
-  const time = r.time || null;
-  const city = r.city || 'Katowice';
-
-  // 2) Places
-  let places = [];
-  try{
-    const p = await searchPlaces(dish.includes('Pizza')?'pizza':dish, city, 3);
-    places = (p && p.items) || [];
-  }catch(e){
-    places = [];
-  }
-  showResults(renderPlaceList(places));
-
-  // 3) Poczekaj na wybór lokalu / liczby
-  const pick = await waitForPlacePick(places);
-  if(!pick){ showResults(`<div>Przerwano wybór lokalu.</div>`); return; }
-
-  const order = {
-    restaurant: pick.name,
-    city,
-    time: time || 'jak najszybciej',
-    items: [{ name: dish, qty, without }]
+    return res.json();
   };
-  showResults(renderSummary(order));
-  wireSummaryActions(order);
+  try{ return await run() }
+  catch(err){ if(retries>0) return fetchJson(url, opts, {retries:retries-1}); throw err; }
 }
 
-function waitForPlacePick(places){
-  return new Promise(resolve=>{
-    const handler = (ev)=>{
-      const t = ev.target.closest('.option');
-      if(t){
-        const idx = parseInt(t.getAttribute('data-idx'),10)-1;
-        document.removeEventListener('click', handler);
-        resolve(places[idx] || null);
-      }
-    };
-    document.addEventListener('click', handler, { passive:true });
-
-    // dodatkowo nasłuchaj krótkiego rozpoznania mowy na „1/2/3”
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR) return; // brak mowy – tylko klik
-    const rec = new SR();
-    rec.lang = 'pl-PL'; rec.interimResults = false; rec.maxAlternatives = 1;
-    rec.onresult = (e)=>{
-      const t = e.results?.[0]?.[0]?.transcript || '';
-      const n = pickNumberFromText(t);
-      try { rec.stop(); } catch(_){}
-      document.removeEventListener('click', handler);
-      resolve(places[(n||0)-1] || null);
-    };
-    try { rec.start(); } catch(_){}
-    setTimeout(()=> { try{rec.stop();}catch(_){ } }, 6000);
-  });
+/* Health */
+async function healthCheck(){
+  try{
+    const data = await fetchJson(apip('/api/health'));
+    if (data && (data.status === 'ok' || data.ok === true)) { show('✅ Backend: ok'); return true; }
+    show('⚠️ Backend: odpowiedź nieoczekiwana'); return false;
+  }catch(e){
+    show(`❌ Backend niedostępny: ${e.message || e}`); return false;
+  }
 }
 
-function wireSummaryActions(order){
-  const c = document.getElementById('confirmBtn');
-  const e = document.getElementById('editBtn');
-  if(c) c.addEventListener('click', async ()=>{
-    try{
-      const r = await sendOrderTest({ ...order, debugEmail: null });
-      showResults(`<div>✅ Zamówienie (TEST) przyjęte: ${r.ok ? 'OK' : 'NIE'}</div>`);
-    }catch(err){
-      showResults(`<div>❌ Błąd wysyłki: ${err.message}</div>`);
+/* NLU */
+async function callNLU(text){
+  const body = JSON.stringify({ text: String(text||'').trim() });
+  return fetchJson(apip('/api/nlu'), { method:'POST', body }, { retries: CONFIG.NLU_RETRIES });
+}
+
+/* Public API */
+window.sendToAssistant = async function(text){
+  if (!text || !String(text).trim()) { show('🙂 Powiedz lub wpisz, co zamówić…'); return; }
+
+  show('⏳ Przetwarzam…');
+  const ok = await healthCheck(); if (!ok) return;
+
+  try{
+    const nlu = await callNLU(text);
+    if (nlu && nlu.ok) {
+      const r = nlu.parsed || {};
+      const resto = r.restaurant_name || r.restaurant_id || r.resto || '–';
+      const when  = r.when || r.godzina || '-';
+      const items = (r.items || r.pozycje || []).map(i=>{
+        const nm = i.name || i.nazwa || 'pozycja';
+        const q  = i.qty ?? i.ilosc ?? 1;
+        const wo = (i.without?.length) ? ` (bez: ${i.without.join(', ')})` : '';
+        return `• ${q} × ${nm}${wo}`;
+      }).join('\n');
+
+      show(`🧾 Zamówienie:
+Restauracja: ${resto}
+${items || '• (brak pozycji)'}
+Czas: ${when}`);
+    } else {
+      show('⚠️ NLU: odpowiedź nieoczekiwana');
     }
-  });
-  if(e) e.addEventListener('click', ()=>{
-    showResults(`<div>OK, powiedz jeszcze raz co chcesz zamówić…</div>`);
-  });
-}
+  }catch(e){
+    const msg = (e && e.message) ? e.message : String(e);
+    show(`❌ Błąd NLU. ${msg.includes('Failed to fetch') ? 'Sprawdź adres BACKEND_URL i CORS.' : msg}`);
+  }
+};
 
-// --- Mikrofon z natychmiastową transkrypcją
+/* Mic + animacje */
 (function setupMic(){
-  if(!$micBtn) return;
+  if (!$micBtn) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){
-    $micBtn.addEventListener('click', ()=> showTranscript('🎤 Brak wsparcia rozpoznawania mowy w tej przeglądarce.'));
+  if (!SR) {
+    $micBtn.addEventListener('click', ()=> show('🎤 Brak wsparcia rozpoznawania mowy w tej przeglądarce.'));
     return;
   }
-  const rec = new SR();
-  rec.lang = 'pl-PL'; rec.interimResults = true; rec.maxAlternatives = 1;
 
-  rec.onstart = ()=> { $logo && $logo.classList.add('listening'); showTranscript('🎙️ Słucham…'); };
-  rec.onend = ()=>   { $logo && $logo.classList.remove('listening'); };
-  rec.onerror = (e)=> { $logo && $logo.classList.remove('listening'); showTranscript(`🎤 Błąd: ${e.error||e.message||e}`); };
+  const rec = new SR();
+  rec.lang = 'pl-PL';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  let listening = false;
+  const ui = (window.uiAnimations || { onListenStart(){}, onListenStop(){} });
+
+  rec.onstart = ()=>{
+    listening = true;
+    ui.onListenStart();
+    show('🎙️ Słucham…');
+  };
+  rec.onerror = (e)=>{
+    listening = false;
+    ui.onListenStop();
+    show(`🎤 Błąd: ${e.error || e.message || e}`);
+  };
+  rec.onend = ()=>{
+    listening = false;
+    ui.onListenStop();
+  };
   rec.onresult = (e)=>{
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; ++i) {
-      const txt = e.results[i][0].transcript;
-      if (e.results[i].isFinal) {
-        handleTextFlow(txt);
-      } else {
-        interim += txt + ' ';
-      }
+    const t = e.results?.[0]?.[0]?.transcript;
+    if (t) {
+      // pokaż natychmiast transkrypcję zanim wyślemy do NLU
+      show('🗣️ ' + t);
+      window.sendToAssistant(t);
+    } else {
+      show('🙂 Nic nie zrozumiałem, spróbuj jeszcze raz.');
     }
-    if (interim) showTranscript(interim);
   };
 
   $micBtn.addEventListener('click', ()=>{
-    try { rec.start(); } catch(_) {}
+    if (listening) { try { rec.stop(); } catch{}; return; }
+    try { rec.start(); } catch (e) { show(`🎤 Nie mogę uruchomić: ${e.message || e}`); }
   });
 })();
+
+/* Auto health */
+healthCheck().catch(()=>{});

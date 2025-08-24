@@ -14,8 +14,7 @@
     </filter>
   </defs>
 
-  <!-- Uwaga: tutaj NAZWA musi być identyczna jak plik w repo -->
   <image x="0" y="0" width="1024" height="1024"
-         xlink:href="Freeflowlogo.png"
+         xlink:href="./Freeflowlogo.png"
          filter="url(#ffGlow)"/>
 </svg>

@@ -1,104 +1,324 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FreeFlow • voice to order</title>
-  <link rel="icon" href="./assets/freeflow-logo.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>FreeFlow — zamów głosem</title>
+  <meta name="theme-color" content="#0b0f12" />
   <style>
     :root{
-      --text:#eef3fb; --muted:#a9b6c9; --brand:#ff7a00;
-      --glass: rgba(0,0,0,.22); --bdr: rgba(255,255,255,.08);
+      --glass-bg: rgba(15,18,22,.55);
+      --glass-bd: rgba(255,255,255,.08);
+      --text: #eef2f5;
+      --muted: #b9c2cc;
+      --accent: #00d3ff;
+      --ok: #2ee6a6;
+      --shadow: 0 20px 40px rgba(0,0,0,.45);
+      --radius: 20px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0; color:var(--text);
-      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      background:#0b0f14 url("./assets/Background.png") center/cover fixed no-repeat;
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial;
+      background:#0b0f12 url("assets/Background.png") center/cover fixed no-repeat;
+      -webkit-tap-highlight-color: transparent; /* NO blue flash on tap */
+      overflow-x:hidden;
     }
-    .wrap{max-width:980px;margin:0 auto;padding:18px}
-    h1{font-family:Poppins,system-ui;font-size:44px;line-height:1.06;margin:8px 0 6px}
-    .sub{color:var(--muted);margin:0 0 16px 0}
+
+    /* backdrop blur containers */
+    .glass{
+      backdrop-filter: blur(18px) saturate(110%);
+      -webkit-backdrop-filter: blur(18px) saturate(110%);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-bd);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    header{
+      padding: clamp(16px, 2.8vw, 28px);
+      padding-bottom: 8px;
+    }
+    .brand{
+      font-weight: 800;
+      letter-spacing:.3px;
+      line-height:1.1;
+      font-size: clamp(28px, 6vw, 52px);
+    }
+    .brand em{ color:#ff7a18; font-style:normal; }
+
+    .strap{
+      margin-top:6px;
+      color:var(--muted);
+      font-size: clamp(14px, 2.8vw, 18px);
+    }
+
+    main{padding: 0 clamp(16px, 3vw, 28px) 28px;}
+
+    .title{
+      margin: 6px 0 10px;
+      font-weight: 800;
+      letter-spacing:.2px;
+      font-size: clamp(28px, 7.2vw, 56px);
+      line-height:1.05;
+      text-shadow: 0 6px 28px rgba(0,0,0,.55);
+    }
+    .subtitle{
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: clamp(15px, 3.2vw, 20px);
+    }
 
     /* HERO */
     .hero{
-      margin:10px auto 0;
-      width:min(92vw,640px); aspect-ratio:1/1;
-      display:grid; place-items:center; position:relative;
+      position: relative;
+      display: grid;
+      place-items: center;
+      margin-top: 10px;
     }
-    .logoBtn{border:none;background:transparent;cursor:pointer;padding:0}
-    .logo{width:76%;max-width:520px;display:block;user-select:none}
-    .listening{animation:pulse 1.2s ease-in-out infinite}
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
-
-    /* BUBBLES */
-    .bubble{
-      margin:12px auto 0; max-width:900px; min-height:52px;
-      padding:16px 14px; font-size:18px;
-      background:var(--glass); border:1px solid var(--bdr); border-radius:14px;
-      backdrop-filter: blur(10px);
+    .badge{
+      width: min(78vw, 460px);
+      max-width: 520px;
+      user-select:none;
+      -webkit-user-drag:none;
+      cursor:pointer;
+      transform-origin: 50% 60%;
+      transition: transform .22s ease, filter .22s ease;
+      filter: drop-shadow(0 18px 40px rgba(0,0,0,.45));
+      outline: none;
     }
-    .bubble.small{font-size:16px;padding:10px 12px}
-
-    /* BOTTOM BUTTONS */
-    .buttons{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:14px 0 38px}
-    .btn{
-      flex:1 1 calc(33.333% - 12px); max-width:200px; min-width:120px; height:56px;
-      display:flex;align-items:center;justify-content:center;gap:10px;
-      font-size:18px; border-radius:14px; cursor:pointer;
-      color:#eaf1ff; background:var(--glass); border:1px solid var(--bdr);
-      box-shadow:0 10px 32px rgba(0,0,0,.35);
-      transition:transform .15s ease, background .2s ease;
+    .badge:active{ transform: scale(.985); }
+    .badge.pulsing .mic-head{
+      animation: glow 1.6s ease-in-out infinite;
     }
-    .btn:hover{transform:translateY(-1px); background:rgba(0,0,0,.28)}
-    .primary{outline:2px solid #ff7a00aa; box-shadow:0 0 20px #ff7a0033 inset,0 10px 32px #000}
+    @keyframes glow{
+      0%,100%{ filter: drop-shadow(0 0 10px #00d3ff) drop-shadow(0 0 2px #00d3ff);}
+      50%{ filter: drop-shadow(0 0 26px #39e4ff) drop-shadow(0 0 8px #39e4ff);}
+    }
 
-    /* ALERT */
-    .alert{display:none;margin-top:12px}
-    .alert.error{display:block;border-color:#ff3b30;background:rgba(255,59,48,.12)}
-    .rightMenu{position:fixed;right:12px;top:96px;display:flex;flex-direction:column;gap:10px;z-index:10}
-    .chip{width:64px;height:64px;border-radius:18px;background:var(--glass);border:1px solid var(--bdr);display:grid;place-items:center}
+    /* TRANSCRIPT right under the drop */
+    .transcript{
+      width: min(900px, 96%);
+      margin: 14px auto 0;
+      padding: 16px 18px;
+      font-size: clamp(16px, 3.6vw, 18px);
+      display:flex; align-items:center; gap:10px;
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 8px #7dd3fc;}
+    .ghost{opacity:.55}
+
+    /* FOOTER TILES */
+    .tiles{
+      position: sticky;
+      bottom: 14px;
+      display:grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 14px;
+      width: min(980px, 96%);
+      margin: 22px auto 6px;
+    }
+    .tile{
+      padding: 16px 18px;
+      display:flex; gap:10px; align-items:center; justify-content:center;
+      font-weight:600;
+      font-size: 18px;
+      color:var(--text);
+      transition: transform .15s ease, background .2s ease, border-color .2s ease;
+    }
+    .tile:active{ transform: translateY(1px) scale(.99); }
+    .tile .emoji{font-size:22px}
+
+    /* little toast for errors / ok */
+    .toast{
+      position: fixed; left:50%; transform:translateX(-50%);
+      bottom: calc(14px + 76px);
+      padding: 14px 16px;
+      max-width: 92vw;
+      color:#fee2e2; border:1px solid rgba(255,255,255,.1);
+      background: rgba(190,43,43,.22);
+      border-radius: 14px; box-shadow:var(--shadow);
+      display:none;
+    }
+    .toast.show{ display:block; }
+
+    /* Responsive tuning */
+    @media (min-width: 820px){
+      .hero{ margin-top: 6px; }
+      .transcript{ margin-top: 16px; }
+    }
   </style>
 </head>
 <body>
-  <div class="rightMenu" aria-hidden="true">
-    <div class="chip">⋮</div>
-    <div class="chip">🔔</div>
-    <div class="chip">🌙</div>
-  </div>
+  <header>
+    <div class="brand"><em>Free</em> Flow</div>
+    <div class="strap">Voice to order — tryb testowy, bez profilowania</div>
+  </header>
 
-  <main class="wrap">
-    <h1>FreeFlow — zamów głosem</h1>
-    <p class="sub">Taxi, posiłek, a może nocleg? Powiedz lub kliknij.</p>
+  <main>
+    <h1 class="title">Złóż zamówienie</h1>
+    <p class="subtitle">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
 
-    <!-- Logo/kropla -->
+    <!-- HERO: logo-kropla — kliknięcie start/stop -->
     <section class="hero">
-      <button id="micBtn" type="button" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <!-- UPEWNIJ SIĘ, że ten plik istnieje: ./assets/freeflow-logo.svg -->
-        <img id="logo" class="logo" src="./assets/freeflow-logo.svg" alt="FreeFlow logo"/>
-      </button>
+      <svg id="badge" class="badge" viewBox="0 0 600 740" aria-label="FreeFlow – naciśnij, aby mówić" role="button" tabindex="0">
+        <!-- mikrofon + fale -->
+        <defs>
+          <radialGradient id="g1" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#0ef"/>
+            <stop offset="100%" stop-color="#021a22"/>
+          </radialGradient>
+          <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffb457"/>
+            <stop offset="100%" stop-color="#ff4d00"/>
+          </linearGradient>
+        </defs>
+        <!-- tło kropli -->
+        <path d="M300,30 C430,30 535,135 535,265 C535,365 470,450 400,510 C355,548 330,590 314,635 C307,655 296,695 300,710 C294,720 284,720 280,710 C284,695 273,655 266,635 C250,590 225,548 180,510 C110,450 45,365 45,265 C45,135 150,30 300,30 Z"
+              fill="#0b0f12" opacity="0.88" stroke="#1f2937" stroke-width="2"/>
+        <!-- neonowa obwódka kropli -->
+        <path d="M300,30 C430,30 535,135 535,265 C535,365 470,450 400,510 C355,548 330,590 314,635 C307,655 296,695 300,710 C294,720 284,720 280,710 C284,695 273,655 266,635 C250,590 225,548 180,510 C110,450 45,365 45,265 C45,135 150,30 300,30 Z"
+              fill="none" stroke="url(#g2)" stroke-width="6" opacity=".85"/>
+
+        <!-- mikrofon -->
+        <g transform="translate(0,40)">
+          <circle cx="300" cy="250" r="128" fill="url(#g1)" opacity=".55"/>
+          <g class="mic-head">
+            <ellipse cx="338" cy="208" rx="74" ry="74" fill="url(#g2)"/>
+            <rect x="310" y="200" width="36" height="120" rx="10" fill="#121a20"/>
+          </g>
+          <rect x="224" y="340" width="152" height="20" rx="10" fill="#00d3ff" opacity=".8"/>
+        </g>
+
+        <!-- ikonki usług -->
+        <g transform="translate(0,420)" opacity=".95">
+          <rect x="210" y="0" width="180" height="56" rx="12" fill="rgba(0,0,0,.35)" stroke="rgba(255,255,255,.08)"/>
+          <text x="240" y="36" fill="#7ee3ff" font-size="24">🍽️</text>
+          <text x="290" y="36" fill="#ffd27e" font-size="24">🚕</text>
+          <text x="340" y="36" fill="#7ee3ff" font-size="24">🏠</text>
+        </g>
+      </svg>
+
+      <!-- TRANSKRYPCJA: tuż pod kroplą -->
+      <div id="transcript" class="glass transcript">
+        <span class="dot" id="dot"></span>
+        <span id="text" class="ghost">Powiedz, co chcesz zamówić…</span>
+      </div>
     </section>
 
-    <!-- Transkrypcja (pod kroplą) -->
-    <div id="transcript" class="bubble" aria-live="polite">Powiedz, co chcesz zamówić…</div>
-
-    <!-- Podsumowanie / wynik -->
-    <div id="resultCard" class="bubble small" style="display:none"></div>
-
-    <!-- Alert backend -->
-    <div id="alert" class="bubble alert"></div>
-
-    <!-- Kafelki -->
-    <div class="buttons">
-      <button class="btn primary" data-quick="food">🍽️ Jedzenie</button>
-      <button class="btn" data-quick="taxi">🚕 Taxi</button>
-      <button class="btn" data-quick="hotel">🏠 Hotel</button>
+    <!-- kafelki -->
+    <div class="tiles">
+      <button class="glass tile" data-intent="food"><span class="emoji">🍽️</span> Jedzenie</button>
+      <button class="glass tile" data-intent="taxi"><span class="emoji">🚕</span> Taxi</button>
+      <button class="glass tile" data-intent="hotel"><span class="emoji">🏠</span> Hotel</button>
     </div>
   </main>
 
-  <audio id="ttsPlayer" preload="auto"></audio>
-  <script src="./freeflow-assistant.js?v=6"></script>
+  <div id="toast" class="toast glass" role="status" aria-live="polite"></div>
+
+  <script>
+    // ===== UI helpers =====
+    const $ = s => document.querySelector(s);
+    const badge = $('#badge');
+    const transcript = $('#text');
+    const dot = $('#dot');
+    const toast = $('#toast');
+
+    const showToast = (msg, ok=false) => {
+      toast.textContent = msg;
+      toast.style.background = ok ? 'rgba(33, 180, 120, .22)' : 'rgba(190, 43, 43, .22)';
+      toast.style.color = ok ? '#e9fff7' : '#ffecec';
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove('show'), 2600);
+    };
+
+    // ===== Speech: guard for unsupported =====
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let rec = null, listening = false, finalBuffer = '';
+
+    function applyInterim(s){
+      if(!s){ transcript.textContent = finalBuffer || '…'; return; }
+      transcript.textContent = (finalBuffer ? finalBuffer + ' ' : '') + s;
+    }
+    function toggleBadgePulse(on){
+      badge.classList.toggle('pulsing', !!on);
+      dot.style.background = on ? '#34d399' : '#7dd3fc';
+      transcript.classList.toggle('ghost', !on && !finalBuffer);
+    }
+
+    function startRec(){
+      if(!Rec){ showToast('Rozpoznawanie mowy niedostępne w tej przeglądarce. Użyj Chrome/Edge.', false); return; }
+      if(listening) return;
+
+      if(!rec){
+        rec = new Rec();
+        rec.lang = 'pl-PL';
+        rec.interimResults = true;
+        rec.continuous = false;
+
+        rec.onresult = (e) => {
+          let interim = '';
+          for(const res of e.results){
+            const txt = res[0].transcript.trim();
+            if(res.isFinal){
+              if(txt) finalBuffer = finalBuffer ? (finalBuffer + ' ' + txt) : txt;
+            } else {
+              interim += txt + ' ';
+            }
+          }
+          applyInterim(interim.trim());
+        };
+        rec.onerror = (e)=>{ showToast('Mikrofon: ' + (e.error||'błąd')); stopRec(); };
+        rec.onend = ()=>{
+          listening = false; toggleBadgePulse(false);
+          // krótka odpowiedź TTS (możesz wyłączyć)
+          if(finalBuffer){ speak('Zapisano: ' + finalBuffer); }
+        };
+      }
+      finalBuffer = '';
+      transcript.textContent = 'Słucham…';
+      listening = true; toggleBadgePulse(true);
+      try{ rec.start(); }catch(_){}
+    }
+    function stopRec(){
+      if(rec && listening){ try{ rec.stop(); }catch(_){} }
+      listening = false; toggleBadgePulse(false);
+    }
+
+    // TTS (krótkie potwierdzenia)
+    function speak(text){
+      if(!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'pl-PL';
+      u.rate = 1; u.pitch = 1; u.volume = .9;
+      window.speechSynthesis.speak(u);
+    }
+
+    // ===== Events =====
+    // Logo = toggle
+    const toggleListen = () => listening ? stopRec() : startRec();
+    badge.addEventListener('click', toggleListen);
+    badge.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleListen(); }});
+    // zapobiegnij „tap highlight” i scroll-drag
+    badge.addEventListener('touchstart', e=>{ e.preventDefault(); }, {passive:false});
+
+    // Kafelki => wstawiają prompt do transkrypcji i czytają
+    document.querySelectorAll('.tile').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const intent = btn.dataset.intent;
+        let hint = '';
+        if(intent==='food') hint = 'Zamów pizza peperoni na 19:00';
+        if(intent==='taxi') hint = 'Zamów taxi na 18:30 do centrum';
+        if(intent==='hotel') hint = 'Zarezerwuj hotel na jutro';
+        finalBuffer = hint; applyInterim('');
+        speak('Wybrano ' + (intent==='food'?'jedzenie':intent));
+      });
+    });
+
+    // start tips
+    setTimeout(()=>showToast('Kliknij kroplę, by mówić.', true), 600);
+  </script>
 </body>
 </html>

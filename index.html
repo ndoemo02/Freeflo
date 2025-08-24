@@ -4,210 +4,267 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>FreeFlow — zamów głosem</title>
-  <meta name="theme-color" content="#0b0f14">
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      --bg:#0b0f14; --text:#eef3fb; --muted:#a6b2c3; --glass:rgba(0,0,0,.35);
-      --stroke:rgba(255,255,255,.08); --ring:rgba(0,214,255,.35); --brand:#ff7a00
+      --fg:#e9eef6;
+      --muted:#a8b3c7;
+      --brand:#ff7a00;
+      --glass-bg: rgba(0,0,0,.36);
+      --glass-bd: rgba(255,255,255,.08);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;color:var(--text);
-      background:var(--bg) url("assets/Background.png") center/cover fixed no-repeat;
-      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial
+      margin:0; color:var(--fg);
+      font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
     }
 
-    /* === top === */
-    .topbar{
-      position:sticky;top:0;z-index:50;
-      background:linear-gradient(to bottom,rgba(11,15,20,.95),rgba(11,15,20,.55),transparent);
-      padding:14px 16px 8px
+    /* Header */
+    .ff-header{
+      display:flex; align-items:center; gap:12px;
+      padding:16px;
+      background:linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,0));
     }
-    .top{
-      max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px
+    .ff-title{
+      font-weight:800; font-size:28px; letter-spacing:.2px;
     }
-    .brand{flex:1 1 auto}
-    .row{display:flex;gap:6px;align-items:baseline}
-    .free{color:var(--brand);font:700 26px/1 Poppins}
-    .flow{font:700 26px/1 Poppins}
-    .sub{color:var(--muted);font-size:12px;margin-top:4px}
-    .actions{display:flex;gap:10px}
-    .action{
-      display:inline-flex;align-items:center;gap:10px;min-width:44px;justify-content:center;
-      height:44px;padding:0 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke)
-    }
-    .badge{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:#ff9f2e;font-weight:700}
-
-    /* === grid główny === */
-    .wrap{max-width:1100px;margin:0 auto;padding:0 16px 98px}
-    h1{font:700 clamp(28px,7vw,44px)/1.1 Poppins;margin:12px 0 4px}
-    .lead{color:var(--muted);margin:0 0 14px}
-
-    .logo-wrap{display:grid;place-items:center;margin:6px 0 10px}
-    .logo-btn{position:relative;border:0;background:transparent;border-radius:22px;outline:0}
-    #ffLogo{
-      width:min(88vw,620px);height:auto;display:block;border-radius:22px;will-change:transform,filter;
-      transition:transform .18s ease, filter .18s ease
-    }
-    /* PULS całego bąbla przy nasłuchu */
-    .logo-btn.listening #ffLogo{
-      animation:ffpulse 1.15s ease-in-out infinite
-    }
-    @keyframes ffpulse{
-      0%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(0,214,255,0))}
-      50%{transform:scale(1.03);filter:drop-shadow(0 0 14px rgba(0,214,255,.45)) drop-shadow(0 0 22px rgba(255,122,0,.25))}
-      100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(0,214,255,0))}
+    .ff-sub{color:var(--muted); font-size:13px}
+    .ff-spacer{flex:1}
+    .ff-iconBtn{
+      height:44px; width:44px; border-radius:14px;
+      display:grid; place-items:center;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-bd);
+      backdrop-filter: blur(8px);
     }
 
-    .bubble{
-      background:var(--glass);border:1px solid var(--stroke);border-radius:16px;
-      padding:14px 16px;font-size:18px
+    main{padding:10px 16px 180px} /* extra bottom for tiles */
+
+    h1{
+      margin:8px 0 6px; font-size:34px; line-height:1.06; letter-spacing:.2px;
+      text-shadow:0 2px 24px rgba(0,0,0,.45);
+    }
+    .lead{color:#c9d3e3; margin:0 0 14px; text-shadow:0 2px 24px rgba(0,0,0,.45)}
+
+    /* Logo bubble */
+    .ff-hero{display:grid; place-items:center; margin:6px 0 18px}
+    .logo-wrap{
+      width:min(86vw,560px); aspect-ratio:1/1; display:grid; place-items:center;
+      border-radius:28px; overflow:hidden;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.06);
+      box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 0 1px rgba(255,255,255,.04);
+    }
+    .logo{
+      width:84%; max-width:520px; user-select:none;
+      transition:transform .18s ease, filter .18s ease;
+      will-change:transform,filter;
+    }
+    .logo.listening{
+      animation: ff-pulse 1.15s ease-in-out infinite;
+      transform-origin:center;
+    }
+    @keyframes ff-pulse{
+      0%{ transform:scale(1);     filter:drop-shadow(0 0 0 rgba(255,122,0,0)); }
+      50%{transform:scale(1.03);  filter:drop-shadow(0 0 14px rgba(255,122,0,.45));}
+      100%{transform:scale(1);    filter:drop-shadow(0 0 0 rgba(255,122,0,0)); }
     }
 
-    .cards{display:grid;gap:14px;margin-top:12px}
-    .card{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
-    .card h3{margin:0 0 8px;font:600 18px/1.2 Poppins}
-    .card ul{margin:0;padding-left:18px;color:var(--muted)}
-
-    /* === DOCK (kafelki) na dole === */
-    .dock{
-      position:fixed;left:12px;right:12px;bottom:12px;z-index:60;
-      display:flex;gap:12px;justify-content:center;background:var(--glass);
-      border:1px solid var(--stroke);border-radius:18px;padding:10px;backdrop-filter:blur(4px)
+    /* Transcript bubble (ALWAYS visible) */
+    #transcript.ff-transcript{
+      position:fixed; left:16px; right:16px;
+      bottom: calc(96px + max(16px, env(safe-area-inset-bottom)));
+      z-index:40;
+      padding:14px 16px; min-height:48px;
+      color:var(--fg); font-size:16px; line-height:1.35;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-bd);
+      border-radius:16px;
+      backdrop-filter: blur(8px);
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
     }
-    .pill{
-      flex:1 1 0%;min-width:0;text-align:center;cursor:pointer;padding:12px 14px;
-      border-radius:14px;font-size:16px;background:rgba(255,255,255,.04);border:1px solid var(--stroke);
-      outline:2px solid transparent
+    @media (max-width:380px){
+      #transcript.ff-transcript{bottom: calc(112px + max(12px, env(safe-area-inset-bottom))); }
     }
-    .pill.active{outline:2px solid var(--ring);box-shadow:0 0 0 6px rgba(0,214,255,.08) inset}
 
-    .toast{position:fixed;left:14px;right:14px;bottom:80px;z-index:70;
-      background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
+    /* Tiles (bottom) — SINGLE glass, no double outline */
+    .ff-bottom{
+      position:fixed; left:16px; right:16px;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index:30;
+      display:flex; gap:14px; justify-content:space-between;
+    }
+    .tile{
+      flex:1; min-width:0;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      height:72px; border-radius:18px;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-bd);      /* pojedyncza delikatna krawędź */
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 24px rgba(0,0,0,.28);
+      color:var(--fg); font-weight:700; font-size:18px;
+    }
+    .tile.active{
+      outline:2px solid rgba(64,171,255,.55);
+      outline-offset:0;               /* brak dodatkowej obwódki */
+      background:rgba(20,28,38,.46);
+    }
+    .tile .emoji{font-size:22px}
+
+    .hint{
+      margin-top:10px; color:var(--muted); font-size:13px
+    }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="top">
-      <div class="brand">
-        <div class="row"><span class="free">Free</span><span class="flow">Flow</span></div>
-        <div class="sub">Voice to order — tryb testowy, bez profilowania</div>
-      </div>
-      <div class="actions">
-        <button class="action" aria-label="Menu">≡</button>
-        <button class="action" aria-label="Koszyk"><span>🛒</span><span class="badge" id="cartNum">11</span></button>
-      </div>
+
+  <!-- HEADER -->
+  <header class="ff-header">
+    <div>
+      <div class="ff-title"><span style="color:var(--brand)">Free</span> Flow</div>
+      <div class="ff-sub">Voice to order — tryb testowy, bez profilowania</div>
     </div>
+    <div class="ff-spacer"></div>
+    <div class="ff-iconBtn" title="Menu" aria-hidden="true">≡</div>
+    <div class="ff-iconBtn" title="Koszyk" aria-hidden="true">🛒</div>
   </header>
 
-  <main class="wrap">
+  <main>
     <h1>Złóż zamówienie</h1>
     <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
 
-    <section class="logo-wrap">
-      <button id="micBtn" class="logo-btn" aria-label="Naciśnij i mów">
-        <img id="ffLogo" src="assets/Freeflowlogo.png?v=12" alt="FreeFlow logo">
-      </button>
+    <!-- LOGO / HERO -->
+    <section class="ff-hero">
+      <div class="logo-wrap">
+        <img id="ffLogo" class="logo" src="assets/Freeflowlogo.png" alt="FreeFlow logo" />
+      </div>
     </section>
 
-    <!-- transkrypcja POD bąblem -->
-    <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
-
-    <!-- feed kart / odpowiedzi -->
-    <section id="cardFeed" class="cards"></section>
+    <p class="hint">Wskazówka: rozpoznawanie mowy działa natywnie w Chrome/Edge. Na iOS użyj Chrome lub dodaj stronę do ekranu głównego.</p>
   </main>
 
-  <!-- Dock z kafelkami na dole -->
-  <nav class="dock" id="dock">
-    <button class="pill" data-cat="food">🍽️ Jedzenie</button>
-    <button class="pill" data-cat="taxi">🚕 Taxi</button>
-    <button class="pill" data-cat="hotel">🏡 Hotel</button>
+  <!-- TRANSCRIPT (fixed, nad kafelkami) -->
+  <div id="transcript" class="ff-transcript" aria-live="polite">Powiedz, co chcesz zamówić…</div>
+
+  <!-- BOTTOM TILES -->
+  <nav class="ff-bottom" role="navigation" aria-label="Główne działania">
+    <button id="btn-food"  class="tile active"><span class="emoji">🍽️</span>Jedzenie</button>
+    <button id="btn-taxi"  class="tile"><span class="emoji">🚕</span>Taxi</button>
+    <button id="btn-hotel" class="tile"><span class="emoji">🏡</span>Hotel</button>
   </nav>
 
-  <div id="toast" class="toast" hidden></div>
-
   <script>
-    // ===== helpers UI =====
-    const $ = s => document.querySelector(s);
-    const $$ = s => [...document.querySelectorAll(s)];
-    const toastEl = $("#toast");
-    function toast(msg, ms=2400){
-      toastEl.textContent = msg; toastEl.hidden = false;
-      clearTimeout(toast._t); toast._t = setTimeout(()=>toastEl.hidden=true, ms);
-    }
+    // ===== Helpers: transcript & beeps & TTS (PL) =====
+    const $logo = document.getElementById('ffLogo');
+    const $t = document.getElementById('transcript');
 
-    const transEl = $("#transcript");
-    const cardFeed = $("#cardFeed");
-    const micBtn = $("#micBtn");
-    const pills = $$(".pill");
+    function setTranscript(txt){ if($t) $t.textContent = txt || ''; }
 
-    function card(title, lines){
-      const el = document.createElement("article");
-      el.className = "card";
-      el.innerHTML = `<h3>${title}</h3><ul>${(lines||[]).map(li=>`<li>${li}</li>`).join("")}</ul>`;
-      cardFeed.prepend(el);
-    }
-
-    // ===== kafelki (presety) =====
-    const presets={
-      food:"Zamów capriciosę na wieczór do Demo Partner.",
-      taxi:"Zamów taksówkę na 20:00 do Katowic.",
-      hotel:"Zarezerwuj pokój dla dwóch osób w centrum Katowic."
-    };
-    function setActive(cat){pills.forEach(p=>p.classList.toggle("active", p.dataset.cat===cat));}
-    pills.forEach(p=>p.addEventListener("click", ()=>{
-      const cat = p.dataset.cat; setActive(cat);
-      const q = presets[cat] || "Złóż zamówienie.";
-      transEl.textContent = q;
-      handleOrder(q);
-    }));
-    setActive("food");
-
-    // ===== mikrofon =====
-    function speechSupported(){return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;}
-    let rec=null;
-    function startRec(){
-      if(!speechSupported()){ toast("Mikrofon działa w Chrome/Edge (Web Speech API)."); return; }
+    function beep(freq=880, ms=110){
       try{
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        rec = new SR(); rec.lang="pl-PL"; rec.continuous=false; rec.interimResults=true;
-        micBtn.classList.add("listening");
-        transEl.textContent="⏺️ Słucham…";
-        let final="";
-        rec.onresult=(e)=>{
-          let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){
-            const t=e.results[i][0].transcript;
-            e.results[i].isFinal ? final+=t+" " : interim+=t;
-          }
-          transEl.textContent=(final+interim).trim();
-        };
-        rec.onerror=()=>{ micBtn.classList.remove("listening"); toast("Błąd mikrofonu / uprawnienia."); };
-        rec.onend=()=>{ micBtn.classList.remove("listening");
-          const q = transEl.textContent.replace(/^⏺️ Słucham…?$/,'').trim();
-          if(q) handleOrder(q);
-        };
-        rec.start();
-      }catch(e){ micBtn.classList.remove("listening"); toast("Błąd Web Speech: "+e.message); }
-    }
-    micBtn.addEventListener("click", startRec);
-
-    // ===== order: backend + cichy mock =====
-    async function handleOrder(query){
-      const MOCK={title:"Propozycja (demo)",lines:["✅ Status: gotowe","🏬 Miejsce: Demo Partner","⏱️ Czas: 15–20 min","💵 Cena: PLN 38","ℹ️ Info: wersja testowa (mock)."]};
-      try{
-        const res = await fetch("https://ffend-vercel.vercel.app/api/order?query="+encodeURIComponent(query), {mode:"cors"});
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        const data = await res.json();
-        if(data && data.title && Array.isArray(data.lines)) card(data.title,data.lines);
-        else card(MOCK.title,MOCK.lines);
-      }catch{ card(MOCK.title,MOCK.lines); }
+        const ctx = new (window.AudioContext||window.webkitAudioContext)();
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type='sine'; osc.frequency.value=freq; osc.connect(g); g.connect(ctx.destination);
+        osc.start();
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+ms/1000);
+        osc.stop(ctx.currentTime+ms/1000+0.02);
+      }catch(e){}
     }
 
-    // init
-    card("Witaj w FreeFlow",["Kliknij kafelek na dole albo naciśnij logo, by mówić."]);
+    let ffVoices = [];
+    function ffLoadVoices(){ ffVoices = window.speechSynthesis?.getVoices?.() || []; }
+    if('speechSynthesis' in window){
+      ffLoadVoices();
+      window.speechSynthesis.onvoiceschanged = ffLoadVoices;
+    }
+    function speakPL(text, opts={}){
+      if (!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      const pl = ffVoices.find(v=>/pl[-_]?PL/i.test(v.lang)) || ffVoices.find(v=>/Polish/i.test(v.name));
+      if(pl) u.voice = pl;
+      u.lang = 'pl-PL';
+      u.rate = opts.rate ?? 1; u.pitch = opts.pitch ?? 1; u.volume = opts.volume ?? 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+
+    // ===== Speech Recognition (Chrome/Edge) =====
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null, listening = false;
+
+    function startListen(){
+      if(!Rec){ setTranscript('Rozpoznawanie mowy nieobsługiwane w tej przeglądarce.'); return; }
+      if(listening) return;
+      recognition = new Rec();
+      recognition.lang = 'pl-PL';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        listening = true;
+        $logo.classList.add('listening');
+        setTranscript('Słucham… mów śmiało.');
+        beep(1200,120);
+      };
+      recognition.onresult = (e) => {
+        const text = Array.from(e.results).map(r=>r[0].transcript).join(' ');
+        setTranscript(text);
+
+        // proste intencje -> feedback głosowy
+        if(e.results?.[0]?.isFinal){
+          if(/taxi|taks(ów|o)wk/i.test(text))       speakPL('Zamawiam taksówkę. Potwierdzam.');
+          else if(/stolik|restauracj/i.test(text))  speakPL('Rezerwuję stolik. Już działam.');
+          else if(/hotel|nocleg/i.test(text))       speakPL('Szukam noclegu. Proszę chwilę poczekać.');
+          else                                      speakPL('Zrozumiałem. Przetwarzam Twoją prośbę.');
+        }
+      };
+      recognition.onerror  = () => { setTranscript('Błąd rozpoznawania — spróbuj ponownie.'); };
+      recognition.onend    = () => { stopListen(); };
+      recognition.start();
+    }
+    function stopListen(){
+      if(!listening) return;
+      try{ recognition?.stop?.(); }catch(e){}
+      listening = false;
+      $logo.classList.remove('listening');
+      beep(700,90);
+    }
+
+    // Toggle listening on logo click
+    $logo.addEventListener('click', ()=> listening ? stopListen() : startListen());
+
+    // ===== Tiles actions =====
+    const $food  = document.getElementById('btn-food');
+    const $taxi  = document.getElementById('btn-taxi');
+    const $hotel = document.getElementById('btn-hotel');
+    function setActive(btn){
+      [$food,$taxi,$hotel].forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    $food?.addEventListener('click', ()=>{
+      setActive($food);
+      setTranscript('Jedzenie – co chcesz zamówić?');
+      speakPL('Wybrałeś jedzenie. Co przygotować?');
+    });
+    $taxi?.addEventListener('click', ()=>{
+      setActive($taxi);
+      setTranscript('Taxi – dokąd jedziemy i o której?');
+      speakPL('Taxi. Dokąd jedziemy i o której?');
+    });
+    $hotel?.addEventListener('click', ()=>{
+      setActive($hotel);
+      setTranscript('Hotel – na ile nocy i gdzie?');
+      speakPL('Hotel. Na ile nocy i gdzie?');
+    });
+
+    // Start hint
+    setTranscript('Powiedz, co chcesz zamówić…');
   </script>
 </body>
 </html>

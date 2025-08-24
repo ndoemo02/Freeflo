@@ -1,392 +1,339 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Free Flow — zamów głosem</title>
-  <meta name="theme-color" content="#0b0f14"/>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow — zamów głosem</title>
+  <link rel="preload" as="image" href="assets/Background.png">
   <style>
     :root{
-      --bg:#0b0f14;
-      --glass:rgba(12,16,22,.55);
-      --glass2:rgba(12,16,22,.38);
-      --stroke:rgba(255,255,255,.08);
-      --text:#e9eef6;
-      --muted:#a8b3c7;
-      --brand:#ff7a00;
-      --ok:#35d07f;
-      --warn:#ffb020;
-      --err:#ff5d5d;
+      --text:#e9eef6; --muted:#a8b3c7; --brand:#ff7a00; --brand-2:#00d0ff;
+      --glass:rgba(15,18,24,.55); --stroke:rgba(255,255,255,.08);
+      --blur:14px;
     }
+    /* Reset & mobile polish */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0; color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background:#0b0f14 url("assets/bg.jpg") center/cover fixed no-repeat;
-      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background:#0b0f14 url("assets/Background.png") center / cover no-repeat fixed;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      -webkit-tap-highlight-color: transparent;
     }
-    a{color:inherit}
-    .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 94px}
-    .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-
-    /* header */
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand .dot{color:var(--brand);font-weight:800;font-size:34px;line-height:1}
-    .brand .name{font-size:34px;font-weight:800}
-    .sub{color:var(--muted);margin-top:-6px}
-
-    .actions{margin-left:auto;display:flex;gap:10px}
-    .iconBtn{
-      border:1px solid var(--stroke); background:var(--glass2);
-      width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
-      backdrop-filter: blur(10px); -webkit-tap-highlight-color:transparent; outline:none;
+    img,svg{max-width:100%; display:block}
+    button{font:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px 18px}
+    .row{display:flex;gap:12px;align-items:center}
+    .grow{flex:1}
+    .brand{
+      display:flex;align-items:flex-end;gap:8px;font-weight:700;letter-spacing:.3px
     }
-    .iconBtn:active{transform:scale(.98)}
-    .cartBadge{position:absolute;margin-top:-26px;margin-left:30px;background:#ff8c1a;
-      color:#111;padding:2px 8px;border-radius:12px;font-weight:700}
-
-    /* titles */
-    h1{font-size:44px;line-height:1.08;margin:18px 0 6px}
-    .lead{color:var(--muted);font-size:20px;margin:0 0 16px}
-
-    /* hero logo */
-    .hero{display:grid;place-items:center;margin:8px 0 10px}
-    .logo-wrap{position:relative;width:min(78vw,460px);aspect-ratio:1/1;display:grid;place-items:center}
-    .logo-wrap object{width:100%;height:100%;pointer-events:none;outline:none}
-    .logo-hit{
-      position:absolute;inset:0;border-radius:28px;cursor:pointer;background:transparent;
-      -webkit-tap-highlight-color:transparent; outline:none;border:none;
+    .brand .orange{color:var(--brand);font-size:34px;line-height:1}
+    .brand .white{color:#fff;font-size:34px;line-height:1}
+    .pill{
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      padding:14px 18px;border-radius:16px;background:var(--glass);
+      border:1px solid var(--stroke); backdrop-filter: blur(var(--blur));
+      color:var(--text);
     }
-    /* mic glow while listening */
-    .glow{animation:glow 1.2s ease-in-out infinite}
-    @keyframes glow{
-      0%{filter:drop-shadow(0 0 0px rgba(0,191,255,.0))}
-      50%{filter:drop-shadow(0 0 14px rgba(0,191,255,.45))}
-      100%{filter:drop-shadow(0 0 0px rgba(0,191,255,.0))}
+    .shadow-soft{box-shadow:0 8px 30px rgba(0,0,0,.28)}
+    header .actions{display:flex;gap:10px}
+    .icon-btn{
+      width:52px;height:52px;border-radius:16px;background:var(--glass);
+      border:1px solid var(--stroke);display:grid;place-items:center;
+      cursor:pointer; user-select:none;
     }
 
-    /* transcript */
-    .bubble{
-      margin:8px auto 10px;max-width:900px;min-height:56px;
-      background:var(--glass);border:1px solid var(--stroke);border-radius:16px;
-      padding:14px 16px;font-size:20px;display:flex;align-items:center;gap:10px;
-      backdrop-filter: blur(10px);
-    }
-    .bubble .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
-    .bubble.listening .dot{background:#45caff;box-shadow:0 0 10px #45caff}
+    h1{font-size:40px;line-height:1.05;margin:14px 0 8px}
+    .sub{color:var(--muted);font-size:18px;margin-bottom:10px}
 
-    /* tiles */
-    .tiles{position:fixed;left:0;right:0;bottom:14px;display:flex;gap:14px;
-      justify-content:center;padding:0 16px;pointer-events:none}
+    /* HERO: logo as button */
+    .hero{
+      margin:10px auto 10px; width:min(92vw,640px);
+      position:relative; display:grid; place-items:center;
+    }
+    .logoBtn{
+      position:relative; border:none; background:transparent; cursor:pointer;
+      width:min(78vw,520px); aspect-ratio:1/1.05; display:grid; place-items:center;
+      user-select:none;
+    }
+    .logoBtn img{width:100%; height:100%; object-fit:contain; pointer-events:none}
+    /* subtle neon aura around mic while listening */
+    .logoBtn::after{
+      content:""; position:absolute; inset:0; border-radius:34px/38px;
+      background: radial-gradient(40% 30% at 52% 38%, rgba(255,160,0,.55), transparent 55%),
+                  radial-gradient(40% 40% at 50% 52%, rgba(0,200,255,.45), transparent 60%);
+      opacity:0; transition:opacity .25s ease;
+      filter: blur(18px);
+      pointer-events:none;
+    }
+    /* Whole bubble pulse when listening */
+    .listening{ animation: pulse 1.25s ease-in-out infinite }
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.025)}100%{transform:scale(1)}}
+    .listening::after{ opacity:1 }
+
+    /* Transcript input (above tiles) */
+    .transcript{
+      margin:6px auto 18px; width:min(92vw,900px);
+      min-height:60px; display:flex; align-items:center; gap:12px;
+      padding:16px 18px; border-radius:18px; background:var(--glass);
+      border:1px solid var(--stroke); backdrop-filter:blur(var(--blur));
+      font-size:20px; color:#fff;
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:#7b8a9c;flex:0 0 10px}
+    .dot.live{background:#35e06f; box-shadow:0 0 14px rgba(53,224,111,.7)}
+    .mic-btn{
+      margin-left:auto; width:48px;height:48px;border-radius:50%;
+      display:grid; place-items:center; border:1px solid var(--stroke);
+      background:rgba(255,255,255,.06); cursor:pointer; user-select:none;
+    }
+
+    /* Summary toast */
+    .summary{
+      position:relative; margin:14px auto 12px; width:min(92vw,900px);
+      padding:16px 18px 10px; border-radius:18px; background:var(--glass);
+      border:1px solid var(--stroke); backdrop-filter: blur(var(--blur));
+    }
+    .summary h3{margin:0 0 10px;font-size:24px}
+    .li{display:flex;align-items:center;gap:10px;margin:8px 0}
+    .li .em{font-size:22px}
+    .close{
+      position:absolute;right:12px;top:10px;width:36px;height:36px;border-radius:10px;
+      background:rgba(255,255,255,.06);border:1px solid var(--stroke);display:grid;place-items:center;cursor:pointer
+    }
+
+    /* Tiles */
+    .tiles{position:sticky; bottom:12px; display:flex; gap:14px; justify-content:center;
+           padding:8px 10px}
     .tile{
-      pointer-events:auto;flex:0 1 31%;min-width:140px;max-width:300px;
-      background:var(--glass);border:1px solid var(--stroke);border-radius:22px;
-      padding:14px 18px; display:flex;align-items:center;gap:12px;
-      backdrop-filter: blur(10px);
+      min-width:180px; padding:16px 22px; border-radius:22px;
+      background:var(--glass); border:1px solid var(--stroke);
+      backdrop-filter:blur(var(--blur)); display:flex; gap:10px;
+      align-items:center; justify-content:center; font-size:20px; color:#fff;
     }
-    .tile .label{font-size:20px}
-    .tile .em{font-size:24px}
-    .tile.active{outline:2px solid rgba(69,202,255,.45)}
-    .tile.blink{animation:blink .7s ease 1}
-    @keyframes blink{0%,100%{outline-color:transparent}50%{outline:2px solid rgba(255,255,255,.35)}}
+    .tile .emoji{font-size:22px}
+    /* flash on intent */
+    .flash{ animation: flash 1s ease-in-out 2 }
+    @keyframes flash{0%,100%{opacity:1}50%{opacity:.25}}
 
-    /* toast summary */
-    .toast{
-      position:fixed;left:16px;right:16px;bottom:118px;max-width:980px;margin:auto;
-      background:var(--glass); border:1px solid var(--stroke); border-radius:18px;
-      padding:16px 16px 12px; backdrop-filter:blur(10px); display:none;
-    }
-    .toast.show{display:block;animation:fade .18s ease}
-    @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-    .toast h3{margin:0 0 10px;font-size:22px}
-    .li{display:flex;gap:10px;align-items:center;margin:6px 2px}
-    .li .ico{width:26px;text-align:center}
-    .toast .closeX{position:absolute;right:12px;top:10px;cursor:pointer;color:#ddd}
+    /* small helpers */
+    .hide{display:none}
+    .muted{color:var(--muted)}
+    .center{text-align:center}
 
-    /* drawer menu */
-    .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(1px);display:none}
-    .scrim.on{display:block}
-    .drawer{
-      position:fixed;top:0;right:-340px;width:320px;max-width:85vw;height:100%;
-      background:rgba(14,18,24,.9);border-left:1px solid var(--stroke);
-      box-shadow:-20px 0 60px rgba(0,0,0,.35);transition:right .18s ease; padding:16px;
-    }
-    .drawer.on{right:0}
-    .menu h4{margin:6px 0 10px;font-size:18px;color:#dbe7ff}
-    .menu .item{
-      border:1px solid var(--stroke);background:var(--glass2);border-radius:12px;
-      padding:12px 12px;margin:8px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
-    }
-    .menu details{border:1px solid var(--stroke);border-radius:12px;background:var(--glass2);margin:8px 0}
-    .menu summary{list-style:none;padding:12px;cursor:pointer}
-    .menu summary::-webkit-details-marker{display:none}
-    .menu .sub{padding:0 10px 10px}
-    .pill{background:#19202a;border:1px solid var(--stroke);padding:2px 8px;border-radius:999px;color:#b9c7dd;font-size:12px}
+    /* ensure the drip (kropla) visible: spacing tweak */
+    .hero + .transcript{ margin-top:0 }
 
-    @media (max-width:520px){
-      h1{font-size:36px}
-      .lead{font-size:18px}
-      .logo-wrap{width:min(82vw,430px)}
-      .tiles{gap:10px}
-      .tile{padding:12px 14px;border-radius:18px}
-      .tile .label{font-size:18px}
+    @media (min-width:900px){
+      h1{font-size:56px}
+      .sub{font-size:20px}
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-
-    <!-- HEADER -->
+  <header class="wrap">
     <div class="row">
-      <div class="brand">
-        <div class="dot">Free</div><div class="name">Flow</div>
+      <div class="brand grow">
+        <div class="orange">Free</div><div class="white">Flow</div>
       </div>
       <div class="actions">
-        <button id="menuBtn" class="iconBtn" aria-label="Menu">☰</button>
-        <div style="position:relative">
-          <button class="iconBtn" aria-label="Koszyk">🛒</button>
-          <div class="cartBadge">11</div>
-        </div>
+        <div class="icon-btn" title="Menu" aria-label="Menu">≡</div>
+        <div class="icon-btn" title="Koszyk" aria-label="Koszyk">🛒</div>
       </div>
-      <div class="sub" style="flex-basis:100%">Voice to order — tryb testowy, bez profilowania</div>
     </div>
-
-    <!-- TITLES -->
     <h1>Złóż zamówienie</h1>
-    <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
+    <div class="sub">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</div>
+  </header>
 
-    <!-- HERO LOGO -->
+  <main class="wrap">
+    <!-- HERO -->
     <section class="hero">
-      <div class="logo-wrap" id="logoWrap">
-        <object id="logoSvg" type="image/svg+xml" data="assets/freeflow-logo.svg"></object>
-        <button id="logoBtn" class="logo-hit" aria-label="Naciśnij aby mówić"></button>
-      </div>
+      <button id="logoBtn" class="logoBtn" aria-label="Naciśnij, aby mówić">
+        <img id="logoImg" src="assets/freeflow-logo.svg"
+             onerror="this.onerror=null;this.src='assets/Freeflowlogo.png'"
+             alt="FreeFlow logo">
+      </button>
     </section>
 
-    <!-- TOAST PODSUMOWANIA (wyskakuje nad transkrypcją) -->
-    <div id="toast" class="toast" role="status" aria-live="polite">
-      <span class="closeX" id="toastClose">✕</span>
+    <!-- SUMMARY (hidden by default) -->
+    <section id="summary" class="summary hide shadow-soft" aria-live="polite">
+      <button class="close" id="sumClose" aria-label="Zamknij">✕</button>
       <h3>Podsumowanie</h3>
-      <div id="toastItems"></div>
+      <div class="li"><span class="em">✅</span><span id="sumStatus">Status: gotowe</span></div>
+      <div class="li"><span class="em">🍽️</span><span id="sumDish">Danie: —</span></div>
+      <div class="li"><span class="em">🕒</span><span id="sumTime">Czas: —</span></div>
+      <div class="li"><span class="em">💲</span><span class="muted">Cena: demo</span></div>
+    </section>
+
+    <!-- TRANSCRIPT -->
+    <div class="transcript shadow-soft" id="transcriptBox">
+      <div id="liveDot" class="dot"></div>
+      <div id="transcript" class="grow muted">Powiedz, co chcesz zamówić…</div>
+      <div id="micBtn" class="mic-btn" title="Mów / Stop">🎤</div>
     </div>
+  </main>
 
-    <!-- TRANSKRYPCJA -->
-    <div id="transcript" class="bubble" aria-live="polite"><span class="dot"></span><span id="txt">Powiedz, co chcesz zamówić…</span></div>
-
-  </div><!-- /wrap -->
-
-  <!-- DOLNE KAFELKI -->
-  <div class="tiles">
-    <button id="tileFood"  class="tile"><span class="em">🍽️</span><span class="label" style="color:#fff">Jedzenie</span></button>
-    <button id="tileTaxi"  class="tile"><span class="em">🚕</span><span class="label" style="color:#fff">Taxi</span></button>
-    <button id="tileHotel" class="tile"><span class="em">🏠</span><span class="label" style="color:#fff">Hotel</span></button>
-  </div>
-
-  <!-- DRAWER MENU -->
-  <div id="scrim" class="scrim"></div>
-  <aside id="drawer" class="drawer">
-    <div class="menu">
-      <h4>Menu</h4>
-
-      <details>
-        <summary>💳 Płatności <span class="pill">demo</span></summary>
-        <div class="sub">
-          <div class="item" data-pay="card">Karta (Visa/Mastercard) <span>›</span></div>
-          <div class="item" data-pay="blik">BLIK <span>›</span></div>
-          <div class="item" data-pay="paypal">PayPal <span>›</span></div>
-        </div>
-      </details>
-
-      <div class="item" id="ordersBtn">🧾 Moje zamówienia <span>›</span></div>
-      <div class="item" id="faqBtn">❓ FAQ <span>›</span></div>
-    </div>
-  </aside>
+  <!-- TILES -->
+  <nav class="tiles wrap">
+    <button id="tile-food" class="tile"><span class="emoji">🍽️</span><span>Jedzenie</span></button>
+    <button id="tile-taxi" class="tile"><span class="emoji">🚕</span><span>Taxi</span></button>
+    <button id="tile-hotel" class="tile"><span class="emoji">🏡</span><span>Hotel</span></button>
+  </nav>
 
   <script>
-  // ---------- helpers ----------
+  // --- UI helpers
   const $ = sel => document.querySelector(sel);
-  const logoBtn = $('#logoBtn'), logoWrap = $('#logoWrap'), logoSvg = $('#logoSvg');
-  const txtEl = $('#txt'), transcript = $('#transcript');
-  const tileFood = $('#tileFood'), tileTaxi = $('#tileTaxi'), tileHotel = $('#tileHotel');
-  const toast = $('#toast'), toastItems = $('#toastItems'), toastClose = $('#toastClose');
-  const drawer = $('#drawer'), scrim = $('#scrim'), menuBtn = $('#menuBtn');
+  const logoBtn = $('#logoBtn');
+  const liveDot = $('#liveDot');
+  const transcriptEl = $('#transcript');
+  const transcriptBox = $('#transcriptBox');
+  const micBtn = $('#micBtn');
+  const summary = $('#summary');
+  const sumClose = $('#sumClose');
+  const sumDish = $('#sumDish');
+  const sumTime = $('#sumTime');
 
-  function setTxt(s){ txtEl.textContent = s || ''; }
-  function showToast(items){
-    toastItems.innerHTML = items.map(it => `
-      <div class="li"><div class="ico">${it.icon}</div><div>${it.text}</div></div>
-    `).join('');
-    toast.classList.add('show');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(()=>toast.classList.remove('show'), 6000);
+  function showSummary(data){
+    if (data?.dish) sumDish.textContent = 'Danie: ' + data.dish;
+    if (data?.time) sumTime.textContent = 'Czas: ' + data.time;
+    summary.classList.remove('hide');
   }
-  toastClose.onclick = ()=> toast.classList.remove('show');
+  sumClose.onclick = () => summary.classList.add('hide');
 
-  function openDrawer(open=true){ drawer.classList.toggle('on', open); scrim.classList.toggle('on', open);}
-  scrim.onclick = ()=>openDrawer(false);
-  menuBtn.onclick = ()=>openDrawer(true);
-
-  // Płatności / Moje zamówienia / FAQ (mock)
-  drawer.addEventListener('click', (e)=>{
-    const it = e.target.closest('.item'); if(!it) return;
-    if(it.dataset.pay){
-      const map = {card:'Karta', blik:'BLIK', paypal:'PayPal'};
-      showToast([{icon:'💳',text:`Wybrano płatność: ${map[it.dataset.pay]} (demo)`},
-                 {icon:'ℹ️',text:'To tylko makieta — bez obciążenia.'}]);
-      openDrawer(false);
-    }
-  });
-  $('#ordersBtn').onclick = ()=>{
-    showToast([
-      {icon:'🧾',text:'Zamówienie #A1 – „2x pepperoni”, 18:00, status: potwierdzone'},
-      {icon:'🧾',text:'Zamówienie #A0 – „Taxi → Centrum”, 10 min, status: zrealizowane'},
-    ]);
-    openDrawer(false);
-  };
-  $('#faqBtn').onclick = ()=>{
-    showToast([
-      {icon:'❓',text:'Jak to działa? Powiedz co chcesz: „dwie pepperoni na 18:00”.'},
-      {icon:'🗣️',text:'Rozpoznawanie działa w Chrome/Edge. iOS Safari → „Dodaj do ekranu głównego”.'}
-    ]);
-    openDrawer(false);
-  };
-
-  // ---------- STT engine ----------
-  let recognition=null, isListening=false, finalOnly='';
-
-  function squashRepeats(s){
-    s = s.replace(/\b(\w+)(?:\s+\1){1,5}\b/gi, '$1');
-    s = s.replace(/\b(\w+\s+\w+)(?:\s+\1){1,5}\b/gi, '$1');
-    return s;
-  }
-  function clean(s){
-    if(!s) return '';
-    s = s.replace(/(\d{1,2})\s*;\s*(\d{2})/g,'$1:$2');
-    return squashRepeats(s).replace(/\s+/g,' ').trim();
-  }
-  function timeOf(t){
-    const m = clean(t).match(/\b([01]?\d|2[0-3])[:\.]([0-5]\d)\b/);
-    if(m) return `${m[1].padStart(2,'0')}:${m[2]}`;
-    const m2 = clean(t).match(/\bna\s+(\d{1,2})\b/); // „na 18”
-    if(m2) return `${m2[1].padStart(2,'0')}:00`;
-    return null;
-  }
-  function quantityOf(t){
-    const num = t.match(/\b(\d{1,2})\b/); if(num) return parseInt(num[1],10);
-    const map = { 'jeden':1,'jedną':1,'jedna':1,'jedno':1,'dwie':2,'dwa':2,'trzy':3,'cztery':4,'pięć':5,'sześć':6,'siedem':7,'osiem':8,'dziewięć':9,'dziesięć':10 };
-    for(const k of Object.keys(map)){ if(new RegExp(`\\b${k}\\b`,'i').test(t)) return map[k]; }
-    return null;
-  }
-  function dishOf(t){
-    // bardzo prosta heurystyka
-    t = t.toLowerCase();
-    const dishes = ['pepperoni','margherita','capricciosa','hawajska','kebab','burger','sushi','ramen'];
-    for(const d of dishes){ if(t.includes(d)) return d; }
-    // po „na”/„dla” zostaw słowa jako „danie”
-    return null;
-  }
-  function placeOf(t){
-    const m = t.match(/\bdo\s+([A-ZĄĆĘŁŃÓŚŹŻ][\w-ąćęłńóśźż]+)/i) || t.match(/\bna\s+([A-ZĄĆĘŁŃÓŚŹŻ][\w-ąćęłńóśźż]+)/i);
-    return m ? m[1] : null;
-  }
-  function category(t){
-    t=t.toLowerCase();
-    if(/taxi|taks|przejazd|dojazd|podwóz|podwieź/.test(t)) return 'taxi';
-    if(/hotel|nocleg|pokój|rezerwuj/.test(t)) return 'hotel';
-    return 'food';
+  // flash tiles on intents
+  function flashIcon(id){
+    const el = document.getElementById(id);
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'), 1200);
   }
 
-  function addMicGlow(on){
-    logoWrap.classList.toggle('glow', !!on);
-    transcript.classList.toggle('listening', !!on);
+  // --- Speech: Web Speech API (Chrome/Edge)
+  let recognition = null;
+  let listening = false;
+  let lastTranscript = '';
+
+  function ensureSpeech(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    const rec = new SR();
+    rec.lang = 'pl-PL';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    return rec;
   }
 
-  function blinkTile(cat){
-    const map = {food:tileFood,taxi:tileTaxi,hotel:tileHotel};
-    const el = map[cat]; if(!el) return;
-    el.classList.add('blink'); setTimeout(()=>el.classList.remove('blink'), 700);
-  }
-  // prosty blink ikonek w logo (jeśli id w SVG istnieją)
-  function svgBlink(cat){
-    try{
-      const svg = logoSvg.contentDocument; if(!svg) return;
-      const ids = {food:'#icon-food', taxi:'#icon-taxi', hotel:'#icon-hotel'};
-      const el = svg.querySelector(ids[cat]);
-      if(!el) return;
-      el.style.transition='filter .2s ease';
-      el.style.filter='drop-shadow(0 0 8px #45caff)';
-      setTimeout(()=>{ el.style.filter='none'; }, 700);
-    }catch(e){}
+  function setListeningUI(on){
+    listening = on;
+    logoBtn.classList.toggle('listening', on);
+    liveDot.classList.toggle('live', on);
+    transcriptBox.style.borderColor = on ? 'rgba(0,210,120,.55)' : 'var(--stroke)';
   }
 
-  function summarize(text){
-    if(!text) return;
-    const cat = category(text);
-    const time = timeOf(text);
-    const qty  = (cat==='food') ? quantityOf(text) : null;
-    const dish = (cat==='food') ? dishOf(text) : null;
-    const place= placeOf(text);
-
-    blinkTile(cat); svgBlink(cat);
-
-    const items=[{icon:'✅',text:'Status: gotowe'}];
-    if(cat==='food'){
-      items.push({icon:'🍽️',text:`Danie: ${[qty?qty+'x':null, dish||'—'].filter(Boolean).join(' ')}`});
-      if(time) items.push({icon:'⏱',text:`Czas: ${time}`});
-      items.push({icon:'💲',text:'Cena: demo'});
-    }else if(cat==='taxi'){
-      items.push({icon:'🚕',text:'Taxi: zamówienie przyjęte'});
-      if(place) items.push({icon:'📍',text:`Kierunek: ${place}`});
-      items.push({icon:'⏱',text:'Szacowany czas: 10–15 min'});
-      items.push({icon:'💲',text:'Cena: demo'});
-    }else{
-      items.push({icon:'🏨',text:'Hotel: zapytanie wysłane'});
-      if(time) items.push({icon:'📅',text:`Godzina: ${time}`});
-    }
-    showToast(items);
-  }
-
-  function initSTT(){
-    if(recognition) return;
-    const Ctor = window.webkitSpeechRecognition || window.SpeechRecognition;
-    if(!Ctor){ setTxt('Rozpoznawanie mowy jest dostępne w Chrome/Edge.'); return; }
-    recognition = new Ctor();
-    recognition.lang='pl-PL';
-    recognition.continuous=true;
-    recognition.interimResults=true;
-
-    recognition.onstart=()=>{
-      isListening=true; addMicGlow(true); setTxt('Słucham…'); transcript.scrollIntoView({block:'end'});
-      finalOnly='';
-    };
-    recognition.onresult=(e)=>{
-      let interim='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        const r=e.results[i];
-        if(r.isFinal) finalOnly = clean((finalOnly + ' ' + r[0].transcript).trim());
-        else interim += r[0].transcript;
+  function startRecognition(){
+    if (!recognition){
+      recognition = ensureSpeech();
+      if (!recognition){
+        transcriptEl.textContent = 'Rozpoznawanie mowy jest dostępne w Chrome / Edge.';
+        return;
       }
-      setTxt(clean((finalOnly + ' ' + interim).trim()));
-    };
-    recognition.onerror=()=> stopSTT();
-    recognition.onend=()=>{ isListening=false; addMicGlow(false); summarize(finalOnly); };
-  }
-  function startSTT(){ try{ initSTT(); recognition && recognition.start(); }catch(e){} }
-  function stopSTT(){ try{ recognition && recognition.stop(); }catch(e){} }
+      recognition.onstart = () => setListeningUI(true);
+      recognition.onend   = () => setListeningUI(false);
 
-  // UI bindings
-  logoBtn.addEventListener('click', ()=>{ isListening ? stopSTT() : startSTT(); });
-  [tileFood,tileTaxi,tileHotel].forEach((el,i)=>{
-    el.addEventListener('click', ()=>{
-      const cat = i===0?'food':i===1?'taxi':'hotel';
-      summarize(cat==='food'?'pizza na 18:00':cat==='taxi'?'taxi do centrum':'hotel dziś');
-    });
+      recognition.onerror = (e) => {
+        setListeningUI(false);
+        transcriptEl.textContent = 'Błąd rozpoznawania: ' + (e.error || 'nieznany');
+      };
+
+      recognition.onresult = (event) => {
+        let txt = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          txt += event.results[i][0].transcript;
+        }
+        txt = txt.trim();
+
+        // dedupe „dwie dwie…”
+        if (txt === lastTranscript) return;
+        lastTranscript = txt;
+
+        transcriptEl.classList.remove('muted');
+        transcriptEl.textContent = txt;
+
+        // Detect simple intents for tile flash
+        const lower = txt.toLowerCase();
+        if (/(pizza|pierogi|pepperoni|jedzenie|zjedz)/.test(lower)) flashIcon('tile-food');
+        if (/(taxi|taksówka|dojazd)/.test(lower)) flashIcon('tile-taxi');
+        if (/(hotel|nocleg|pokój)/.test(lower)) flashIcon('tile-hotel');
+
+        // On final result -> parse & show summary, speak back
+        const isFinal = event.results[event.results.length-1].isFinal;
+        if (isFinal) {
+          const parsed = parseOrder(lower);
+          if (parsed.dish || parsed.time){
+            showSummary(parsed);
+            speak(`OK. ${parsed.dish?('Zamawiam: '+parsed.dish+'. '):''}${parsed.time?('Na godzinę '+parsed.time+'.'):''}`);
+          }
+        }
+      };
+    }
+    try{
+      lastTranscript = '';
+      recognition.start();
+    }catch(_){/* if already started */}
+  }
+
+  function stopRecognition(){
+    if (recognition) { try{ recognition.stop(); }catch(_){} }
+  }
+
+  // Simple PL NLU (demo)
+  function parseOrder(lower){
+    // danie: słowa po słowach kluczowych
+    let dish = '';
+    const dishMatch = lower.match(/(zam(?:awiam)?|chcę|poprosz?ę|dla mnie)?\s*([a-ząćęłńóśźż0-9 ]{3,})/i);
+    if (dishMatch) dish = dishMatch[2].trim();
+
+    // czas: 18:30 / 18.30 / na 18 / o 18
+    let time = '';
+    const t1 = lower.match(/\b([01]?\d|2[0-3])[:\.]([0-5]\d)\b/);
+    if (t1) time = `${t1[1].padStart(2,'0')}:${t1[2]}`;
+    else{
+      const t2 = lower.match(/\b(?:na|o)\s*([01]?\d|2[0-3])\b/);
+      if (t2) time = `${String(t2[1]).padStart(2,'0')}:00`;
+    }
+    // Oczyść powtórzenia: "dwie pepperoni" -> zostaw
+    dish = dish.replace(/\b(dwie|trzy)\s+\1\b/g,'$1'); // proste zbijanie dubli
+    return {dish, time};
+  }
+
+  // TTS
+  function speak(text){
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'pl-PL';
+    u.rate = 1; u.pitch = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+
+  // Click handlers
+  logoBtn.addEventListener('click', () => {
+    if (!listening) startRecognition(); else stopRecognition();
+  });
+  micBtn.addEventListener('click', () => {
+    if (!listening) startRecognition(); else stopRecognition();
   });
 
-  // wyłącz focus-outline / tap highlight już w CSS (logo-hit)
+  // Tiles
+  $('#tile-food').onclick  = () => { flashIcon('tile-food'); speak('Jedzenie. Co podać?'); };
+  $('#tile-taxi').onclick  = () => { flashIcon('tile-taxi'); speak('Taxi. Dokąd jedziemy?'); };
+  $('#tile-hotel').onclick = () => { flashIcon('tile-hotel'); speak('Hotel. Na którą godzinę?'); };
 
+  // Prevent blue tap overlay on mobile
+  document.querySelectorAll('button, .icon-btn, .tile, .logoBtn').forEach(el=>{
+    el.style.webkitTapHighlightColor = 'transparent';
+  });
   </script>
 </body>
 </html>

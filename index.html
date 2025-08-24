@@ -1,339 +1,173 @@
-<!doctype html>
-<html lang="pl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FreeFlow — zamów głosem</title>
-  <link rel="preload" as="image" href="assets/Background.png">
+<main class="wrap">
   <style>
     :root{
-      --text:#e9eef6; --muted:#a8b3c7; --brand:#ff7a00; --brand-2:#00d0ff;
-      --glass:rgba(15,18,24,.55); --stroke:rgba(255,255,255,.08);
-      --blur:14px;
+      --text:#e9eef6; --muted:#aec0d6; --brand:#ff7a00;
+      --glass: rgba(0,0,0,.22); --stroke: rgba(255,255,255,.10);
     }
-    /* Reset & mobile polish */
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    * { -webkit-tap-highlight-color: transparent; }
     body{
       margin:0; color:var(--text);
-      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      background:#0b0f14 url("assets/Background.png") center / cover no-repeat fixed;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-      -webkit-tap-highlight-color: transparent;
+      font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
+      overflow-x:hidden;
     }
-    img,svg{max-width:100%; display:block}
-    button{font:inherit}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px 18px}
-    .row{display:flex;gap:12px;align-items:center}
-    .grow{flex:1}
-    .brand{
-      display:flex;align-items:flex-end;gap:8px;font-weight:700;letter-spacing:.3px
-    }
-    .brand .orange{color:var(--brand);font-size:34px;line-height:1}
-    .brand .white{color:#fff;font-size:34px;line-height:1}
-    .pill{
-      display:inline-flex;align-items:center;justify-content:center;gap:10px;
-      padding:14px 18px;border-radius:16px;background:var(--glass);
-      border:1px solid var(--stroke); backdrop-filter: blur(var(--blur));
-      color:var(--text);
-    }
-    .shadow-soft{box-shadow:0 8px 30px rgba(0,0,0,.28)}
-    header .actions{display:flex;gap:10px}
-    .icon-btn{
-      width:52px;height:52px;border-radius:16px;background:var(--glass);
-      border:1px solid var(--stroke);display:grid;place-items:center;
-      cursor:pointer; user-select:none;
-    }
+    .wrap{ max-width:980px; margin:0 auto; padding:18px 16px 26px; }
+    header{ display:flex; align-items:center; gap:12px; }
+    .brand{ font-weight:800; font-size:32px; letter-spacing:.5px;}
+    .brand em{ color:var(--brand); font-style:normal; }
+    .subtitle{ color:var(--muted); margin-top:2px; font-size:14px }
 
-    h1{font-size:40px;line-height:1.05;margin:14px 0 8px}
-    .sub{color:var(--muted);font-size:18px;margin-bottom:10px}
+    h1{ font-size:44px; line-height:1.06; margin:20px 0 8px }
+    .lead{ color:var(--muted); font-size:18px; margin-bottom:8px }
 
-    /* HERO: logo as button */
-    .hero{
-      margin:10px auto 10px; width:min(92vw,640px);
-      position:relative; display:grid; place-items:center;
-    }
-    .logoBtn{
-      position:relative; border:none; background:transparent; cursor:pointer;
-      width:min(78vw,520px); aspect-ratio:1/1.05; display:grid; place-items:center;
-      user-select:none;
-    }
-    .logoBtn img{width:100%; height:100%; object-fit:contain; pointer-events:none}
-    /* subtle neon aura around mic while listening */
-    .logoBtn::after{
-      content:""; position:absolute; inset:0; border-radius:34px/38px;
-      background: radial-gradient(40% 30% at 52% 38%, rgba(255,160,0,.55), transparent 55%),
-                  radial-gradient(40% 40% at 50% 52%, rgba(0,200,255,.45), transparent 60%);
-      opacity:0; transition:opacity .25s ease;
-      filter: blur(18px);
-      pointer-events:none;
-    }
-    /* Whole bubble pulse when listening */
-    .listening{ animation: pulse 1.25s ease-in-out infinite }
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.025)}100%{transform:scale(1)}}
-    .listening::after{ opacity:1 }
+    /* LOGO */
+    .hero{ margin:10px auto 10px; width:min(92vw,560px); aspect-ratio:1/1; display:grid; place-items:center; }
+    #ffLogo{ width:100%; height:100%; display:block; cursor:pointer; }
+    /* puls „oddech” całego znaku */
+    #ffLogo .badge { filter:url(#glow); transform-origin:50% 50%; animation:badgePulse 2.6s ease-in-out infinite; }
+    @keyframes badgePulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.012)} }
+    /* punktowy glow mikrofonu sterowany klasą .listening na <svg> */
+    #ffLogo .mic-glow{ opacity:0; transition:opacity .22s ease, transform .22s ease; }
+    #ffLogo.listening .mic-glow{ opacity:1; animation:micWave 1.35s ease-in-out infinite; }
+    @keyframes micWave{ 0%,100%{ transform:scale(.94)} 50%{ transform:scale(1.08)} }
 
-    /* Transcript input (above tiles) */
-    .transcript{
-      margin:6px auto 18px; width:min(92vw,900px);
-      min-height:60px; display:flex; align-items:center; gap:12px;
-      padding:16px 18px; border-radius:18px; background:var(--glass);
-      border:1px solid var(--stroke); backdrop-filter:blur(var(--blur));
-      font-size:20px; color:#fff;
+    /* Transkrypcja – wyżej, aby było widać kroplę */
+    .bubble{
+      margin:8px auto 0; max-width:900px; padding:14px 16px; min-height:48px;
+      background:var(--glass); border:1px solid var(--stroke); border-radius:16px;
+      font-size:18px; backdrop-filter: blur(8px);
     }
-    .dot{width:10px;height:10px;border-radius:50%;background:#7b8a9c;flex:0 0 10px}
-    .dot.live{background:#35e06f; box-shadow:0 0 14px rgba(53,224,111,.7)}
-    .mic-btn{
-      margin-left:auto; width:48px;height:48px;border-radius:50%;
-      display:grid; place-items:center; border:1px solid var(--stroke);
-      background:rgba(255,255,255,.06); cursor:pointer; user-select:none;
-    }
+    .bubble .dot{ width:8px; height:8px; border-radius:50%; background:#83d0ff; display:inline-block; margin-right:10px; }
+    .controls{ display:flex; gap:12px; margin-top:14px; }
 
-    /* Summary toast */
-    .summary{
-      position:relative; margin:14px auto 12px; width:min(92vw,900px);
-      padding:16px 18px 10px; border-radius:18px; background:var(--glass);
-      border:1px solid var(--stroke); backdrop-filter: blur(var(--blur));
+    /* Kafelki na dole – pojedyncze, bez obwódki grupowej, napisy białe */
+    .dock{
+      position:fixed; left:0; right:0; bottom:14px;
+      display:flex; gap:14px; justify-content:center; padding:0 16px; pointer-events:none;
     }
-    .summary h3{margin:0 0 10px;font-size:24px}
-    .li{display:flex;align-items:center;gap:10px;margin:8px 0}
-    .li .em{font-size:22px}
-    .close{
-      position:absolute;right:12px;top:10px;width:36px;height:36px;border-radius:10px;
-      background:rgba(255,255,255,.06);border:1px solid var(--stroke);display:grid;place-items:center;cursor:pointer
-    }
-
-    /* Tiles */
-    .tiles{position:sticky; bottom:12px; display:flex; gap:14px; justify-content:center;
-           padding:8px 10px}
     .tile{
-      min-width:180px; padding:16px 22px; border-radius:22px;
-      background:var(--glass); border:1px solid var(--stroke);
-      backdrop-filter:blur(var(--blur)); display:flex; gap:10px;
-      align-items:center; justify-content:center; font-size:20px; color:#fff;
+      pointer-events:auto; width:min(32%, 360px); min-width:160px;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      padding:16px 18px; border-radius:18px; background:var(--glass); border:1px solid var(--stroke);
+      backdrop-filter: blur(10px); color:#fff; font-weight:600; font-size:18px;
     }
-    .tile .emoji{font-size:22px}
-    /* flash on intent */
-    .flash{ animation: flash 1s ease-in-out 2 }
-    @keyframes flash{0%,100%{opacity:1}50%{opacity:.25}}
+    .tile span{ opacity:.95 }
+    .tile:active{ transform:translateY(1px); }
 
-    /* small helpers */
-    .hide{display:none}
-    .muted{color:var(--muted)}
-    .center{text-align:center}
-
-    /* ensure the drip (kropla) visible: spacing tweak */
-    .hero + .transcript{ margin-top:0 }
-
-    @media (min-width:900px){
-      h1{font-size:56px}
-      .sub{font-size:20px}
+    @media (max-width:520px){
+      h1{ font-size:36px } .hero{ width:min(94vw,520px) }
+      .tile{ font-size:17px; padding:14px 16px }
     }
   </style>
-</head>
-<body>
-  <header class="wrap">
-    <div class="row">
-      <div class="brand grow">
-        <div class="orange">Free</div><div class="white">Flow</div>
-      </div>
-      <div class="actions">
-        <div class="icon-btn" title="Menu" aria-label="Menu">≡</div>
-        <div class="icon-btn" title="Koszyk" aria-label="Koszyk">🛒</div>
-      </div>
-    </div>
-    <h1>Złóż zamówienie</h1>
-    <div class="sub">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</div>
+
+  <header>
+    <div class="brand"><em>Free</em> Flow</div>
   </header>
+  <div class="subtitle">Voice to order — tryb testowy, bez profilowania</div>
 
-  <main class="wrap">
-    <!-- HERO -->
-    <section class="hero">
-      <button id="logoBtn" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <img id="logoImg" src="assets/freeflow-logo.svg"
-             onerror="this.onerror=null;this.src='assets/Freeflowlogo.png'"
-             alt="FreeFlow logo">
-      </button>
-    </section>
+  <h1>Złóż zamówienie</h1>
+  <div class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</div>
 
-    <!-- SUMMARY (hidden by default) -->
-    <section id="summary" class="summary hide shadow-soft" aria-live="polite">
-      <button class="close" id="sumClose" aria-label="Zamknij">✕</button>
-      <h3>Podsumowanie</h3>
-      <div class="li"><span class="em">✅</span><span id="sumStatus">Status: gotowe</span></div>
-      <div class="li"><span class="em">🍽️</span><span id="sumDish">Danie: —</span></div>
-      <div class="li"><span class="em">🕒</span><span id="sumTime">Czas: —</span></div>
-      <div class="li"><span class="em">💲</span><span class="muted">Cena: demo</span></div>
-    </section>
+  <!-- LOGO INLINE (SVG) -->
+  <section class="hero" aria-label="Logo FreeFlow – naciśnij, aby mówić">
+    <!-- Jeśli wolisz PNG w środku, podmień href w <image> poniżej na assets/freeflow-core.png -->
+    <svg id="ffLogo" viewBox="0 0 600 600" role="button" tabindex="0" aria-pressed="false">
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="micRad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#00d8ff" stop-opacity=".85"/>
+          <stop offset="60%" stop-color="#00d8ff" stop-opacity=".22"/>
+          <stop offset="100%" stop-color="#00d8ff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <!-- Cały znak (tu może być <image href="assets/freeflow-core.png"> jeśli masz PNG z alfa) -->
+      <g class="badge">
+        <image href="assets/Freeflowlogo.png" x="0" y="0" width="600" height="600"/>
+      </g>
+      <!-- Blask mikrofonu – ustaw translate tak, by trafiał w kapsułę mikrofonu -->
+      <g class="mic-glow" transform="translate(300,230)">
+        <circle r="78" fill="url(#micRad)"/>
+      </g>
+    </svg>
+  </section>
 
-    <!-- TRANSCRIPT -->
-    <div class="transcript shadow-soft" id="transcriptBox">
-      <div id="liveDot" class="dot"></div>
-      <div id="transcript" class="grow muted">Powiedz, co chcesz zamówić…</div>
-      <div id="micBtn" class="mic-btn" title="Mów / Stop">🎤</div>
-    </div>
-  </main>
+  <!-- Transkrypcja (wyżej, kropla widoczna) -->
+  <div id="transcript" class="bubble" aria-live="polite">
+    <span class="dot"></span><span id="transText">Powiedz, co chcesz zamówić…</span>
+  </div>
 
-  <!-- TILES -->
-  <nav class="tiles wrap">
-    <button id="tile-food" class="tile"><span class="emoji">🍽️</span><span>Jedzenie</span></button>
-    <button id="tile-taxi" class="tile"><span class="emoji">🚕</span><span>Taxi</span></button>
-    <button id="tile-hotel" class="tile"><span class="emoji">🏡</span><span>Hotel</span></button>
+  <!-- Dock z kafelkami -->
+  <nav class="dock" aria-label="Szybkie akcje">
+    <button class="tile" data-kind="food">🍽️ <span>Jedzenie</span></button>
+    <button class="tile" data-kind="taxi">🚕 <span>Taxi</span></button>
+    <button class="tile" data-kind="hotel">🏡 <span>Hotel</span></button>
   </nav>
 
   <script>
-  // --- UI helpers
-  const $ = sel => document.querySelector(sel);
-  const logoBtn = $('#logoBtn');
-  const liveDot = $('#liveDot');
-  const transcriptEl = $('#transcript');
-  const transcriptBox = $('#transcriptBox');
-  const micBtn = $('#micBtn');
-  const summary = $('#summary');
-  const sumClose = $('#sumClose');
-  const sumDish = $('#sumDish');
-  const sumTime = $('#sumTime');
+    // --------- Speech: start/stop + glow mikrofonu ---------
+    const logo = document.getElementById('ffLogo');
+    const transText = document.getElementById('transText');
 
-  function showSummary(data){
-    if (data?.dish) sumDish.textContent = 'Danie: ' + data.dish;
-    if (data?.time) sumTime.textContent = 'Czas: ' + data.time;
-    summary.classList.remove('hide');
-  }
-  sumClose.onclick = () => summary.classList.add('hide');
-
-  // flash tiles on intents
-  function flashIcon(id){
-    const el = document.getElementById(id);
-    el.classList.add('flash');
-    setTimeout(()=>el.classList.remove('flash'), 1200);
-  }
-
-  // --- Speech: Web Speech API (Chrome/Edge)
-  let recognition = null;
-  let listening = false;
-  let lastTranscript = '';
-
-  function ensureSpeech(){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return null;
-    const rec = new SR();
-    rec.lang = 'pl-PL';
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 1;
-    return rec;
-  }
+    let recog, listening = false, lastFinal = '';
 
-  function setListeningUI(on){
-    listening = on;
-    logoBtn.classList.toggle('listening', on);
-    liveDot.classList.toggle('live', on);
-    transcriptBox.style.borderColor = on ? 'rgba(0,210,120,.55)' : 'var(--stroke)';
-  }
+    function setListening(on){
+      listening = !!on;
+      logo.classList.toggle('listening', listening);
+      logo.setAttribute('aria-pressed', String(listening));
+    }
 
-  function startRecognition(){
-    if (!recognition){
-      recognition = ensureSpeech();
-      if (!recognition){
-        transcriptEl.textContent = 'Rozpoznawanie mowy jest dostępne w Chrome / Edge.';
-        return;
-      }
-      recognition.onstart = () => setListeningUI(true);
-      recognition.onend   = () => setListeningUI(false);
+    function ensureSR(){
+      if (!SR) return null;
+      if (recog) return recog;
+      recog = new SR();
+      recog.lang = 'pl-PL';
+      recog.interimResults = true;
+      recog.continuous = false;
 
-      recognition.onerror = (e) => {
-        setListeningUI(false);
-        transcriptEl.textContent = 'Błąd rozpoznawania: ' + (e.error || 'nieznany');
-      };
+      recog.onstart = () => setListening(true);
+      recog.onend   = () => setListening(false);
 
-      recognition.onresult = (event) => {
-        let txt = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          txt += event.results[i][0].transcript;
+      recog.onresult = (e)=>{
+        let interim = '', finalTxt = '';
+        for (let i= e.resultIndex; i< e.results.length; i++){
+          const tr = e.results[i][0].transcript.trim();
+          if (e.results[i].isFinal) finalTxt += tr + ' ';
+          else interim += tr + ' ';
         }
-        txt = txt.trim();
-
-        // dedupe „dwie dwie…”
-        if (txt === lastTranscript) return;
-        lastTranscript = txt;
-
-        transcriptEl.classList.remove('muted');
-        transcriptEl.textContent = txt;
-
-        // Detect simple intents for tile flash
-        const lower = txt.toLowerCase();
-        if (/(pizza|pierogi|pepperoni|jedzenie|zjedz)/.test(lower)) flashIcon('tile-food');
-        if (/(taxi|taksówka|dojazd)/.test(lower)) flashIcon('tile-taxi');
-        if (/(hotel|nocleg|pokój)/.test(lower)) flashIcon('tile-hotel');
-
-        // On final result -> parse & show summary, speak back
-        const isFinal = event.results[event.results.length-1].isFinal;
-        if (isFinal) {
-          const parsed = parseOrder(lower);
-          if (parsed.dish || parsed.time){
-            showSummary(parsed);
-            speak(`OK. ${parsed.dish?('Zamawiam: '+parsed.dish+'. '):''}${parsed.time?('Na godzinę '+parsed.time+'.'):''}`);
-          }
+        // anty-echo: jeżeli final się powtórzył — nie duplikuj
+        finalTxt = finalTxt.trim();
+        if (finalTxt && finalTxt !== lastFinal){
+          lastFinal = finalTxt;
+          transText.textContent = finalTxt;
+          // TODO: tu wołasz swój parser/intent
+        } else if (interim){
+          transText.textContent = interim.trim();
         }
       };
+      return recog;
     }
-    try{
-      lastTranscript = '';
-      recognition.start();
-    }catch(_){/* if already started */}
-  }
 
-  function stopRecognition(){
-    if (recognition) { try{ recognition.stop(); }catch(_){} }
-  }
-
-  // Simple PL NLU (demo)
-  function parseOrder(lower){
-    // danie: słowa po słowach kluczowych
-    let dish = '';
-    const dishMatch = lower.match(/(zam(?:awiam)?|chcę|poprosz?ę|dla mnie)?\s*([a-ząćęłńóśźż0-9 ]{3,})/i);
-    if (dishMatch) dish = dishMatch[2].trim();
-
-    // czas: 18:30 / 18.30 / na 18 / o 18
-    let time = '';
-    const t1 = lower.match(/\b([01]?\d|2[0-3])[:\.]([0-5]\d)\b/);
-    if (t1) time = `${t1[1].padStart(2,'0')}:${t1[2]}`;
-    else{
-      const t2 = lower.match(/\b(?:na|o)\s*([01]?\d|2[0-3])\b/);
-      if (t2) time = `${String(t2[1]).padStart(2,'0')}:00`;
+    function startSR(){
+      const r = ensureSR();
+      if (!r){ transText.textContent = 'Rozpoznawanie mowy dostępne w Chrome/Edge.'; return; }
+      try{ r.start(); }catch(_){ /* ignore double-start */ }
     }
-    // Oczyść powtórzenia: "dwie pepperoni" -> zostaw
-    dish = dish.replace(/\b(dwie|trzy)\s+\1\b/g,'$1'); // proste zbijanie dubli
-    return {dish, time};
-  }
 
-  // TTS
-  function speak(text){
-    if (!window.speechSynthesis) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pl-PL';
-    u.rate = 1; u.pitch = 1;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }
+    logo.addEventListener('click', startSR);
+    logo.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); startSR(); } });
 
-  // Click handlers
-  logoBtn.addEventListener('click', () => {
-    if (!listening) startRecognition(); else stopRecognition();
-  });
-  micBtn.addEventListener('click', () => {
-    if (!listening) startRecognition(); else stopRecognition();
-  });
-
-  // Tiles
-  $('#tile-food').onclick  = () => { flashIcon('tile-food'); speak('Jedzenie. Co podać?'); };
-  $('#tile-taxi').onclick  = () => { flashIcon('tile-taxi'); speak('Taxi. Dokąd jedziemy?'); };
-  $('#tile-hotel').onclick = () => { flashIcon('tile-hotel'); speak('Hotel. Na którą godzinę?'); };
-
-  // Prevent blue tap overlay on mobile
-  document.querySelectorAll('button, .icon-btn, .tile, .logoBtn').forEach(el=>{
-    el.style.webkitTapHighlightColor = 'transparent';
-  });
+    // --------- Kafelki: szybkie podpowiedzi ---------
+    document.querySelectorAll('.tile').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const kind = btn.dataset.kind;
+        if (kind==='food') transText.textContent = 'Przykład: dwie pepperoni na 18:00';
+        if (kind==='taxi') transText.textContent = 'Przykład: zamów taxi na 20:00 do Katowic';
+        if (kind==='hotel') transText.textContent = 'Przykład: zarezerwuj hotel na jutro';
+      });
+    });
   </script>
-</body>
-</html>
+</main>

@@ -1,173 +1,100 @@
-<main class="wrap">
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>FreeFlow • Voice to order</title>
+  <link rel="icon" href="./Freeflow-logo.png"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --text:#e9eef6; --muted:#aec0d6; --brand:#ff7a00;
-      --glass: rgba(0,0,0,.22); --stroke: rgba(255,255,255,.10);
+      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00;
+      --menu-bg: rgba(0,0,0,.30); --menu-bdr: rgba(255,255,255,.08);
+      --neon:#00d1ff;
     }
-    * { -webkit-tap-highlight-color: transparent; }
     body{
-      margin:0; color:var(--text);
-      font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
-      overflow-x:hidden;
+      margin:0;
+      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      color:var(--text);
+      background:#0b0f14 url("./Background.png") center/cover fixed no-repeat;
     }
-    .wrap{ max-width:980px; margin:0 auto; padding:18px 16px 26px; }
-    header{ display:flex; align-items:center; gap:12px; }
-    .brand{ font-weight:800; font-size:32px; letter-spacing:.5px;}
-    .brand em{ color:var(--brand); font-style:normal; }
-    .subtitle{ color:var(--muted); margin-top:2px; font-size:14px }
-
-    h1{ font-size:44px; line-height:1.06; margin:20px 0 8px }
-    .lead{ color:var(--muted); font-size:18px; margin-bottom:8px }
-
-    /* LOGO */
-    .hero{ margin:10px auto 10px; width:min(92vw,560px); aspect-ratio:1/1; display:grid; place-items:center; }
-    #ffLogo{ width:100%; height:100%; display:block; cursor:pointer; }
-    /* puls „oddech” całego znaku */
-    #ffLogo .badge { filter:url(#glow); transform-origin:50% 50%; animation:badgePulse 2.6s ease-in-out infinite; }
-    @keyframes badgePulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.012)} }
-    /* punktowy glow mikrofonu sterowany klasą .listening na <svg> */
-    #ffLogo .mic-glow{ opacity:0; transition:opacity .22s ease, transform .22s ease; }
-    #ffLogo.listening .mic-glow{ opacity:1; animation:micWave 1.35s ease-in-out infinite; }
-    @keyframes micWave{ 0%,100%{ transform:scale(.94)} 50%{ transform:scale(1.08)} }
-
-    /* Transkrypcja – wyżej, aby było widać kroplę */
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    h1{font-size:42px;line-height:1.05;margin:8px 0 6px}
+    .sub{color:var(--muted);margin-bottom:18px}
+    /* HERO */
+    .hero{
+      margin:14px auto 0;
+      width:min(92vw,640px);aspect-ratio:1/1;
+      display:grid;place-items:center;
+      position:relative;
+    }
+    .logoBtn{border:none;background:transparent;cursor:pointer}
+    .logo{width:76%;max-width:520px;transition:transform .2s ease}
+    .logo.listening{animation:pulse 1.2s ease-in-out infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+    /* BUBBLES */
     .bubble{
-      margin:8px auto 0; max-width:900px; padding:14px 16px; min-height:48px;
-      background:var(--glass); border:1px solid var(--stroke); border-radius:16px;
-      font-size:18px; backdrop-filter: blur(8px);
+      margin:12px auto 0;
+      max-width:900px;
+      padding:16px 14px;
+      min-height:48px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:14px;
+      font-size:18px;
     }
-    .bubble .dot{ width:8px; height:8px; border-radius:50%; background:#83d0ff; display:inline-block; margin-right:10px; }
-    .controls{ display:flex; gap:12px; margin-top:14px; }
-
-    /* Kafelki na dole – pojedyncze, bez obwódki grupowej, napisy białe */
-    .dock{
-      position:fixed; left:0; right:0; bottom:14px;
-      display:flex; gap:14px; justify-content:center; padding:0 16px; pointer-events:none;
+    /* BOTTOM BUTTONS */
+    .bottom-buttons{
+      display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:14px
     }
-    .tile{
-      pointer-events:auto; width:min(32%, 360px); min-width:160px;
-      display:flex; align-items:center; justify-content:center; gap:10px;
-      padding:16px 18px; border-radius:18px; background:var(--glass); border:1px solid var(--stroke);
-      backdrop-filter: blur(10px); color:#fff; font-weight:600; font-size:18px;
+    .bottom-buttons button{
+      flex:1 1 calc(33.333% - 12px);
+      max-width:180px;min-width:120px;height:56px;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      font-size:18px;border-radius:14px;
+      background:rgba(0,0,0,.18);color:#e8eefb;
+      border:1px solid rgba(255,255,255,.06);
+      cursor:pointer;box-shadow:0 10px 32px rgba(0,0,0,.35);
+      transition:transform .15s ease,background .2s ease;
     }
-    .tile span{ opacity:.95 }
-    .tile:active{ transform:translateY(1px); }
-
-    @media (max-width:520px){
-      h1{ font-size:36px } .hero{ width:min(94vw,520px) }
-      .tile{ font-size:17px; padding:14px 16px }
+    .bottom-buttons button:hover{
+      transform:translateY(-1px);background:rgba(0,0,0,.22);
+    }
+    .bottom-buttons .primary{
+      outline:2px solid #ff7a00aa;
+      box-shadow:0 0 20px #ff7a0033 inset,0 10px 32px #000;
     }
   </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>FreeFlow – zamów głosem</h1>
+    <div class="sub">Taxi, posiłek, a może nocleg?</div>
 
-  <header>
-    <div class="brand"><em>Free</em> Flow</div>
-  </header>
-  <div class="subtitle">Voice to order — tryb testowy, bez profilowania</div>
+    <!-- Logo/kropla -->
+    <section class="hero">
+      <button id="micBtn" type="button" class="logoBtn" aria-label="Naciśnij, aby mówić">
+        <img class="logo" src="./freeflow-logo.svg" alt="FreeFlow"/>
+      </button>
+    </section>
 
-  <h1>Złóż zamówienie</h1>
-  <div class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</div>
+    <!-- Transkrypcja POD kroplą -->
+    <div id="transcript" class="bubble glass">
+      Powiedz, co chcesz zamówić…
+    </div>
 
-  <!-- LOGO INLINE (SVG) -->
-  <section class="hero" aria-label="Logo FreeFlow – naciśnij, aby mówić">
-    <!-- Jeśli wolisz PNG w środku, podmień href w <image> poniżej na assets/freeflow-core.png -->
-    <svg id="ffLogo" viewBox="0 0 600 600" role="button" tabindex="0" aria-pressed="false">
-      <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="6" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <radialGradient id="micRad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#00d8ff" stop-opacity=".85"/>
-          <stop offset="60%" stop-color="#00d8ff" stop-opacity=".22"/>
-          <stop offset="100%" stop-color="#00d8ff" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <!-- Cały znak (tu może być <image href="assets/freeflow-core.png"> jeśli masz PNG z alfa) -->
-      <g class="badge">
-        <image href="assets/Freeflowlogo.png" x="0" y="0" width="600" height="600"/>
-      </g>
-      <!-- Blask mikrofonu – ustaw translate tak, by trafiał w kapsułę mikrofonu -->
-      <g class="mic-glow" transform="translate(300,230)">
-        <circle r="78" fill="url(#micRad)"/>
-      </g>
-    </svg>
-  </section>
+    <!-- Wyniki -->
+    <div id="results" class="bubble" style="margin-top:10px;display:none"></div>
 
-  <!-- Transkrypcja (wyżej, kropla widoczna) -->
-  <div id="transcript" class="bubble" aria-live="polite">
-    <span class="dot"></span><span id="transText">Powiedz, co chcesz zamówić…</span>
-  </div>
+    <!-- Kafelki -->
+    <div class="bottom-buttons" style="margin-bottom:32px">
+      <button class="primary glass" data-quick="Jedzenie">🍽️ <span>Jedzenie</span></button>
+      <button class="glass" data-quick="Taxi">🚕 <span>Taxi</span></button>
+      <button class="glass" data-quick="Hotel">🏠 <span>Hotel</span></button>
+    </div>
+  </main>
 
-  <!-- Dock z kafelkami -->
-  <nav class="dock" aria-label="Szybkie akcje">
-    <button class="tile" data-kind="food">🍽️ <span>Jedzenie</span></button>
-    <button class="tile" data-kind="taxi">🚕 <span>Taxi</span></button>
-    <button class="tile" data-kind="hotel">🏡 <span>Hotel</span></button>
-  </nav>
-
-  <script>
-    // --------- Speech: start/stop + glow mikrofonu ---------
-    const logo = document.getElementById('ffLogo');
-    const transText = document.getElementById('transText');
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recog, listening = false, lastFinal = '';
-
-    function setListening(on){
-      listening = !!on;
-      logo.classList.toggle('listening', listening);
-      logo.setAttribute('aria-pressed', String(listening));
-    }
-
-    function ensureSR(){
-      if (!SR) return null;
-      if (recog) return recog;
-      recog = new SR();
-      recog.lang = 'pl-PL';
-      recog.interimResults = true;
-      recog.continuous = false;
-
-      recog.onstart = () => setListening(true);
-      recog.onend   = () => setListening(false);
-
-      recog.onresult = (e)=>{
-        let interim = '', finalTxt = '';
-        for (let i= e.resultIndex; i< e.results.length; i++){
-          const tr = e.results[i][0].transcript.trim();
-          if (e.results[i].isFinal) finalTxt += tr + ' ';
-          else interim += tr + ' ';
-        }
-        // anty-echo: jeżeli final się powtórzył — nie duplikuj
-        finalTxt = finalTxt.trim();
-        if (finalTxt && finalTxt !== lastFinal){
-          lastFinal = finalTxt;
-          transText.textContent = finalTxt;
-          // TODO: tu wołasz swój parser/intent
-        } else if (interim){
-          transText.textContent = interim.trim();
-        }
-      };
-      return recog;
-    }
-
-    function startSR(){
-      const r = ensureSR();
-      if (!r){ transText.textContent = 'Rozpoznawanie mowy dostępne w Chrome/Edge.'; return; }
-      try{ r.start(); }catch(_){ /* ignore double-start */ }
-    }
-
-    logo.addEventListener('click', startSR);
-    logo.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); startSR(); } });
-
-    // --------- Kafelki: szybkie podpowiedzi ---------
-    document.querySelectorAll('.tile').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const kind = btn.dataset.kind;
-        if (kind==='food') transText.textContent = 'Przykład: dwie pepperoni na 18:00';
-        if (kind==='taxi') transText.textContent = 'Przykład: zamów taxi na 20:00 do Katowic';
-        if (kind==='hotel') transText.textContent = 'Przykład: zarezerwuj hotel na jutro';
-      });
-    });
-  </script>
-</main>
+  <audio id="ttsPlayer" preload="auto"></audio>
+  <script src="./freeflow-assistant.js?v=5"></script>
+</body>
+</html>

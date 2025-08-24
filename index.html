@@ -2,269 +2,189 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>FreeFlow — zamów głosem</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-
   <style>
     :root{
-      --fg:#e9eef6;
-      --muted:#a8b3c7;
-      --brand:#ff7a00;
-      --glass-bg: rgba(0,0,0,.36);
-      --glass-bd: rgba(255,255,255,.08);
+      --fg:#e9eef6; --muted:#a8b3c7; --brand:#ff7a00;
+      --glass-bg: rgba(0,0,0,.36); --glass-bd: rgba(255,255,255,.08);
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
-      margin:0; color:var(--fg);
-      font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      margin:0;font-family:Inter,sans-serif;color:var(--fg);
       background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
     }
-
-    /* Header */
-    .ff-header{
-      display:flex; align-items:center; gap:12px;
-      padding:16px;
-      background:linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,0));
-    }
-    .ff-title{
-      font-weight:800; font-size:28px; letter-spacing:.2px;
-    }
-    .ff-sub{color:var(--muted); font-size:13px}
+    .ff-header{display:flex;align-items:center;gap:12px;padding:16px;
+      background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,0))}
+    .ff-title{font-weight:800;font-size:28px}
+    .ff-title em{color:var(--brand);font-style:normal}
+    .ff-sub{color:var(--muted);font-size:13px}
     .ff-spacer{flex:1}
-    .ff-iconBtn{
-      height:44px; width:44px; border-radius:14px;
-      display:grid; place-items:center;
-      background:var(--glass-bg);
-      border:1px solid var(--glass-bd);
-      backdrop-filter: blur(8px);
-    }
-
-    main{padding:10px 16px 180px} /* extra bottom for tiles */
-
-    h1{
-      margin:8px 0 6px; font-size:34px; line-height:1.06; letter-spacing:.2px;
-      text-shadow:0 2px 24px rgba(0,0,0,.45);
-    }
-    .lead{color:#c9d3e3; margin:0 0 14px; text-shadow:0 2px 24px rgba(0,0,0,.45)}
-
-    /* Logo bubble */
-    .ff-hero{display:grid; place-items:center; margin:6px 0 18px}
-    .logo-wrap{
-      width:min(86vw,560px); aspect-ratio:1/1; display:grid; place-items:center;
-      border-radius:28px; overflow:hidden;
-      background:rgba(0,0,0,.28);
-      border:1px solid rgba(255,255,255,.06);
-      box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 0 1px rgba(255,255,255,.04);
-    }
-    .logo{
-      width:84%; max-width:520px; user-select:none;
-      transition:transform .18s ease, filter .18s ease;
-      will-change:transform,filter;
-    }
-    .logo.listening{
-      animation: ff-pulse 1.15s ease-in-out infinite;
-      transform-origin:center;
-    }
+    .ff-iconBtn{height:44px;width:44px;border-radius:14px;display:grid;place-items:center;
+      background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(8px)}
+    h1{margin:8px 16px 6px;font-size:34px}
+    .lead{color:#c9d3e3;margin:0 16px 14px}
+    .ff-hero{display:grid;place-items:center;margin:6px 0 18px}
+    .logo{width:86%;max-width:520px;user-select:none;transition:transform .18s ease,filter .18s ease}
+    .logo.listening{animation:ff-pulse 1.15s ease-in-out infinite}
     @keyframes ff-pulse{
-      0%{ transform:scale(1);     filter:drop-shadow(0 0 0 rgba(255,122,0,0)); }
-      50%{transform:scale(1.03);  filter:drop-shadow(0 0 14px rgba(255,122,0,.45));}
-      100%{transform:scale(1);    filter:drop-shadow(0 0 0 rgba(255,122,0,0)); }
+      0%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,122,0,0))}
+      50%{transform:scale(1.05);filter:drop-shadow(0 0 20px rgba(255,122,0,.55))}
+      100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,122,0,0))}
     }
-
-    /* Transcript bubble (ALWAYS visible) */
-    #transcript.ff-transcript{
-      position:fixed; left:16px; right:16px;
-      bottom: calc(96px + max(16px, env(safe-area-inset-bottom)));
-      z-index:40;
-      padding:14px 16px; min-height:48px;
-      color:var(--fg); font-size:16px; line-height:1.35;
-      background:var(--glass-bg);
-      border:1px solid var(--glass-bd);
-      border-radius:16px;
-      backdrop-filter: blur(8px);
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    @media (max-width:380px){
-      #transcript.ff-transcript{bottom: calc(112px + max(12px, env(safe-area-inset-bottom))); }
-    }
-
-    /* Tiles (bottom) — SINGLE glass, no double outline */
-    .ff-bottom{
-      position:fixed; left:16px; right:16px;
-      bottom: max(16px, env(safe-area-inset-bottom));
-      z-index:30;
-      display:flex; gap:14px; justify-content:space-between;
-    }
-    .tile{
-      flex:1; min-width:0;
-      display:flex; align-items:center; justify-content:center; gap:10px;
-      height:72px; border-radius:18px;
-      background:var(--glass-bg);
-      border:1px solid var(--glass-bd);      /* pojedyncza delikatna krawędź */
-      backdrop-filter: blur(10px);
-      box-shadow: 0 12px 24px rgba(0,0,0,.28);
-      color:var(--fg); font-weight:700; font-size:18px;
-    }
-    .tile.active{
-      outline:2px solid rgba(64,171,255,.55);
-      outline-offset:0;               /* brak dodatkowej obwódki */
-      background:rgba(20,28,38,.46);
-    }
-    .tile .emoji{font-size:22px}
-
-    .hint{
-      margin-top:10px; color:var(--muted); font-size:13px
-    }
+    #transcript{position:fixed;left:16px;right:16px;
+      bottom:calc(96px + max(16px, env(safe-area-inset-bottom)));
+      z-index:40;padding:14px 16px;min-height:48px;color:var(--fg);font-size:16px;
+      background:var(--glass-bg);border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)}
+    .ff-bottom{position:fixed;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));
+      display:flex;gap:14px;z-index:30}
+    .tile{flex:1;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;
+      background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(10px);font-weight:700}
+    .tile.active{background:rgba(20,28,38,.46);outline:2px solid rgba(64,171,255,.55)}
+    .summary{margin:6px 16px 20px;padding:16px;background:var(--glass-bg);
+      border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)}
+    .summary h2{margin:0 0 12px;font-size:18px}
+    .summary ul{list-style:none;padding:0;margin:0}
+    .summary li{margin:6px 0;font-size:15px;display:flex;align-items:center;gap:8px}
   </style>
 </head>
 <body>
-
-  <!-- HEADER -->
   <header class="ff-header">
     <div>
-      <div class="ff-title"><span style="color:var(--brand)">Free</span> Flow</div>
+      <div class="ff-title"><em>Free</em> Flow</div>
       <div class="ff-sub">Voice to order — tryb testowy, bez profilowania</div>
     </div>
     <div class="ff-spacer"></div>
-    <div class="ff-iconBtn" title="Menu" aria-hidden="true">≡</div>
-    <div class="ff-iconBtn" title="Koszyk" aria-hidden="true">🛒</div>
+    <div class="ff-iconBtn" aria-label="Menu">≡</div>
+    <div class="ff-iconBtn" aria-label="Koszyk">🛒</div>
   </header>
 
   <main>
     <h1>Złóż zamówienie</h1>
     <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
-
-    <!-- LOGO / HERO -->
     <section class="ff-hero">
-      <div class="logo-wrap">
-        <img id="ffLogo" class="logo" src="assets/Freeflowlogo.png" alt="FreeFlow logo" />
-      </div>
+      <!-- logo bez obwódki -->
+      <img id="ffLogo" class="logo" src="assets/Freeflowlogo.png" alt="FreeFlow logo"/>
     </section>
-
-    <p class="hint">Wskazówka: rozpoznawanie mowy działa natywnie w Chrome/Edge. Na iOS użyj Chrome lub dodaj stronę do ekranu głównego.</p>
   </main>
 
-  <!-- TRANSCRIPT (fixed, nad kafelkami) -->
-  <div id="transcript" class="ff-transcript" aria-live="polite">Powiedz, co chcesz zamówić…</div>
+  <!-- Transkrypcja (stałe miejsce nad kafelkami) -->
+  <div id="transcript">Powiedz, co chcesz zamówić…</div>
 
-  <!-- BOTTOM TILES -->
-  <nav class="ff-bottom" role="navigation" aria-label="Główne działania">
-    <button id="btn-food"  class="tile active"><span class="emoji">🍽️</span>Jedzenie</button>
-    <button id="btn-taxi"  class="tile"><span class="emoji">🚕</span>Taxi</button>
-    <button id="btn-hotel" class="tile"><span class="emoji">🏡</span>Hotel</button>
+  <!-- Kafelki na dole, każdy osobno (glass) -->
+  <nav class="ff-bottom">
+    <button id="btn-food" class="tile active">🍽️ Jedzenie</button>
+    <button id="btn-taxi" class="tile">🚕 Taxi</button>
+    <button id="btn-hotel" class="tile">🏡 Hotel</button>
   </nav>
 
+  <!-- Podsumowanie (pojawia się po wyborze) -->
+  <div class="summary" id="summaryBox" style="display:none;">
+    <h2>Podsumowanie zamówienia</h2>
+    <ul id="summaryList"></ul>
+  </div>
+
   <script>
-    // ===== Helpers: transcript & beeps & TTS (PL) =====
+    // ====== elementy ======
     const $logo = document.getElementById('ffLogo');
     const $t = document.getElementById('transcript');
+    const $sumBox = document.getElementById('summaryBox');
+    const $sumList = document.getElementById('summaryList');
 
-    function setTranscript(txt){ if($t) $t.textContent = txt || ''; }
+    // ====== pomocnicze ======
+    function setTranscript(txt){ $t.textContent = txt; }
 
-    function beep(freq=880, ms=110){
+    function addSummary(items){
+      $sumList.innerHTML = "";
+      items.forEach(i=>{
+        const li = document.createElement('li');
+        li.innerHTML = `${i.icon} ${i.text}`;
+        $sumList.appendChild(li);
+      });
+      $sumBox.style.display = "block";
+
+      // zbuduj zwięzły tekst do TTS
+      const plain = items.map(i => i.text).join(". ");
+      speak(`Podsumowanie: ${plain}.`);
+    }
+
+    // ====== TTS (Web Speech API) ======
+    function speak(text){
       try{
-        const ctx = new (window.AudioContext||window.webkitAudioContext)();
-        const osc = ctx.createOscillator(), g = ctx.createGain();
-        osc.type='sine'; osc.frequency.value=freq; osc.connect(g); g.connect(ctx.destination);
-        osc.start();
-        g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime+0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+ms/1000);
-        osc.stop(ctx.currentTime+ms/1000+0.02);
-      }catch(e){}
-    }
-
-    let ffVoices = [];
-    function ffLoadVoices(){ ffVoices = window.speechSynthesis?.getVoices?.() || []; }
-    if('speechSynthesis' in window){
-      ffLoadVoices();
-      window.speechSynthesis.onvoiceschanged = ffLoadVoices;
-    }
-    function speakPL(text, opts={}){
-      if (!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      const pl = ffVoices.find(v=>/pl[-_]?PL/i.test(v.lang)) || ffVoices.find(v=>/Polish/i.test(v.name));
-      if(pl) u.voice = pl;
-      u.lang = 'pl-PL';
-      u.rate = opts.rate ?? 1; u.pitch = opts.pitch ?? 1; u.volume = opts.volume ?? 1;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-    }
-
-    // ===== Speech Recognition (Chrome/Edge) =====
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null, listening = false;
-
-    function startListen(){
-      if(!Rec){ setTranscript('Rozpoznawanie mowy nieobsługiwane w tej przeglądarce.'); return; }
-      if(listening) return;
-      recognition = new Rec();
-      recognition.lang = 'pl-PL';
-      recognition.interimResults = true;
-      recognition.continuous = false;
-
-      recognition.onstart = () => {
-        listening = true;
-        $logo.classList.add('listening');
-        setTranscript('Słucham… mów śmiało.');
-        beep(1200,120);
-      };
-      recognition.onresult = (e) => {
-        const text = Array.from(e.results).map(r=>r[0].transcript).join(' ');
-        setTranscript(text);
-
-        // proste intencje -> feedback głosowy
-        if(e.results?.[0]?.isFinal){
-          if(/taxi|taks(ów|o)wk/i.test(text))       speakPL('Zamawiam taksówkę. Potwierdzam.');
-          else if(/stolik|restauracj/i.test(text))  speakPL('Rezerwuję stolik. Już działam.');
-          else if(/hotel|nocleg/i.test(text))       speakPL('Szukam noclegu. Proszę chwilę poczekać.');
-          else                                      speakPL('Zrozumiałem. Przetwarzam Twoją prośbę.');
+        if(!("speechSynthesis" in window)){
+          // brak wsparcia – pokaż tylko tekst
+          return;
         }
-      };
-      recognition.onerror  = () => { setTranscript('Błąd rozpoznawania — spróbuj ponownie.'); };
-      recognition.onend    = () => { stopListen(); };
-      recognition.start();
+        // przerwij poprzednie czytanie, jeżeli trwa
+        window.speechSynthesis.cancel();
+
+        const u = new SpeechSynthesisUtterance(text);
+        // PL głos (fallback na default)
+        u.lang = "pl-PL";
+        u.rate = 1.0;   // prędkość
+        u.pitch = 1.0;  // ton
+        u.volume = 1.0; // głośność
+
+        // spróbuj dobrać polski głos, jeśli dostępny
+        const pickVoice = () => {
+          const voices = window.speechSynthesis.getVoices() || [];
+          const pl = voices.find(v => v.lang?.toLowerCase().startsWith("pl"));
+          if(pl) u.voice = pl;
+          window.speechSynthesis.speak(u);
+        };
+        // na części przeglądarek lista głosów ładuje się asynchronicznie
+        if (speechSynthesis.getVoices().length) {
+          pickVoice();
+        } else {
+          speechSynthesis.onvoiceschanged = pickVoice;
+        }
+      }catch(e){
+        // cicho ignoruj – TTS jest dodatkiem
+        console.warn("TTS error:", e);
+      }
     }
-    function stopListen(){
-      if(!listening) return;
-      try{ recognition?.stop?.(); }catch(e){}
-      listening = false;
-      $logo.classList.remove('listening');
-      beep(700,90);
-    }
 
-    // Toggle listening on logo click
-    $logo.addEventListener('click', ()=> listening ? stopListen() : startListen());
+    // ====== demo akcji kafelków ======
+    document.getElementById('btn-food').onclick = () => {
+      setTranscript("Zamawiam jedzenie…");
+      addSummary([
+        {icon:"✅",text:"Status: gotowe"},
+        {icon:"🍕",text:"Capricciosa"},
+        {icon:"🏨",text:"Miejsce: Demo Partner"},
+        {icon:"⏱",text:"Czas: 15–20 minut"},
+        {icon:"💲",text:"Cena: 38 zł"}
+      ]);
+    };
 
-    // ===== Tiles actions =====
-    const $food  = document.getElementById('btn-food');
-    const $taxi  = document.getElementById('btn-taxi');
-    const $hotel = document.getElementById('btn-hotel');
-    function setActive(btn){
-      [$food,$taxi,$hotel].forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-    }
+    document.getElementById('btn-taxi').onclick = () => {
+      setTranscript("Zamawiam taksówkę…");
+      addSummary([
+        {icon:"✅",text:"Status: gotowe"},
+        {icon:"🚕",text:"Taxi zamówione"},
+        {icon:"📍",text:"Kierunek: Demo City"},
+        {icon:"⏱",text:"Czas podjazdu: około 5 minut"}
+      ]);
+    };
 
-    $food?.addEventListener('click', ()=>{
-      setActive($food);
-      setTranscript('Jedzenie – co chcesz zamówić?');
-      speakPL('Wybrałeś jedzenie. Co przygotować?');
-    });
-    $taxi?.addEventListener('click', ()=>{
-      setActive($taxi);
-      setTranscript('Taxi – dokąd jedziemy i o której?');
-      speakPL('Taxi. Dokąd jedziemy i o której?');
-    });
-    $hotel?.addEventListener('click', ()=>{
-      setActive($hotel);
-      setTranscript('Hotel – na ile nocy i gdzie?');
-      speakPL('Hotel. Na ile nocy i gdzie?');
-    });
+    document.getElementById('btn-hotel').onclick = () => {
+      setTranscript("Rezerwuję hotel…");
+      addSummary([
+        {icon:"✅",text:"Status: gotowe"},
+        {icon:"🏡",text:"Hotel Demo"},
+        {icon:"⏱",text:"Długość pobytu: 2 noce"},
+        {icon:"💲",text:"Cena: 300 zł"}
+      ]);
+    };
 
-    // Start hint
-    setTranscript('Powiedz, co chcesz zamówić…');
+    // ====== klik logo → efekt nasłuchu (wizualny) ======
+    let listening = false;
+    $logo.onclick = () => {
+      listening = !listening;
+      $logo.classList.toggle("listening", listening);
+      setTranscript(listening ? "Słucham…" : "Powiedz, co chcesz zamówić…");
+      // (Tu później podepniemy realny STT)
+    };
   </script>
 </body>
 </html>

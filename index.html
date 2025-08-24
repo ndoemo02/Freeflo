@@ -1,179 +1,281 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>FreeFlow – zamów głosem</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-
+  <link rel="preload" as="image" href="assets/Background.png">
   <style>
     :root{
-      --text:#e9eef6; --muted:#93a1b4; --brand:#ff7a00; --glass: rgba(0,0,0,.18);
-      --border: rgba(255,255,255,.08);
+      --bg: #0b0f14;
+      --glass: rgba(0,0,0,.22);
+      --line: rgba(255,255,255,.08);
+      --text: #e9eef6;
+      --muted:#9fb0c6;
+      --brand:#ff7a00;
+      --neon:#29d3ff;
+      --ok:#33d17a;
+      --warn:#ffd76a;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial;
-      color:var(--text);
-      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
+      margin:0; color:var(--text);
+      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      background: var(--bg) url("assets/Background.png") center/cover fixed no-repeat;
     }
-
-    /* top bar */
-    .wrap{max-width:1100px;margin:0 auto;padding:16px}
-    header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .wrap{max-width:1040px;margin:0 auto;padding:20px 16px}
     h1{
-      font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      font-weight:700; letter-spacing:.2px; margin:0; font-size: clamp(24px, 4.2vw, 44px);
-      text-shadow: 0 4px 30px rgba(0,0,0,.45);
+      margin:8px 0 14px; font-size: clamp(28px,5.5vw,44px); line-height:1.1;
+      letter-spacing:.3px; font-weight:800; position:relative; display:inline-block;
+      animation: neon-in 1.2s ease both;
+      text-shadow: 0 0 0 transparent;
     }
-    nav{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+    h1.neon { text-shadow: 0 0 18px var(--neon), 0 0 36px rgba(41,211,255,.55);}
+    @keyframes neon-in {
+      0%{opacity:.2; text-shadow:0 0 0 transparent}
+      50%{opacity:1; text-shadow:0 0 22px var(--neon)}
+      100%{opacity:1;}
+    }
+
+    /* Top chips */
+    .chips{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
     .chip{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border:1px solid var(--border); border-radius:999px;
-      background: var(--glass); color:var(--text); cursor:pointer; user-select:none;
-      backdrop-filter:saturate(120%) blur(8px);
-      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      display:inline-flex;align-items:center;gap:10px;
+      padding:10px 14px;border-radius:999px;font-weight:600;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      box-shadow: inset 0 -6px 14px rgba(255,255,255,.03);
+      transition: transform .15s ease, box-shadow .15s ease;
+      cursor: default;
     }
-    .chip:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.14);}
-    .chip:active{ transform: translateY(0); }
-    .chip i{font-style:normal; opacity:.9}
+    .chip svg{width:22px;height:22px;opacity:.9}
+    .chip.active{ box-shadow:0 0 18px rgba(255,122,0,.28), inset 0 0 0 transparent; transform:translateY(-1px)}
+    .chip.ok{ box-shadow:0 0 18px rgba(51,209,122,.28)}
+    .chip.warn{ box-shadow:0 0 18px rgba(255,215,106,.32)}
+    .chip .label{font-size:16px}
 
-    /* hero + logo */
-    .hero{margin:20px auto 14px; width:min(92vw,640px); aspect-ratio:1/1; display:grid; place-items:center}
-    .logoBtn{border:none; background:transparent; padding:0; cursor:pointer}
-    .logo-core{ width:78%; max-width:520px; display:block; filter:drop-shadow(0 10px 40px rgba(0,0,0,.55)); transition: transform .22s ease }
-    .logo-core.listening{ animation:ff-pulse 1.2s ease-in-out infinite }
-    @keyframes ff-pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.035)} 100%{transform:scale(1)} }
+    /* Hero logo */
+    .hero{ display:grid; place-items:center; margin:8px 0 16px}
+    .logoBtn{ border:none; background:transparent; cursor:pointer; padding:0 }
+    .stage{ width:min(82vw,560px); aspect-ratio:1/1; position:relative }
 
-    /* bubbles */
+    /* transcript bubbles */
     .bubble{
-      margin:10px auto 0; max-width:900px; padding:14px 16px; min-height:48px;
-      background:var(--glass); border:1px solid var(--border); border-radius:14px;
-      line-height:1.5; font-size:18px; backdrop-filter: blur(8px) saturate(120%);
-      box-shadow: 0 6px 28px rgba(0,0,0,.25);
+      background:var(--glass); border:1px solid var(--line);
+      padding:16px 14px; border-radius:14px; min-height:50px;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      max-width:980px; margin:0 auto 10px; font-size:18px
     }
-    .note{ color:var(--muted); font-size:14px; margin-top:8px }
+    #hint{color:var(--muted); font-size:15px}
 
-    /* toast (na komunikaty) */
-    .toast{
-      position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
-      background:#0f1520; color:#dfe7f3; border:1px solid rgba(255,255,255,.12);
-      padding:10px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.35);
-      opacity:0; pointer-events:none; transition:opacity .18s ease;
-    }
-    .toast.show{opacity:1}
+    /* --- SVG Animations --- */
+    .listening .mic-dot{ animation: pulse 1.1s ease-in-out infinite }
+    .listening .rings{ animation: spin 6s linear infinite }
+    .beam{ opacity:0 }
+    .listening .beam{ animation: sweep 1.6s ease-in-out infinite; opacity:1 }
+    .glow{ filter: drop-shadow(0 0 8px #ff4d00) drop-shadow(0 0 18px rgba(255,153,0,.45)); transition:filter .2s ease }
 
-    /* małe ekrany */
-    @media (max-width:640px){
-      nav{ width:100%; margin-left:0 }
+    @keyframes pulse{
+      0%,100%{ transform:scale(1)}
+      50%{ transform:scale(1.1)}
     }
+    @keyframes spin{ to{ transform: rotate(360deg)}}
+    @keyframes sweep{
+      0%{ transform:translateY(0) scaleY(.9); opacity:.0 }
+      40%{ opacity:.9 }
+      100%{ transform:translateY(-26%) scaleY(1.15); opacity:.15 }
+    }
+
+    /* Drop */
+    .drop{
+      position:absolute; left:50%; top:78%;
+      width:26px; height:36px; border-radius:13px 13px 16px 16px / 18px 18px 18px 18px;
+      transform:translateX(-50%); background: radial-gradient(circle at 50% 30%, #ffb36b 0%, #ff7a00 55%, #8b2b00 100%);
+      box-shadow: 0 0 18px rgba(255,122,0,.55);
+      opacity:0; pointer-events:none;
+    }
+    .drop.run{ animation: fall .9s cubic-bezier(.2,.9,.2,1) forwards }
+    @keyframes fall{
+      0%{ opacity:0; transform: translate(-50%, -24px) scale(.85)}
+      15%{ opacity:1}
+      80%{ transform: translate(-50%, calc(60vh)) scale(1)}
+      100%{ opacity:0; transform: translate(-50%, calc(60vh + 10px)) scale(.96)}
+    }
+
+    /* Icon reactions */
+    .wiggle{ animation: wig .9s ease }
+    @keyframes wig{
+      0%{ transform:scale(1)}
+      25%{ transform:scale(1.1)}
+      50%{ transform:scale(1)}
+      75%{ transform:scale(1.08)}
+      100%{ transform:scale(1)}
+    }
+    .spin-move{ animation: taxi 900ms ease }
+    @keyframes taxi{
+      0%{ transform: translateX(0) rotate(0)}
+      50%{ transform: translateX(24px) rotate(8deg)}
+      100%{ transform: translateX(0) rotate(0)}
+    }
+    .door{ transform-origin: left center }
+    .open .door{ animation: door 800ms ease forwards }
+    @keyframes door{ to{ transform: rotateY(40deg)} }
+
+    .sr-only{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden }
   </style>
 </head>
-
 <body>
-  <div class="wrap">
-    <header>
-      <h1>FreeFlow – zamów głosem</h1>
-      <nav aria-label="Szybkie skróty">
-        <button class="chip" data-intent="restaurant"><i>🍽️</i> Restauracja</button>
-        <button class="chip" data-intent="taxi"><i>🚕</i> Taxi</button>
-        <button class="chip" data-intent="hotel"><i>🏨</i> Hotel</button>
-      </nav>
-    </header>
+  <main class="wrap">
+    <h1 id="title">FreeFlow – zamów głosem</h1>
+
+    <div class="chips" aria-hidden="true">
+      <div id="chip-food"  class="chip"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3v18M4 8h6M14 3h6v8a3 3 0 0 1-3 3h-3V3z" stroke="currentColor" stroke-width="2" /></svg><span class="label">Restauracja</span></div>
+      <div id="chip-taxi"  class="chip"><svg viewBox="0 0 24 24" fill="none"><path d="M3 14h18l-2-5h-8l-2-3H6l-3 8Z" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="17" r="2" fill="currentColor"/><circle cx="17" cy="17" r="2" fill="currentColor"/></svg><span class="label">Taxi</span></div>
+      <div id="chip-hotel" class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/><rect class="door" x="6.5" y="11" width="4" height="6" fill="currentColor"/></svg><span class="label">Hotel</span></div>
+    </div>
 
     <section class="hero">
       <button id="micBtn" class="logoBtn" aria-label="Naciśnij, aby mówić">
-        <!-- Używamy SVG (pulsuje) -->
-        <img class="logo-core" src="assets/freeflow-logo.svg?v=7" alt="FreeFlow logo" />
+        <div id="stage" class="stage">
+          <!-- Stylizowane logo/mikrofon (inline SVG) -->
+          <svg id="logo" viewBox="0 0 600 600" width="100%" height="100%" class="glow" xmlns="http://www.w3.org/2000/svg">
+            <!-- szklana plakietka -->
+            <defs>
+              <radialGradient id="g1" cx="50%" cy="40%">
+                <stop offset="0%" stop-color="#002b36"/>
+                <stop offset="100%" stop-color="#0b0f14"/>
+              </radialGradient>
+              <linearGradient id="beam" x1="50%" y1="80%" x2="50%" y2="0%">
+                <stop offset="0%" stop-color="rgba(41,211,255,0)"/>
+                <stop offset="100%" stop-color="rgba(41,211,255,.45)"/>
+              </linearGradient>
+            </defs>
+
+            <g transform="translate(300,330)">
+              <!-- fale -->
+              <g class="rings" transform-origin="center">
+                <circle r="150" stroke="#14b8ff" stroke-opacity=".35" stroke-width="3" fill="none"/>
+                <circle r="110" stroke="#37f" stroke-opacity=".28" stroke-width="3" fill="none"/>
+                <circle r="75"  stroke="#ff7a00" stroke-opacity=".45" stroke-width="3" fill="none"/>
+              </g>
+
+              <!-- promień/sweep -->
+              <rect class="beam" x="-12" y="-10" width="24" height="240" fill="url(#beam)" opacity=".6" />
+
+              <!-- mikrofon -->
+              <g transform="translate(0,0)">
+                <circle class="mic-dot" cx="0" cy="-40" r="34" fill="#28c0ff" opacity=".95"/>
+                <rect x="-10" y="-6" width="20" height="70" rx="7" fill="#2dd4bf" opacity=".85"/>
+                <rect x="-110" y="60" width="220" height="18" rx="9" fill="#28c0ff" opacity=".7"/>
+                <!-- kropla docelowa jest osobno w .drop -->
+              </g>
+            </g>
+          </svg>
+
+          <div id="drop" class="drop" aria-hidden="true"></div>
+        </div>
       </button>
+      <span class="sr-only">Kliknij logo aby rozpocząć/ zakończyć nasłuch.</span>
     </section>
 
     <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
-    <div class="note">Wskazówka: działa w Chrome/Edge (Web Speech API). Na iOS Safari użyj otwarcia w Chrome lub „Dodaj do ekranu głównego”.</div>
-  </div>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="hint" class="bubble">
+      Wskazówka: rozpoznawanie działa w Chrome/Edge (Web Speech API). Na iOS Safari użyj „Otwórz w Chrome” lub dodaj do ekranu głównego.
+    </div>
+  </main>
 
   <script>
-    // szybkie podpowiedzi – tylko wsadzamy tekst do bąbla
-    document.querySelectorAll('.chip').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const map = {
-          restaurant: "Zarezerwuj stolik na dziś 19:30 w Katowicach, kuchnia włoska.",
-          taxi: "Zamów taksówkę na 20:00 z Rynku w Katowicach do Pyrzowic.",
-          hotel: "Znajdź pokój 2-osobowy na dziś w centrum Krakowa."
-        };
-        const t = map[btn.dataset.intent] || "";
-        if(t) document.getElementById('transcript').textContent = t;
-      });
-    });
-
-    // TOAST helper
-    const toast = (msg) => {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(()=>t.classList.remove('show'), 1800);
-    };
-
-    // Web Speech API – czysta transkrypcja
+    const stage = document.getElementById('stage');
+    const logo  = document.getElementById('logo');
+    const drop  = document.getElementById('drop');
+    const title = document.getElementById('title');
     const micBtn = document.getElementById('micBtn');
-    const logo   = document.querySelector('.logo-core');
     const transcriptEl = document.getElementById('transcript');
 
-    let recognition;
-    let listening = false;
+    const chipFood  = document.getElementById('chip-food');
+    const chipTaxi  = document.getElementById('chip-taxi');
+    const chipHotel = document.getElementById('chip-hotel');
 
-    if ('webkitSpeechRecognition' in window) {
-      recognition = new webkitSpeechRecognition();
-      recognition.lang = 'pl-PL';
-      recognition.continuous = false;       // 1 fraza → stop
-      recognition.interimResults = true;    // pokazuj „na żywo”
+    // Neon finalize
+    setTimeout(()=>title.classList.add('neon'), 1200);
 
-      recognition.onstart = () => {
-        listening = true;
-        logo.classList.add('listening');
-        transcriptEl.textContent = "Słucham… 🎤";
+    // ---- Speech Recognition (Chrome/Edge) ----
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const supportsSR = !!SR;
+    let rec = null, listening = false;
+
+    function typing(text){
+      transcriptEl.textContent = "";
+      let i=0;
+      const tick = () => {
+        if(i<=text.length){ transcriptEl.textContent = text.slice(0,i++); requestAnimationFrame(tick); }
       };
-
-      recognition.onresult = (event) => {
-        let interim = '', final = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i][0].transcript;
-          if (event.results[i].isFinal) final += res;
-          else interim += res;
-        }
-        transcriptEl.textContent = final || interim || "Słucham… 🎤";
-      };
-
-      recognition.onerror = (e) => {
-        logo.classList.remove('listening');
-        listening = false;
-        const msg = (e.error === 'not-allowed')
-          ? "Brak zgody na mikrofon. Przyznaj uprawnienie w przeglądarce."
-          : "Błąd mikrofonu / rozpoznawania mowy.";
-        toast(msg);
-      };
-
-      recognition.onend = () => {
-        logo.classList.remove('listening');
-        listening = false;
-      };
-    } else {
-      // brak wsparcia
-      document.querySelector('.note').textContent =
-        "Twoja przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome/Edge lub Android.";
+      tick();
     }
 
-    // start/stop nasłuchu
-    micBtn.addEventListener('click', () => {
-      if (!recognition) return;
-      if (listening) recognition.stop();
-      else           recognition.start();
+    function startDrop(){
+      drop.classList.remove('run');
+      void drop.offsetWidth; // reflow
+      drop.classList.add('run');
+    }
+
+    function uiListening(on){
+      listening = on;
+      stage.classList.toggle('listening', on);
+      logo.classList.toggle('listening', on);
+      if(on){ startDrop(); }
+    }
+
+    function reactToIntent(text){
+      const t = text.toLowerCase();
+
+      // reset classes
+      [chipFood, chipTaxi, chipHotel].forEach(c => c.classList.remove('active','ok','warn','open'));
+      chipFood.classList.remove('wiggle'); chipTaxi.classList.remove('spin-move'); chipHotel.classList.remove('open');
+
+      if(/restaur|jedzen|kolac|pizza|sushi|obiad/.test(t)){
+        chipFood.classList.add('active','ok'); chipFood.classList.add('wiggle');
+      }
+      if(/taxi|taks|uber|przejazd|podwiez/.test(t)){
+        chipTaxi.classList.add('active','warn'); chipTaxi.classList.add('spin-move');
+      }
+      if(/hotel|nocleg|pokój|pokoj|rezerwac/.test(t)){
+        chipHotel.classList.add('active'); chipHotel.classList.add('open');
+      }
+    }
+
+    function startSR(){
+      if(!supportsSR){ typing("Ten przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome/Edge."); return; }
+      rec = new SR();
+      rec.lang = "pl-PL";
+      rec.interimResults = true;
+      rec.continuous = false;
+
+      rec.onstart = () => { uiListening(true); typing("Słucham… mów, co chcesz zamówić."); };
+      rec.onresult = (e) => {
+        let final = "";
+        let interim = "";
+        for(const res of e.results){
+          if(res.isFinal) final += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        typing(final || (interim + "█"));
+      };
+      rec.onerror = (e) => { typing("Błąd mikrofonu: " + (e.error||"nieznany")); uiListening(false); };
+      rec.onend = () => { uiListening(false); reactToIntent(transcriptEl.textContent); };
+
+      rec.start();
+    }
+
+    function stopSR(){ try{ rec && rec.stop(); }catch{} uiListening(false); }
+
+    micBtn.addEventListener('click', ()=>{
+      if(listening) stopSR(); else startSR();
     });
+
+    // First paint transcript hint
+    typing("Powiedz: „zamów taksówkę na 20:00 do Katowic” albo „zarezerwuj stolik na 3 osoby”.");
   </script>
 </body>
 </html>

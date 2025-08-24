@@ -1,487 +1,130 @@
 <!doctype html>
 <html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <title>FreeFlow — zamów głosem</title>
-    <meta name="theme-color" content="#0b0f14" />
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>FreeFlow — zamów głosem</title>
+  <meta name="theme-color" content="#0b0f14">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0b0f14;--text:#eef3fb;--muted:#a6b2c3;--glass:rgba(0,0,0,.35);--stroke:rgba(255,255,255,.08);--ring:rgba(0,214,255,.35);--brand:#ff7a00}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;color:var(--text);background:var(--bg) url("assets/Background.png") center/cover fixed no-repeat;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .topbar{position:sticky;top:0;z-index:30;padding:16px 18px;background:linear-gradient(to bottom,rgba(11,15,20,.95),rgba(11,15,20,.6),transparent)}
+    .brand{display:flex;flex-direction:column;gap:4px}
+    .brand .row{display:flex;gap:6px;align-items:baseline}
+    .brand .free{color:var(--brand);font:700 clamp(22px,4.5vw,28px)/1 Poppins,system-ui}
+    .brand .flow{font:700 clamp(22px,4.5vw,28px)/1 Poppins,system-ui}
+    .brand .sub{color:var(--muted);font-size:12px}
+    .wrap{max-width:1000px;margin:0 auto;padding:0 16px 88px} /* padding-bottom bo na dole będzie dock */
+    h1{font:700 clamp(28px,7vw,44px)/1.1 Poppins,system-ui;margin:10px 0 6px}
+    p.lead{color:var(--muted);margin:0 0 10px}
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap"
-      rel="stylesheet"
-    />
+    .logo-wrap{display:grid;place-items:center;margin:8px 0 16px}
+    .logo-btn{position:relative;border:0;background:transparent;border-radius:20px}
+    #ffLogo{width:min(84vw,560px);height:auto;display:block;border-radius:20px;pointer-events:none}
+    .rings{position:absolute;width:52%;aspect-ratio:1/1;left:50%;top:46%;transform:translate(-50%,-50%);border-radius:50%;
+      box-shadow:0 0 0 2px rgba(0,214,255,.25),0 0 34px rgba(255,122,0,.28) inset;opacity:0;transition:opacity .15s}
+    .logo-btn.listening .rings{animation:ping 1.2s ease-in-out infinite;opacity:1}
+    @keyframes ping{0%{transform:translate(-50%,-50%) scale(.92)}50%{transform:translate(-50%,-50%) scale(1.03)}100%{transform:translate(-50%,-50%) scale(.92)}}
 
-    <style>
-      :root {
-        --bg: #0b0f14;
-        --text: #eef3fb;
-        --muted: #a6b2c3;
-        --glass: rgba(0, 0, 0, 0.35);
-        --stroke: rgba(255, 255, 255, 0.08);
-        --brand: #ff7a00;
-        --ring: rgba(0, 214, 255, 0.35);
-      }
+    .bubble{max-width:1000px;margin:10px auto 0;background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px;font-size:18px}
 
-      /* Reset & base */
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        color: var(--text);
-        background: var(--bg) url("assets/Background.png") center/cover fixed
-          no-repeat;
-        font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica,
-          Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-      button {
-        font: inherit;
-      }
+    /* === DOCK NA DOLE (kafelki) === */
+    .dock{position:fixed;left:12px;right:12px;bottom:12px;z-index:40;display:flex;gap:12px;justify-content:center;flex-wrap:nowrap;
+      background:var(--glass);border:1px solid var(--stroke);border-radius:18px;padding:10px 10px;backdrop-filter:blur(4px)}
+    .pill{flex:1 1 0%;min-width:0;text-align:center;cursor:pointer;padding:12px 14px;border-radius:14px;font-size:16px;
+      background:rgba(255,255,255,.04);border:1px solid var(--stroke);outline:2px solid transparent}
+    .pill.active{outline:2px solid var(--ring);box-shadow:0 0 0 6px rgba(0,214,255,.08) inset}
+    .toast{position:fixed;left:14px;right:14px;bottom:76px;z-index:50;background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
+    .cards{max-width:1000px;margin:12px auto 0;display:grid;gap:14px}
+    .card{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
+    .card h3{margin:0 0 8px;font:600 18px/1.2 Poppins,system-ui}
+    .card ul{margin:0;padding-left:18px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="row"><span class="free">Free</span><span class="flow">Flow</span></div>
+      <span class="sub">Voice to order — tryb testowy, bez profilowania</span>
+    </div>
+  </header>
 
-      /* Top bar */
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
-        gap: 12px;
-        padding: 16px 18px;
-        background: linear-gradient(
-          to bottom,
-          rgba(11, 15, 20, 0.9),
-          rgba(11, 15, 20, 0.65),
-          transparent
-        );
-        backdrop-filter: saturate(120%) blur(4px);
-      }
-      .brand {
-        line-height: 1.05;
-      }
-      .brand-row {
-        display: flex;
-        align-items: baseline;
-        gap: 6px;
-      }
-      .brand--free {
-        color: var(--brand);
-        font-weight: 700;
-        font-size: clamp(22px, 4.5vw, 28px);
-        letter-spacing: 0.2px;
-      }
-      .brand--flow {
-        font-weight: 700;
-        font-size: clamp(22px, 4.5vw, 28px);
-      }
-      .brand-sub {
-        color: var(--muted);
-        font-size: 12px;
-        margin-top: 4px;
-        opacity: 0.9;
-      }
-      .top-actions {
-        display: flex;
-        gap: 10px;
-      }
-      .ghost {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--stroke);
-        color: var(--text);
-        padding: 10px 12px;
-        border-radius: 14px;
-        display: inline-grid;
-        place-items: center;
-        transition: transform 120ms ease, background 120ms ease;
-      }
-      .ghost:active {
-        transform: translateY(1px) scale(0.98);
-      }
-      .badge {
-        margin-left: 6px;
-        background: #111;
-        padding: 2px 7px;
-        border-radius: 999px;
-        font-size: 12px;
-      }
+  <main class="wrap">
+    <h1>Złóż zamówienie</h1>
+    <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
 
-      /* Main container */
-      .container {
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 0 16px 40px;
-      }
-      .hero-copy {
-        margin: 8px 0 6px;
-      }
-      .hero-copy h1 {
-        font-family: Poppins, system-ui, sans-serif;
-        font-size: clamp(28px, 7vw, 44px);
-        margin: 8px 0 4px;
-        letter-spacing: 0.2px;
-      }
-      .hero-copy p {
-        color: var(--muted);
-        margin: 0 0 10px;
-        font-size: clamp(14px, 2.8vw, 18px);
-      }
+    <section class="logo-wrap">
+      <button id="micBtn" class="logo-btn" aria-label="Naciśnij i mów">
+        <img id="ffLogo" src="assets/Freeflowlogo.png?v=11" alt="FreeFlow logo">
+        <span class="rings"></span>
+      </button>
+    </section>
 
-      /* Pills (menu) */
-      .pill-row {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        margin: 8px 0 12px;
-      }
-      .pill {
-        cursor: pointer;
-        padding: 14px 18px;
-        border-radius: 22px;
-        font-size: 16px;
-        background: var(--glass);
-        border: 1px solid var(--stroke);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-        transition: box-shadow 160ms ease, transform 120ms ease,
-          outline-color 160ms ease;
-        outline: 2px solid transparent;
-      }
-      .pill:active {
-        transform: translateY(1px);
-      }
-      .pill.active {
-        outline: 2px solid var(--ring);
-        box-shadow: 0 0 0 6px rgba(0, 214, 255, 0.08) inset;
-      }
+    <section id="cardFeed" class="cards"></section>
+    <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
+  </main>
 
-      /* Logo + waves */
-      .logo-wrap {
-        display: grid;
-        place-items: center;
-        margin: 10px 0 18px;
-      }
-      .logo-btn {
-        position: relative;
-        display: grid;
-        place-items: center;
-        border: 0;
-        background: transparent;
-        border-radius: 24px;
-        overflow: visible;
-        isolation: isolate;
-      }
-      #ffLogo {
-        width: min(84vw, 560px);
-        height: auto;
-        display: block;
-        border-radius: 20px;
-        pointer-events: none;
-        user-select: none;
-      }
-      .rings {
-        position: absolute;
-        width: 52%;
-        aspect-ratio: 1/1;
-        border-radius: 50%;
-        pointer-events: none;
-        opacity: 0;
-        box-shadow: 0 0 0 2px rgba(0, 214, 255, 0.25),
-          0 0 34px rgba(255, 122, 0, 0.28) inset;
-        transition: opacity 160ms ease;
-      }
-      .logo-btn.listening .rings {
-        animation: ping 1200ms ease-in-out infinite;
-        opacity: 1;
-      }
-      @keyframes ping {
-        0% {
-          transform: scale(0.92);
-        }
-        50% {
-          transform: scale(1.03);
-        }
-        100% {
-          transform: scale(0.92);
-        }
-      }
+  <!-- Dock z kafelkami na samym dole -->
+  <nav class="dock" id="dock">
+    <button class="pill" data-cat="food">🍽️ Jedzenie</button>
+    <button class="pill" data-cat="taxi">🚕 Taxi</button>
+    <button class="pill" data-cat="hotel">🏡 Hotel</button>
+  </nav>
 
-      /* Transcript + results */
-      .bubble {
-        margin: 10px auto 0;
-        max-width: 1000px;
-        background: var(--glass);
-        border: 1px solid var(--stroke);
-        border-radius: 16px;
-        padding: 14px 16px;
-        font-size: 18px;
-        line-height: 1.35;
-        backdrop-filter: blur(2px);
-      }
+  <div id="toast" class="toast" hidden></div>
 
-      .cards {
-        display: grid;
-        gap: 14px;
-        margin: 12px 0 2px;
-      }
-      .card {
-        background: var(--glass);
-        border: 1px solid var(--stroke);
-        border-radius: 16px;
-        padding: 14px 16px;
-      }
-      .card h3 {
-        margin: 0 0 8px;
-        font-family: Poppins, system-ui, sans-serif;
-        font-weight: 600;
-        letter-spacing: 0.2px;
-      }
-      .card ul {
-        margin: 0;
-        padding-left: 18px;
-        color: var(--muted);
-      }
-
-      /* Toast */
-      .toast {
-        position: fixed;
-        left: 14px;
-        right: 14px;
-        bottom: 14px;
-        z-index: 30;
-        background: var(--glass);
-        border: 1px solid var(--stroke);
-        border-radius: 16px;
-        padding: 14px 16px;
-        line-height: 1.35;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-      }
-
-      /* Desktop tuning */
-      @media (min-width: 980px) {
-        .hero-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 24px;
-          align-items: start;
-        }
-        .logo-wrap {
-          margin: 6px 0 6px;
-        }
-        .bubble {
-          font-size: 19px;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-row">
-          <span class="brand--free">Free</span>
-          <span class="brand--flow">Flow</span>
-        </div>
-        <div class="brand-sub">Voice to order — tryb testowy, bez profilowania</div>
-      </div>
-
-      <nav class="top-actions">
-        <button class="ghost" aria-label="Menu">≡</button>
-        <button class="ghost" aria-label="Koszyk">
-          🛒<span class="badge">11</span>
-        </button>
-      </nav>
-    </header>
-
-    <!-- Main -->
-    <main class="container">
-      <section class="hero-copy">
-        <h1>Złóż zamówienie</h1>
-        <p>Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
-      </section>
-
-      <section class="pill-row" id="pillRow">
-        <button class="pill" data-cat="food">🍽️ Jedzenie</button>
-        <button class="pill" data-cat="taxi">🚕 Taxi</button>
-        <button class="pill" data-cat="hotel">🏡 Hotel</button>
-      </section>
-
-      <section class="hero-grid">
-        <section class="logo-wrap">
-          <button id="micBtn" class="logo-btn" aria-label="Naciśnij i mów">
-            <!-- Upewnij się, że to PNG z przezroczystością -->
-            <img id="ffLogo" src="assets/Freeflowlogo.png?v=9" alt="FreeFlow logo" />
-            <span class="rings"></span>
-          </button>
-        </section>
-
-        <section class="cards" id="cardFeed">
-          <!-- Ostatnie wyniki (renderowane JS-em) -->
-        </section>
-      </section>
-
-      <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
-    </main>
-
-    <!-- Toast -->
-    <div id="toast" class="toast" hidden></div>
-
-    <script>
-      /* ---------- helpers ---------- */
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
       const toastEl = document.getElementById("toast");
-      function toast(msg, ms = 3200) {
-        toastEl.textContent = msg;
-        toastEl.hidden = false;
-        clearTimeout(toast._t);
-        toast._t = setTimeout(() => (toastEl.hidden = true), ms);
-      }
-
       const transEl = document.getElementById("transcript");
       const cardFeed = document.getElementById("cardFeed");
-      function card(title, lines) {
-        const el = document.createElement("article");
-        el.className = "card";
-        el.innerHTML = \`<h3>\${title}</h3><ul>\${lines
-          .map((li) => \`<li>\${li}</li>\`)
-          .join("")}</ul>\`;
-        cardFeed.prepend(el);
-      }
-
-      /* ---------- pills ---------- */
-      const pills = [...document.querySelectorAll(".pill")];
-      const presets = {
-        food: "Zamów capriciosę na wieczór do Demo Partner.",
-        taxi: "Zamów taksówkę na 20:00 do Katowic.",
-        hotel: "Zarezerwuj pokój dla dwóch osób w centrum Katowic."
-      };
-      function setActive(cat) {
-        pills.forEach((p) =>
-          p.classList.toggle("active", p.dataset.cat === cat)
-        );
-      }
-      pills.forEach((p) =>
-        p.addEventListener("click", () => {
-          const cat = p.dataset.cat;
-          setActive(cat);
-          const q = presets[cat] || "Złóż zamówienie.";
-          transEl.textContent = q;
-          handleOrder(q); // od razu pokażemy wynik (mock/real)
-        })
-      );
-      // domyślnie food
-      setActive("food");
-
-      /* ---------- microphone ---------- */
       const micBtn = document.getElementById("micBtn");
-      function speechSupported() {
-        return (
-          "webkitSpeechRecognition" in window ||
-          "SpeechRecognition" in window
-        );
+      const pills = [...document.querySelectorAll(".pill")];
+
+      function toast(msg, ms=2600){toastEl.textContent=msg;toastEl.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>toastEl.hidden=true,ms);}
+      function card(title, lines){const el=document.createElement("article");el.className="card";el.innerHTML=`<h3>${title}</h3><ul>${lines.map(li=>`<li>${li}</li>`).join("")}</ul>`;cardFeed.prepend(el);}
+      toast("✅ Aplikacja gotowa — JS działa");
+
+      // ==== logika kafelków (jak wcześniej) ====
+      const presets={food:"Zamów capriciosę na wieczór do Demo Partner.",taxi:"Zamów taksówkę na 20:00 do Katowic.",hotel:"Zarezerwuj pokój dla dwóch osób w centrum Katowic."};
+      function setActive(cat){pills.forEach(p=>p.classList.toggle("active",p.dataset.cat===cat));}
+      pills.forEach(p=>p.addEventListener("click",()=>{const cat=p.dataset.cat;setActive(cat);const q=presets[cat]||"Złóż zamówienie.";transEl.textContent=q;handleOrder(q);})); setActive("food");
+
+      // ==== mikrofon po kliknięciu logo ====
+      function speechSupported(){return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;}
+      let rec=null;
+      function startRec(){
+        if(!speechSupported()){toast("Mikrofon działa w Chrome/Edge (Web Speech API).");return;}
+        try{
+          const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+          rec=new SR(); rec.lang="pl-PL"; rec.continuous=false; rec.interimResults=true;
+          micBtn.classList.add("listening"); transEl.textContent="⏺️ Słucham…";
+          let final=""; rec.onresult=(e)=>{let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript; e.results[i].isFinal? final+=t+" ": interim+=t;} transEl.textContent=(final+interim).trim();};
+          rec.onerror=()=>{micBtn.classList.remove("listening");toast("Błąd mikrofonu / brak uprawnień.");};
+          rec.onend=()=>{micBtn.classList.remove("listening");const q=transEl.textContent.trim(); if(q&&!q.startsWith("⏺️")) handleOrder(q);};
+          rec.start();
+        }catch(e){micBtn.classList.remove("listening");toast("Błąd Web Speech: "+e.message);}
+      }
+      micBtn.addEventListener("click",startRec);
+
+      // ==== order (backend + cichy mock) ====
+      async function handleOrder(query){
+        const MOCK={title:"Propozycja (demo)",lines:["✅ Status: gotowe","🏬 Miejsce: Demo Partner","⏱️ Czas: 15–20 min","💵 Cena: PLN 38","ℹ️ Info: wersja testowa (mock)."]};
+        transEl.textContent=query;
+        try{
+          const res=await fetch("https://ffend-vercel.vercel.app/api/order?query="+encodeURIComponent(query),{mode:"cors"});
+          if(!res.ok) throw new Error("HTTP "+res.status);
+          const data=await res.json();
+          if(data && data.title && Array.isArray(data.lines)) card(data.title,data.lines); else card(MOCK.title,MOCK.lines);
+        }catch{ card(MOCK.title,MOCK.lines); }
       }
 
-      let rec = null;
-      function startRec() {
-        if (!speechSupported()) {
-          toast("Rozpoznawanie mowy dostępne w Chrome/Edge (Web Speech API).");
-          return;
-        }
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        rec = new SR();
-        rec.lang = "pl-PL";
-        rec.continuous = false;
-        rec.interimResults = true;
-
-        micBtn.classList.add("listening");
-        transEl.textContent = "⏺️ Słucham… mów śmiało.";
-
-        let final = "";
-        rec.onresult = (e) => {
-          let interim = "";
-          for (let i = e.resultIndex; i < e.results.length; i++) {
-            const t = e.results[i][0].transcript;
-            if (e.results[i].isFinal) final += t + " ";
-            else interim += t;
-          }
-          transEl.textContent = (final + interim).trim();
-        };
-        rec.onerror = () => {
-          micBtn.classList.remove("listening");
-          toast("Błąd mikrofonu lub uprawnień.");
-        };
-        rec.onend = () => {
-          micBtn.classList.remove("listening");
-          const query = transEl.textContent.trim();
-          if (query && !query.startsWith("⏺️")) handleOrder(query);
-        };
-        rec.start();
-      }
-      micBtn.addEventListener("click", startRec);
-
-      /* ---------- handleOrder (backend + mock) ---------- */
-      async function handleOrder(query) {
-        const MOCK = {
-          title: "Propozycja (demo)",
-          lines: [
-            "✅ Status: gotowe do realizacji",
-            "🏬 Miejsce: Demo Partner",
-            "⏱️ Czas: 15–20 min",
-            "💵 Cena: PLN 38",
-            "ℹ️ Info: wersja testowa (mock)."
-          ]
-        };
-
-        transEl.textContent = query;
-
-        try {
-          // podmień na docelowy backend, gdy będzie stały
-          const url =
-            "https://ffend-vercel.vercel.app/api/order?query=" +
-            encodeURIComponent(query);
-          const res = await fetch(url, { mode: "cors" });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          const data = await res.json(); // {title, lines[]}
-          if (data && data.title && Array.isArray(data.lines)) {
-            card(data.title, data.lines);
-          } else {
-            card(MOCK.title, MOCK.lines);
-          }
-        } catch (e) {
-          // nie psujemy UI — spokojny fallback
-          console.log("Backend niedostępny, używam mock:", e.message);
-          card(MOCK.title, MOCK.lines);
-        }
-      }
-
-      /* ---------- first paint: pokaż drobny hint tylko raz ---------- */
-      (function firstHint() {
-        try {
-          const k = "ff_hint_v1";
-          if (!localStorage.getItem(k)) {
-            if (!speechSupported()) {
-              toast(
-                "Wskazówka: mikrofon działa najlepiej w Chrome/Edge (Web Speech API)."
-              );
-            }
-            localStorage.setItem(k, "1");
-          }
-        } catch {}
-      })();
-    </script>
-  </body>
+      // pierwszy wpis
+      card("Witaj w FreeFlow",["Kliknij kafelek na dole albo naciśnij logo, by mówić."]);
+    });
+  </script>
+</body>
 </html>

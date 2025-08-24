@@ -1,235 +1,281 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FreeFlow — zamów głosem</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --fg:#e9eef6; --muted:#a8b3c7; --brand:#ff7a00;
-      --glass-bg: rgba(0,0,0,.36); --glass-bd: rgba(255,255,255,.08);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;font-family:Inter,sans-serif;color:var(--fg);
-      background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
-    }
-    .ff-header{display:flex;align-items:center;gap:12px;padding:16px;
-      background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,0))}
-    .ff-title{font-weight:800;font-size:28px}
-    .ff-title em{color:var(--brand);font-style:normal}
-    .ff-sub{color:var(--muted);font-size:13px}
-    .ff-spacer{flex:1}
-    .ff-iconBtn{height:44px;width:44px;border-radius:14px;display:grid;place-items:center;
-      background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(8px)}
-    h1{margin:8px 16px 6px;font-size:34px}
-    .lead{color:#c9d3e3;margin:0 16px 14px}
-    .ff-hero{display:grid;place-items:center;margin:6px 0 18px}
-    .logo{width:86%;max-width:520px;user-select:none;transition:transform .18s ease,filter .18s ease}
-    .logo.listening{animation:ff-pulse 1.15s ease-in-out infinite}
-    @keyframes ff-pulse{
-      0%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,122,0,0))}
-      50%{transform:scale(1.05);filter:drop-shadow(0 0 20px rgba(255,122,0,.55))}
-      100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,122,0,0))}
-    }
-    /* transkrypcja ciut niżej (kropla widoczna) */
-    #transcript{position:fixed;left:16px;right:16px;
-      bottom:calc(72px + max(16px, env(safe-area-inset-bottom)));
-      z-index:40;padding:14px 16px;min-height:48px;color:var(--fg);font-size:16px;
-      background:var(--glass-bg);border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)}
-    .ff-bottom{position:fixed;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));
-      display:flex;gap:14px;z-index:30}
-    .tile{flex:1;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;
-      background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(10px);font-weight:700;color:#fff}
-    .tile.active{background:rgba(20,28,38,.46);outline:2px solid rgba(64,171,255,.55);color:#fff}
-    .summary{margin:6px 16px 20px;padding:16px;background:var(--glass-bg);
-      border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)}
-    .summary h2{margin:0 0 12px;font-size:18px}
-    .summary ul{list-style:none;padding:0;margin:0}
-    .summary li{margin:6px 0;font-size:15px;display:flex;align-items:center;gap:8px}
-    .hint{margin:4px 16px 0;color:#cbd6e6;font-size:13px;opacity:.9}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FreeFlow — zamów głosem</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fg:#e9eef6; --muted:#a8b3c7; --brand:#ff7a00;
+    --glass-bg: rgba(0,0,0,.36); --glass-bd: rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--fg);
+    background:#0b0f14 url("assets/Background.png") center/cover fixed no-repeat;
+  }
+  .hdr{display:flex;gap:12px;align-items:center;padding:16px;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,0))}
+  .brand{font-size:28px;font-weight:800}
+  .brand em{color:var(--brand);font-style:normal}
+  .muted{color:var(--muted);font-size:13px}
+  .spacer{flex:1}
+  .btn-ico{height:44px;width:44px;border-radius:14px;display:grid;place-items:center;background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(8px)}
+  h1{margin:6px 16px 6px;font-size:34px}
+  .lead{margin:0 16px 2px;color:#c9d3e3}
+
+  /* Logo wyżej */
+  .hero{display:grid;place-items:center;margin:0 0 4px}
+  .logo-wrap{width:min(84vw,520px);aspect-ratio:1/1}
+  .logo-wrap object,.logo-wrap svg{width:100%;height:100%;display:block}
+
+  /* Transkrypcja wyżej (tuż nad kafelkami) */
+  #transcript{
+    position:fixed;left:16px;right:16px;
+    bottom:calc(108px + max(16px, env(safe-area-inset-bottom))); /* było 72px – teraz wyżej */
+    z-index:40;padding:14px 16px;min-height:48px;font-size:16px;
+    background:var(--glass-bg);border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)
+  }
+
+  /* Kafelki */
+  .bottom{position:fixed;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));display:flex;gap:14px;z-index:30}
+  .tile{flex:1;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--glass-bg);border:1px solid var(--glass-bd);backdrop-filter:blur(10px);font-weight:700;color:#fff}
+  .tile.active{background:rgba(20,28,38,.46);outline:2px solid rgba(64,171,255,.55)}
+  /* miganie kategorii */
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .tile.blink{animation:blink .9s linear 6}
+
+  /* Podsumowanie */
+  .summary{margin:12px 16px 120px;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-bd);border-radius:16px;backdrop-filter:blur(8px)}
+  .summary h2{margin:0 0 10px;font-size:18px}
+  .summary ul{list-style:none;margin:0;padding:0}
+  .summary li{margin:6px 0;display:flex;gap:8px;align-items:center}
+  .hint{margin:6px 16px;color:#cbd6e6;font-size:13px;opacity:.9}
+
+  /* glow dla SVG (aplikowane do #mic, #icon-food/#icon-taxi/#icon-hotel jeśli istnieją) */
+  .svg-glow{filter:drop-shadow(0 0 10px rgba(255,122,0,.8)) drop-shadow(0 0 20px rgba(255,122,0,.6))}
+  .svg-blink{animation:blink .9s linear infinite}
+</style>
 </head>
 <body>
-  <header class="ff-header">
+  <header class="hdr">
     <div>
-      <div class="ff-title"><em>Free</em> Flow</div>
-      <div class="ff-sub">Voice to order — tryb testowy, bez profilowania</div>
+      <div class="brand"><em>Free</em> Flow</div>
+      <div class="muted">Voice to order — tryb testowy, bez profilowania</div>
     </div>
-    <div class="ff-spacer"></div>
-    <div class="ff-iconBtn" aria-label="Menu">≡</div>
-    <div class="ff-iconBtn" aria-label="Koszyk">🛒</div>
+    <div class="spacer"></div>
+    <div class="btn-ico" aria-label="Menu">≡</div>
+    <div class="btn-ico" aria-label="Koszyk">🛒</div>
   </header>
 
   <main>
     <h1>Złóż zamówienie</h1>
     <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
-    <section class="ff-hero">
-      <img id="ffLogo" class="logo" src="assets/Freeflowlogo.png" alt="FreeFlow logo"/>
+
+    <!-- logo jako SVG (żeby móc modyfikować elementy w środku) -->
+    <section class="hero">
+      <div class="logo-wrap">
+        <object id="ffLogo" type="image/svg+xml" data="assets/freeflow-logo.svg" aria-label="FreeFlow logo"></object>
+      </div>
     </section>
     <p class="hint" id="sttHint" style="display:none;">🎤 Rozpoznawanie mowy nie jest wspierane w tej przeglądarce.</p>
   </main>
 
-  <!-- Transkrypcja (tu pokazujemy to, co słyszymy) -->
   <div id="transcript">Słucham…</div>
 
-  <!-- Kafelki na dole -->
-  <nav class="ff-bottom">
-    <button id="btn-food" class="tile active">🍽️ Jedzenie</button>
-    <button id="btn-taxi" class="tile">🚕 Taxi</button>
+  <nav class="bottom">
+    <button id="btn-food"  class="tile">🍽️ Jedzenie</button>
+    <button id="btn-taxi"  class="tile">🚕 Taxi</button>
     <button id="btn-hotel" class="tile">🏡 Hotel</button>
   </nav>
 
-  <!-- Podsumowanie (po wyborze) -->
-  <div class="summary" id="summaryBox" style="display:none;">
-    <h2>Podsumowanie zamówienia</h2>
+  <section id="summaryBox" class="summary" style="display:none;">
+    <h2>Podsumowanie</h2>
     <ul id="summaryList"></ul>
-  </div>
+  </section>
 
-  <script>
-    // ====== elementy ======
-    const $logo = document.getElementById('ffLogo');
-    const $t = document.getElementById('transcript');
-    const $sumBox = document.getElementById('summaryBox');
-    const $sumList = document.getElementById('summaryList');
-    const $hint = document.getElementById('sttHint');
+<script>
+/* ===== helpers UI ===== */
+const $t = document.getElementById('transcript');
+const $sumBox = document.getElementById('summaryBox');
+const $sumList = document.getElementById('summaryList');
+const $hint = document.getElementById('sttHint');
+const tiles = {
+  food:  document.getElementById('btn-food'),
+  taxi:  document.getElementById('btn-taxi'),
+  hotel: document.getElementById('btn-hotel'),
+};
 
-    // ====== STT (webkitSpeechRecognition) ======
-    let recognition = null;
-    let isListening = false;
+/* ===== dostęp do elementów w SVG (po załadowaniu) ===== */
+let svgDoc=null, svgMic=null, svgFood=null, svgTaxi=null, svgHotel=null;
+const logoObj = document.getElementById('ffLogo');
+logoObj.addEventListener('load', () => {
+  svgDoc = logoObj.contentDocument;
+  if(!svgDoc) return;
+  svgMic   = svgDoc.getElementById('mic');
+  svgFood  = svgDoc.getElementById('icon-food');
+  svgTaxi  = svgDoc.getElementById('icon-taxi');
+  svgHotel = svgDoc.getElementById('icon-hotel');
+});
 
-    function sttSupported(){
-      return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+/* ===== STT ===== */
+let recognition=null, isListening=false;
+function sttSupported(){
+  return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+}
+function initSTT(){
+  if(recognition) return;
+  const Ctor = window.webkitSpeechRecognition || window.SpeechRecognition;
+  if(!Ctor){ $hint.style.display='block'; return; }
+  recognition = new Ctor();
+  recognition.lang='pl-PL'; recognition.continuous=true; recognition.interimResults=true;
+
+  let finalText='';
+  recognition.onstart=()=>{
+    isListening=true;
+    addMicGlow(true);
+    setTranscript('Słucham…');
+    finalText='';
+  };
+  recognition.onresult=(e)=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i];
+      if(r.isFinal) finalText += r[0].transcript+' ';
+      else interim += r[0].transcript;
     }
+    const text = cleanTranscript((finalText+interim).trim());
+    setTranscript(text);
+  };
+  recognition.onerror=(e)=>{ console.warn('STT error',e); stopSTT(); };
+  recognition.onend=()=>{ isListening=false; addMicGlow(false); if(!$t.textContent.trim()) setTranscript('Powiedz, co chcesz zamówić…'); parseAndSummarize($t.textContent); };
+}
+function startSTT(){ if(!recognition) initSTT(); try{ recognition && recognition.start(); }catch(_){} }
+function stopSTT(){ try{ recognition && recognition.stop(); }catch(_){} }
+function setTranscript(s){ $t.textContent=s; }
 
-    function initSTT(){
-      if(recognition) return;
-      const Ctor = window.webkitSpeechRecognition || window.SpeechRecognition;
-      if(!Ctor){ $hint.style.display='block'; return; }
+/* odszumianie duplikatów: "pierogi pierogi pierogi" -> "pierogi"  */
+function cleanTranscript(s){
+  return s
+    .replace(/\s+/g,' ')
+    .replace(/\b(\w{2,})(?:\s+\1){1,}\b/gi,'$1'); // usuń powtórzone słowa
+}
 
-      recognition = new Ctor();
-      recognition.lang = 'pl-PL';
-      recognition.continuous = true;        // stream
-      recognition.interimResults = true;     // pokazuj „na żywo”
+/* ===== intent parser (proste reguły) ===== */
+const catLex = {
+  taxi:  ['taxi','taksów','przejazd','dojazd','kurs'],
+  hotel: ['hotel','nocleg','pokój','rezerw']
+};
+const places = ['Katowic','Krakow','Kraków','Warszaw','Gdyn','Gdańsk','Pozna','Wrocław','Sopot']; // demo
+const foodHints = ['pizza','pierogi','burger','sushi','makaron','sałat','zupa','kebab','ramen'];
 
-      let finalTranscript = '';
+function detectCategory(text){
+  const t=text.toLowerCase();
+  if(catLex.taxi.some(w=>t.includes(w)))  return 'taxi';
+  if(catLex.hotel.some(w=>t.includes(w))) return 'hotel';
+  return 'food';
+}
+function extractTime(text){
+  const m = text.match(/(?:na|o)\s+(\d{1,2})(?::(\d{2}))?/i);
+  if(!m) return null;
+  const hh = m[1].padStart(2,'0'); const mm = m[2]||'00';
+  return `${hh}:${mm}`;
+}
+function extractPlace(text){
+  for(const p of places){ const re=new RegExp(p,'i'); if(re.test(text)) return p.replace(/.$/,''); }
+  // prosty fallback po przyimkach
+  const m = text.match(/\b(?:do|na|w)\s+([A-ZŁŚŻŹĆÓ][\p{L}\-]+(?:\s+[A-ZŁŚŻŹĆÓ][\p{L}\-]+)*)/u);
+  return m? m[1] : null;
+}
+function extractFood(text){
+  const t=text.toLowerCase();
+  for(const f of foodHints) if(t.includes(f)) return f;
+  // fallback – pierwsze 2-3 słowa bez przyimków
+  const stop = ['na','do','w','o','i','oraz','dla','poproszę','proszę'];
+  const words = t.split(/\s+/).filter(w=>!stop.includes(w) && w.length>2);
+  return words.slice(0,3).join(' ') || null;
+}
 
-      recognition.onstart = () => {
-        isListening = true;
-        $logo.classList.add('listening');
-        finalTranscript = '';
-        setTranscript('Słucham…');
-      };
+function parseAndSummarize(text){
+  if(!text || text.length<2) return;
+  const cat = detectCategory(text);
+  const time = extractTime(text);
+  const place = extractPlace(text);
+  const dish = (cat==='food')? extractFood(text) : null;
 
-      recognition.onresult = (e) => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const res = e.results[i];
-          if (res.isFinal) finalTranscript += res[0].transcript + ' ';
-          else interim += res[0].transcript;
-        }
-        setTranscript((finalTranscript + interim).trim());
-      };
+  blinkTile(cat);
+  svgBlinkCategory(cat);
 
-      recognition.onerror = (e) => {
-        console.warn('STT error:', e.error);
-        setTranscript('Błąd rozpoznawania mowy.');
-        stopSTT();
-      };
+  const items=[];
+  items.push({icon:'✅',text:'Status: gotowe'});
+  if(cat==='food'){
+    items.push({icon:'🍽️',text:`Danie: ${dish||'—'}`});
+    if(time)  items.push({icon:'⏱',text:`Czas: ${time}`});
+    if(place) items.push({icon:'📍',text:`Miejsce: ${place}`});
+    items.push({icon:'💲',text:'Cena: demo'});
+  }else if(cat==='taxi'){
+    if(place) items.push({icon:'📍',text:`Kierunek: ${place}`});
+    if(time)  items.push({icon:'⏱',text:`Godzina: ${time}`});
+    items.push({icon:'🚕',text:'Taxi zamówione (demo)'});
+  }else{
+    if(place) items.push({icon:'📍',text:`Miasto: ${place}`});
+    if(time)  items.push({icon:'⏱',text:`Godzina: ${time}`});
+    items.push({icon:'🏨',text:'Hotel – rezerwacja demo'});
+  }
+  showSummary(items);
+}
 
-      recognition.onend = () => {
-        isListening = false;
-        $logo.classList.remove('listening');
-        if (!finalTranscript.trim()) setTranscript('Powiedz, co chcesz zamówić…');
-      };
-    }
+/* ===== podsumowanie + TTS ===== */
+function showSummary(items){
+  $sumList.innerHTML='';
+  items.forEach(i=>{ const li=document.createElement('li'); li.innerHTML=`${i.icon} ${i.text}`; $sumList.appendChild(li); });
+  $sumBox.style.display='block';
+  speak('Podsumowanie. ' + items.map(i=>i.text).join('. ') + '.');
+}
+function speak(text){
+  try{
+    if(!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang='pl-PL';
+    const use=()=>{ const v=speechSynthesis.getVoices().find(v=>v.lang?.toLowerCase().startsWith('pl')); if(v) u.voice=v; speechSynthesis.speak(u); };
+    if(speechSynthesis.getVoices().length) use(); else speechSynthesis.onvoiceschanged=use;
+  }catch(e){console.warn(e)}
+}
 
-    function startSTT(){
-      if(!recognition){ initSTT(); }
-      if(recognition){
-        try{ recognition.start(); }catch(_){}
-      }
-    }
-    function stopSTT(){
-      if(recognition){
-        try{ recognition.stop(); }catch(_){}
-      }
-    }
+/* ===== UI: miganie kafelka + SVG ===== */
+function blinkTile(cat){
+  Object.values(tiles).forEach(el=>el.classList.remove('blink','active'));
+  const el = tiles[cat]; if(!el) return;
+  el.classList.add('active','blink');
+  setTimeout(()=>el.classList.remove('blink'), 5000);
+}
+function addMicGlow(on){
+  if(svgMic){
+    if(on){ svgMic.classList.add('svg-glow'); }
+    else  { svgMic.classList.remove('svg-glow'); }
+  }
+}
+function svgBlinkCategory(cat){
+  const map={food:svgFood,taxi:svgTaxi,hotel:svgHotel};
+  const node = map[cat]; if(!node) return;
+  node.classList.add('svg-blink');
+  setTimeout(()=>node.classList.remove('svg-blink'), 3000);
+}
 
-    // ====== TTS (Web Speech API) ======
-    function speak(text){
-      try{
-        if(!("speechSynthesis" in window)) return;
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "pl-PL"; u.rate=1; u.pitch=1; u.volume=1;
-        const assignThenSpeak = () => {
-          const voices = speechSynthesis.getVoices() || [];
-          const pl = voices.find(v => v.lang?.toLowerCase().startsWith('pl'));
-          if(pl) u.voice = pl;
-          speechSynthesis.speak(u);
-        };
-        if (speechSynthesis.getVoices().length) assignThenSpeak();
-        else speechSynthesis.onvoiceschanged = assignThenSpeak;
-      }catch(e){ console.warn("TTS error:", e); }
-    }
+/* ===== klik w logo: start/stop ===== */
+logoObj.addEventListener('click', ()=>{
+  if(!sttSupported()){ $hint.style.display='block'; addMicGlow(!isListening); return; }
+  if(isListening) stopSTT(); else startSTT();
+});
 
-    // ====== helpers ======
-    function setTranscript(txt){ $t.textContent = txt; }
+/* ===== kafelki – manualne demo ===== */
+tiles.food.onclick  = ()=>parseAndSummarize('zamów jedzenie pizza na 19:00 do Katowic');
+tiles.taxi.onclick  = ()=>parseAndSummarize('taxi do Warszawy na 18:30');
+tiles.hotel.onclick = ()=>parseAndSummarize('hotel w Krakowie na 20');
 
-    function addSummary(items){
-      $sumList.innerHTML = "";
-      items.forEach(i=>{
-        const li = document.createElement('li');
-        li.innerHTML = `${i.icon} ${i.text}`;
-        $sumList.appendChild(li);
-      });
-      $sumBox.style.display = "block";
-      const plain = items.map(i => i.text).join(". ");
-      speak(`Podsumowanie: ${plain}.`);
-    }
-
-    // ====== akcje kafelków ======
-    document.getElementById('btn-food').onclick = () => {
-      addSummary([
-        {icon:"✅",text:"Status: gotowe"},
-        {icon:"🍕",text:"Capricciosa"},
-        {icon:"🏨",text:"Miejsce: Demo Partner"},
-        {icon:"⏱",text:"Czas: 15–20 minut"},
-        {icon:"💲",text:"Cena: 38 zł"}
-      ]);
-    };
-    document.getElementById('btn-taxi').onclick = () => {
-      addSummary([
-        {icon:"✅",text:"Status: gotowe"},
-        {icon:"🚕",text:"Taxi zamówione"},
-        {icon:"📍",text:"Kierunek: Demo City"},
-        {icon:"⏱",text:"Czas podjazdu: około 5 minut"}
-      ]);
-    };
-    document.getElementById('btn-hotel').onclick = () => {
-      addSummary([
-        {icon:"✅",text:"Status: gotowe"},
-        {icon:"🏡",text:"Hotel Demo"},
-        {icon:"⏱",text:"Długość pobytu: 2 noce"},
-        {icon:"💲",text:"Cena: 300 zł"}
-      ]);
-    };
-
-    // ====== klik logo: start/stop STT + puls ======
-    $logo.onclick = () => {
-      if(!sttSupported()){
-        $hint.style.display='block';
-        $logo.classList.toggle('listening');
-        return;
-      }
-      if(isListening) stopSTT();
-      else startSTT();
-    };
-
-    // pokaż informację, jeśli STT niedostępne
-    if(!sttSupported()) $hint.style.display='block';
-  </script>
+/* init */
+if(!sttSupported()) $hint.style.display='block';
+</script>
 </body>
 </html>

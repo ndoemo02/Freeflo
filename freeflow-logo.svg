@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="720" viewBox="0 0 720 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Neonki -->
+    <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glow-orange" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <linearGradient id="grad-wordmark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#a7f3ff"/>
+      <stop offset="50%" stop-color="#00d1ff"/>
+      <stop offset="100%" stop-color="#7de7ff"/>
+    </linearGradient>
+
+    <linearGradient id="grad-badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c1117"/>
+      <stop offset="100%" stop-color="#0b0f14"/>
+    </linearGradient>
+
+    <style><![CDATA[
+      .muted { opacity:.75 }
+      .stroke-soft { stroke: rgba(255,255,255,.08); stroke-width:2 }
+    ]]></style>
+  </defs>
+
+  <!-- TARCZA / BADGE -->
+  <g id="badge">
+    <circle cx="360" cy="360" r="320" fill="url(#grad-badge)"/>
+    <!-- obrys delikatny -->
+    <circle cx="360" cy="360" r="318" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="3"/>
+    <!-- siatka subtelna -->
+    <g class="muted">
+      <path d="M120 240 H600" class="stroke-soft"/>
+      <path d="M120 360 H600" class="stroke-soft"/>
+      <path d="M120 480 H600" class="stroke-soft"/>
+      <path d="M240 120 V600" class="stroke-soft"/>
+      <path d="M360 120 V600" class="stroke-soft"/>
+      <path d="M480 120 V600" class="stroke-soft"/>
+    </g>
+  </g>
+
+  <!-- MIKROFON -->
+  <g id="mic" filter="url(#glow-cyan)">
+    <!-- kapsuła -->
+    <rect x="318" y="180" rx="36" ry="36" width="84" height="150" fill="#00d1ff" opacity=".12" stroke="#00d1ff" stroke-width="3"/>
+    <!-- trzon -->
+    <rect x="346" y="330" width="28" height="86" rx="14" fill="#00d1ff" opacity=".22"/>
+    <!-- stopka -->
+    <rect x="300" y="416" width="140" height="16" rx="8" fill="#00d1ff" opacity=".18"/>
+    <!-- obwódki -->
+    <rect x="322" y="186" rx="30" ry="30" width="76" height="138" fill="none" stroke="#00d1ff" stroke-width="2" opacity=".65"/>
+  </g>
+
+  <!-- KROPLA (pod mikrofonem) -->
+  <g id="drop" filter="url(#glow-cyan)">
+    <!-- pozycja startowa pod kapsułą; będziemy animować translateY -->
+    <path d="M360 440
+             C372 460, 376 472, 376 484
+             C376 500, 368 510, 360 510
+             C352 510, 344 500, 344 484
+             C344 472, 348 460, 360 440Z"
+          fill="#00d1ff" opacity=".22" stroke="#00d1ff" stroke-width="2"/>
+  </g>
+
+  <!-- SŁOWO FREEFLOW -->
+  <g id="wordmark" filter="url(#glow-cyan)">
+    <!-- używamy <text>; jeśli masz Poppins lokalnie/Google Fonts w HTML, będzie ok;
+         w produkcji rozważ zamianę na ścieżki (outline). -->
+    <text x="360" y="560"
+          text-anchor="middle"
+          font-family="Poppins, ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial"
+          font-size="64"
+          fill="url(#grad-wordmark)"
+          letter-spacing="1.5">FreeFlow</text>
+    <!-- akcent (kropka/iskra) -->
+    <circle cx="516" cy="534" r="4" fill="#00d1ff" opacity=".8"/>
+  </g>
+
+  <!-- IKONY FUNKCJI (w badge’u u dołu) -->
+  <g id="icon-row">
+    <!-- FOOD -->
+    <g id="icon-food" transform="translate(240,620)" filter="url(#glow-orange)">
+      <circle cx="0" cy="0" r="22" fill="rgba(0,0,0,.22)" stroke="rgba(255,255,255,.08)" stroke-width="2"/>
+      <!-- slice pizzy -->
+      <path d="M -8 -6 L 12 6 L -8 10 Z" fill="#ff7a00"/>
+      <circle cx="-2" cy="0" r="2.5" fill="#111"/>
+      <circle cx="4" cy="3" r="2.5" fill="#111"/>
+    </g>
+
+    <!-- TAXI -->
+    <g id="icon-taxi" transform="translate(360,620)" filter="url(#glow-orange)">
+      <circle cx="0" cy="0" r="22" fill="rgba(0,0,0,.22)" stroke="rgba(255,255,255,.08)" stroke-width="2"/>
+      <rect x="-10" y="-6" width="20" height="10" rx="2" fill="#ffd54d"/>
+      <rect x="-6" y="-12" width="12" height="6" rx="2" fill="#ffd54d"/>
+      <circle cx="-6" cy="8" r="3" fill="#222"/>
+      <circle cx="6" cy="8" r="3" fill="#222"/>
+    </g>
+
+    <!-- HOTEL -->
+    <g id="icon-hotel" transform="translate(480,620)" filter="url(#glow-orange)">
+      <circle cx="0" cy="0" r="22" fill="rgba(0,0,0,.22)" stroke="rgba(255,255,255,.08)" stroke-width="2"/>
+      <!-- łóżko -->
+      <rect x="-10" y="-2" width="20" height="8" rx="2" fill="#64b5f6"/>
+      <rect x="-10" y="-8" width="10" height="6" rx="2" fill="#64b5f6"/>
+    </g>
+  </g>
+</svg>

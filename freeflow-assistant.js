@@ -5,8 +5,8 @@
   const transcript = document.getElementById('transcript');
   const dot        = document.getElementById('dot');
   const backendMsg = document.getElementById('backendMsg');
-  const backendToast = document.getElementById('backendToast');
 
+  // ——— UI helpers
   const setListening = (on)=>{
     app.classList.toggle('listening', on);
     dot.style.background = on ? '#21d4fd' : '#86e2ff';
@@ -16,8 +16,10 @@
     }
   };
 
+  // usuń powtórzenia typu "dwie dwie"
   const dedupeWords = (s)=> s.replace(/\b(\w{2,})\b(?:\s+\1\b)+/gi, '$1');
 
+  // bardzo proste parsowanie: potrawa + czas
   const parseOrder = (s)=>{
     const text = s.toLowerCase();
     const mTime = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
@@ -41,6 +43,7 @@
     }catch(_){}
   };
 
+  // ——— ASR
   const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recognizing = false;
 
@@ -96,12 +99,11 @@
 
     try{ rec.start(); }catch(_){}
   };
-
   const stopRec = ()=>{ try{ rec && rec.stop(); }catch(_){ } };
 
   [logoBtn, micBtn].forEach(el=> el.addEventListener('click', startRec, {passive:true}));
 
-  // Kafelki – aktywny stan
+  // ——— Kafelki
   const tiles = {
     food:  document.getElementById('tileFood'),
     taxi:  document.getElementById('tileTaxi'),
@@ -115,13 +117,13 @@
   tiles.taxi.addEventListener('click',  ()=>selectTile('taxi'));
   tiles.hotel.addEventListener('click', ()=>selectTile('hotel'));
 
-  // Backend status (na razie demo) + autoukrycie, żeby nie zasłaniał niczego
-  backendMsg.textContent = 'ok';
-  backendToast.classList.add('show');
-  setTimeout(()=> backendToast.classList.remove('show'), 2500);
+  // ——— Backend status (demo)
+  backendMsg.textContent = 'ok'; // tutaj wstawiasz realny status, gdy już masz fetch
+
+  // ——— Start
+  transcript.textContent = 'Powiedz, co chcesz zamówić…';
+  transcript.classList.add('ghost');
 
   window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
 
-  transcript.textContent = 'Powiedz, co chcesz zamówić…';
-  transcript.classList.add('ghost');
 })();

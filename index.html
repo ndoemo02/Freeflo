@@ -8,174 +8,81 @@
 
   <style>
     :root{
-      --bg:#0b0f14;
-      --glass: rgba(0,0,0,.36);
-      --glass-strong: rgba(0,0,0,.50);
-      --border: rgba(255,255,255,.10);
-      --txt:#eef3fa;
-      --muted:#a9b5c7;
-      --brand:#ff7a00;
-      --accent:#00d4ff;
-      --ok:#2bd67b;
-      --err:#ff5a5a;
-      --radius:18px;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --bg:#0b0f14; --glass:rgba(0,0,0,.36); --glass-strong:rgba(0,0,0,.5);
+      --border:rgba(255,255,255,.10); --txt:#eef3fa; --muted:#a9b5c7;
+      --brand:#ff7a00; --accent:#00d4ff; --ok:#2bd67b; --radius:18px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
     }
-
-    /* === Reset + baza === */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      color:var(--txt);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: var(--bg) url("./assets/Background.png") center/cover fixed no-repeat;
+      margin:0; color:var(--txt);
+      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:var(--bg) url("./assets/Background.png") center/cover fixed no-repeat;
     }
-    .page{
-      min-height:100dvh;
-      display:flex;
-      flex-direction:column;
-      backdrop-filter: saturate(110%) blur(.2px);
-    }
-    .wrap{
-      width:min(1100px, 92vw);
-      margin-inline:auto;
-    }
+    .page{min-height:100dvh; display:flex; flex-direction:column}
+    .wrap{width:min(1100px,92vw); margin-inline:auto}
 
-    /* === Header === */
-    header{
-      position:sticky; top:0; z-index:20;
-      backdrop-filter: blur(6px);
-      background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.10) 70%, transparent);
-    }
-    .bar{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:16px 0 6px;
-    }
-    .brand{
-      display:flex; align-items:baseline; gap:8px;
-      font-weight:800; letter-spacing:.2px; font-size:28px;
-    }
+    header{position:sticky; top:0; z-index:20; backdrop-filter:blur(6px);
+      background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,.1) 70%,transparent)}
+    .bar{display:flex; align-items:center; justify-content:space-between; padding:16px 0 6px}
+    .brand{display:flex; gap:8px; font-weight:800; letter-spacing:.2px; font-size:28px}
     .brand .dot{color:var(--brand)}
-    .brand small{
-      display:block; font-weight:500; color:var(--muted);
-      margin-top:2px; font-size:12px;
-    }
+    .brand-sub{display:block; color:var(--muted); margin-top:2px; font-size:12px}
     .actions{display:flex; gap:12px}
-    .iconbtn{
-      border:1px solid var(--border);
-      background:var(--glass);
-      padding:10px 12px; border-radius:14px;
-      display:flex; align-items:center; gap:10px;
-      color:var(--txt); box-shadow: var(--shadow);
-    }
+    .iconbtn{border:1px solid var(--border); background:var(--glass); padding:10px 12px; border-radius:14px; display:flex; align-items:center; gap:10px; box-shadow:var(--shadow)}
     .iconbtn b{background:#ff8a00;color:#111;border-radius:10px;padding:2px 6px}
 
-    /* === Hero === */
-    .hero{
-      display:grid; place-items:center;
-      padding:24px 0 8px;
-    }
-    .logo-big{
-      width:min(520px, 70vw);
-      height:auto; display:block;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.6));
-      animation: float 6s ease-in-out infinite;
-    }
-    @keyframes float{
-      0%,100%{ transform: translateY(0) }
-      50%{ transform: translateY(-6px) }
-    }
+    h1{font-size:clamp(28px,5vw,56px); line-height:1.04; margin:0 0 6px; text-shadow:0 10px 30px rgba(0,0,0,.4)}
+    .lead{color:var(--muted); margin:0 0 8px; font-size:clamp(14px,2.6vw,20px)}
 
-    /* === Tytuł/lead === */
-    h1{
-      font-size: clamp(28px, 5vw, 56px);
-      line-height:1.04; margin:0 0 6px;
-      text-shadow: 0 10px 30px rgba(0,0,0,.4);
+    .cats{display:flex; gap:12px; flex-wrap:wrap; margin:18px 0 24px}
+    .cat{
+      flex:1 1 160px; max-width:220px; border:1px solid var(--border); background:var(--glass);
+      color:var(--txt); border-radius:20px; padding:14px 18px; display:flex; align-items:center;
+      gap:10px; justify-content:center; cursor:pointer; box-shadow:var(--shadow);
+      transition:transform .12s ease, background .2s ease, border-color .2s ease; backdrop-filter:blur(4px)
     }
-    .lead{color:var(--muted); margin:0 0 8px; font-size:clamp(14px, 2.6vw, 20px)}
+    .cat:hover{transform:translateY(-2px); border-color:rgba(255,255,255,.18)}
+    .cat.active{outline:2px solid rgba(0,212,255,.35); background:rgba(0,0,0,.55)}
 
-    /* === Panel alert / wynik === */
+    .hero{display:grid; place-items:center; padding:8px 0}
+    .logo-big{width:min(520px,70vw); height:auto; display:block; filter:drop-shadow(0 10px 20px rgba(0,0,0,.6)); cursor:pointer}
+    /* animacja słuchania */
+    .logo-big.listening{
+      animation: pulse 1.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 8px rgba(0,212,255,.55)) drop-shadow(0 0 18px rgba(255,122,0,.45));
+    }
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+
     .panel{
-      margin: 8px auto 0;
-      width:min(100%, 980px);
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--glass-strong);
-      box-shadow: var(--shadow);
-      padding:16px 18px;
-      display:flex; align-items:center; gap:12px;
+      margin:10px auto 0; width:min(100%,980px); border:1px solid var(--border);
+      border-radius:var(--radius); background:var(--glass-strong); box-shadow:var(--shadow);
+      padding:14px 16px; display:flex; align-items:center; gap:12px
     }
     .panel.hidden{display:none}
-    .panel.err{border-color: rgba(255,90,90,.25)}
-    .panel .pill{
-      width:28px; height:28px; border-radius:50%;
-      display:grid; place-items:center; flex:0 0 auto;
-      background:rgba(0,0,0,.35); border:1px solid var(--border)
-    }
-    .panel.err .pill{ background:rgba(255,90,90,.15); border-color: rgba(255,90,90,.35) }
-
-    /* === Przyciski kategorii === */
-    .cats{
-      display:flex; gap:12px; flex-wrap:wrap;
-      margin: 18px 0 28px;
-    }
-    .cat{
-      flex:1 1 160px; max-width:220px;
-      border:1px solid var(--border);
-      background: var(--glass);
-      color:var(--txt);
-      border-radius: 20px;
-      padding:14px 18px;
-      display:flex; align-items:center; gap:10px;
-      justify-content:center;
-      cursor:pointer;
-      box-shadow: var(--shadow);
-      transition: transform .12s ease, background .2s ease, border-color .2s ease;
-      backdrop-filter: blur(4px);
-      user-select:none;
-    }
-    .cat:hover{ transform: translateY(-2px); border-color: rgba(255,255,255,.18) }
-    .cat.active{ outline:2px solid rgba(0,212,255,.35); background: rgba(0,0,0,.55) }
-
-    /* === Sekcja tytułowa (nad hero) === */
-    .intro{margin-top:6px}
-    .intro .wrap{padding-top:6px}
-    .hero .wrap{padding:0}
-
-    /* === Dół strony — bez notek, czysto === */
-    footer{height:22px}
-
-    @media (min-width:900px){
-      .clusters{display:grid; grid-template-columns: 1.2fr .8fr; gap:24px; align-items:center}
-      .hero{padding-top:10px}
-    }
+    .panel.err{border-color:rgba(255,90,90,.25)}
+    .pill{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:rgba(0,0,0,.35);border:1px solid var(--border)}
+    .panel.err .pill{background:rgba(255,90,90,.15); border-color:rgba(255,90,90,.35)}
   </style>
 </head>
 <body>
   <div class="page">
-    <!-- HEADER -->
     <header>
       <div class="wrap bar">
         <div>
-          <div class="brand">
-            <span class="dot">Free</span><span>Flow</span>
-          </div>
+          <div class="brand"><span class="dot">Free</span><span>Flow</span></div>
           <small class="brand-sub">Voice to order — tryb testowy, bez profilowania</small>
         </div>
         <div class="actions">
-          <div class="iconbtn" aria-label="Menu">
-            <span>☰</span>
-          </div>
-          <div class="iconbtn" aria-label="Koszyk">
-            <span>🛒</span><b id="cartBadge">11</b>
-          </div>
+          <div class="iconbtn" aria-label="Menu">☰</div>
+          <div class="iconbtn" aria-label="Koszyk">🛒 <b id="cartBadge">11</b></div>
         </div>
       </div>
     </header>
 
     <main class="wrap">
-      <section class="intro">
+      <section>
         <h1>Złóż zamówienie</h1>
         <p class="lead">Jedzenie, Taxi albo nocleg — powiedz lub kliknij.</p>
         <div class="cats" id="cats">
@@ -185,17 +92,15 @@
         </div>
       </section>
 
-      <section class="hero" aria-label="Logo FreeFlow">
-        <img class="logo-big" src="./assets/Freeflowlogo.png" alt="FreeFlow logo">
+      <section class="hero" aria-label="Logo FreeFlow — kliknij, aby mówić">
+        <img id="logo" class="logo-big" src="./assets/Freeflowlogo.png" alt="FreeFlow logo (kliknij, aby mówić)"/>
       </section>
 
-      <!-- panel błędu / wyniku -->
       <div id="panel" class="panel hidden">
         <div class="pill" id="panelIcon">ℹ️</div>
         <div id="panelText">Komunikat…</div>
       </div>
     </main>
-
     <footer></footer>
   </div>
 

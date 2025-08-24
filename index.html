@@ -8,47 +8,98 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0b0f14;--text:#eef3fb;--muted:#a6b2c3;--glass:rgba(0,0,0,.35);--stroke:rgba(255,255,255,.08);--ring:rgba(0,214,255,.35);--brand:#ff7a00}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;color:var(--text);background:var(--bg) url("assets/Background.png") center/cover fixed no-repeat;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .topbar{position:sticky;top:0;z-index:30;padding:16px 18px;background:linear-gradient(to bottom,rgba(11,15,20,.95),rgba(11,15,20,.6),transparent)}
-    .brand{display:flex;flex-direction:column;gap:4px}
-    .brand .row{display:flex;gap:6px;align-items:baseline}
-    .brand .free{color:var(--brand);font:700 clamp(22px,4.5vw,28px)/1 Poppins,system-ui}
-    .brand .flow{font:700 clamp(22px,4.5vw,28px)/1 Poppins,system-ui}
-    .brand .sub{color:var(--muted);font-size:12px}
-    .wrap{max-width:1000px;margin:0 auto;padding:0 16px 88px} /* padding-bottom bo na dole będzie dock */
-    h1{font:700 clamp(28px,7vw,44px)/1.1 Poppins,system-ui;margin:10px 0 6px}
-    p.lead{color:var(--muted);margin:0 0 10px}
+    :root{
+      --bg:#0b0f14; --text:#eef3fb; --muted:#a6b2c3; --glass:rgba(0,0,0,.35);
+      --stroke:rgba(255,255,255,.08); --ring:rgba(0,214,255,.35); --brand:#ff7a00
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;color:var(--text);
+      background:var(--bg) url("assets/Background.png") center/cover fixed no-repeat;
+      font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial
+    }
 
-    .logo-wrap{display:grid;place-items:center;margin:8px 0 16px}
-    .logo-btn{position:relative;border:0;background:transparent;border-radius:20px}
-    #ffLogo{width:min(84vw,560px);height:auto;display:block;border-radius:20px;pointer-events:none}
-    .rings{position:absolute;width:52%;aspect-ratio:1/1;left:50%;top:46%;transform:translate(-50%,-50%);border-radius:50%;
-      box-shadow:0 0 0 2px rgba(0,214,255,.25),0 0 34px rgba(255,122,0,.28) inset;opacity:0;transition:opacity .15s}
-    .logo-btn.listening .rings{animation:ping 1.2s ease-in-out infinite;opacity:1}
-    @keyframes ping{0%{transform:translate(-50%,-50%) scale(.92)}50%{transform:translate(-50%,-50%) scale(1.03)}100%{transform:translate(-50%,-50%) scale(.92)}}
+    /* === top === */
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:linear-gradient(to bottom,rgba(11,15,20,.95),rgba(11,15,20,.55),transparent);
+      padding:14px 16px 8px
+    }
+    .top{
+      max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px
+    }
+    .brand{flex:1 1 auto}
+    .row{display:flex;gap:6px;align-items:baseline}
+    .free{color:var(--brand);font:700 26px/1 Poppins}
+    .flow{font:700 26px/1 Poppins}
+    .sub{color:var(--muted);font-size:12px;margin-top:4px}
+    .actions{display:flex;gap:10px}
+    .action{
+      display:inline-flex;align-items:center;gap:10px;min-width:44px;justify-content:center;
+      height:44px;padding:0 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke)
+    }
+    .badge{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:#ff9f2e;font-weight:700}
 
-    .bubble{max-width:1000px;margin:10px auto 0;background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px;font-size:18px}
+    /* === grid główny === */
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px 98px}
+    h1{font:700 clamp(28px,7vw,44px)/1.1 Poppins;margin:12px 0 4px}
+    .lead{color:var(--muted);margin:0 0 14px}
 
-    /* === DOCK NA DOLE (kafelki) === */
-    .dock{position:fixed;left:12px;right:12px;bottom:12px;z-index:40;display:flex;gap:12px;justify-content:center;flex-wrap:nowrap;
-      background:var(--glass);border:1px solid var(--stroke);border-radius:18px;padding:10px 10px;backdrop-filter:blur(4px)}
-    .pill{flex:1 1 0%;min-width:0;text-align:center;cursor:pointer;padding:12px 14px;border-radius:14px;font-size:16px;
-      background:rgba(255,255,255,.04);border:1px solid var(--stroke);outline:2px solid transparent}
-    .pill.active{outline:2px solid var(--ring);box-shadow:0 0 0 6px rgba(0,214,255,.08) inset}
-    .toast{position:fixed;left:14px;right:14px;bottom:76px;z-index:50;background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
-    .cards{max-width:1000px;margin:12px auto 0;display:grid;gap:14px}
+    .logo-wrap{display:grid;place-items:center;margin:6px 0 10px}
+    .logo-btn{position:relative;border:0;background:transparent;border-radius:22px;outline:0}
+    #ffLogo{
+      width:min(88vw,620px);height:auto;display:block;border-radius:22px;will-change:transform,filter;
+      transition:transform .18s ease, filter .18s ease
+    }
+    /* PULS całego bąbla przy nasłuchu */
+    .logo-btn.listening #ffLogo{
+      animation:ffpulse 1.15s ease-in-out infinite
+    }
+    @keyframes ffpulse{
+      0%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(0,214,255,0))}
+      50%{transform:scale(1.03);filter:drop-shadow(0 0 14px rgba(0,214,255,.45)) drop-shadow(0 0 22px rgba(255,122,0,.25))}
+      100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(0,214,255,0))}
+    }
+
+    .bubble{
+      background:var(--glass);border:1px solid var(--stroke);border-radius:16px;
+      padding:14px 16px;font-size:18px
+    }
+
+    .cards{display:grid;gap:14px;margin-top:12px}
     .card{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
-    .card h3{margin:0 0 8px;font:600 18px/1.2 Poppins,system-ui}
+    .card h3{margin:0 0 8px;font:600 18px/1.2 Poppins}
     .card ul{margin:0;padding-left:18px;color:var(--muted)}
+
+    /* === DOCK (kafelki) na dole === */
+    .dock{
+      position:fixed;left:12px;right:12px;bottom:12px;z-index:60;
+      display:flex;gap:12px;justify-content:center;background:var(--glass);
+      border:1px solid var(--stroke);border-radius:18px;padding:10px;backdrop-filter:blur(4px)
+    }
+    .pill{
+      flex:1 1 0%;min-width:0;text-align:center;cursor:pointer;padding:12px 14px;
+      border-radius:14px;font-size:16px;background:rgba(255,255,255,.04);border:1px solid var(--stroke);
+      outline:2px solid transparent
+    }
+    .pill.active{outline:2px solid var(--ring);box-shadow:0 0 0 6px rgba(0,214,255,.08) inset}
+
+    .toast{position:fixed;left:14px;right:14px;bottom:80px;z-index:70;
+      background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px}
   </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <div class="row"><span class="free">Free</span><span class="flow">Flow</span></div>
-      <span class="sub">Voice to order — tryb testowy, bez profilowania</span>
+    <div class="top">
+      <div class="brand">
+        <div class="row"><span class="free">Free</span><span class="flow">Flow</span></div>
+        <div class="sub">Voice to order — tryb testowy, bez profilowania</div>
+      </div>
+      <div class="actions">
+        <button class="action" aria-label="Menu">≡</button>
+        <button class="action" aria-label="Koszyk"><span>🛒</span><span class="badge" id="cartNum">11</span></button>
+      </div>
     </div>
   </header>
 
@@ -58,16 +109,18 @@
 
     <section class="logo-wrap">
       <button id="micBtn" class="logo-btn" aria-label="Naciśnij i mów">
-        <img id="ffLogo" src="assets/Freeflowlogo.png?v=11" alt="FreeFlow logo">
-        <span class="rings"></span>
+        <img id="ffLogo" src="assets/Freeflowlogo.png?v=12" alt="FreeFlow logo">
       </button>
     </section>
 
-    <section id="cardFeed" class="cards"></section>
+    <!-- transkrypcja POD bąblem -->
     <div id="transcript" class="bubble">Powiedz, co chcesz zamówić…</div>
+
+    <!-- feed kart / odpowiedzi -->
+    <section id="cardFeed" class="cards"></section>
   </main>
 
-  <!-- Dock z kafelkami na samym dole -->
+  <!-- Dock z kafelkami na dole -->
   <nav class="dock" id="dock">
     <button class="pill" data-cat="food">🍽️ Jedzenie</button>
     <button class="pill" data-cat="taxi">🚕 Taxi</button>
@@ -77,54 +130,84 @@
   <div id="toast" class="toast" hidden></div>
 
   <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      const toastEl = document.getElementById("toast");
-      const transEl = document.getElementById("transcript");
-      const cardFeed = document.getElementById("cardFeed");
-      const micBtn = document.getElementById("micBtn");
-      const pills = [...document.querySelectorAll(".pill")];
+    // ===== helpers UI =====
+    const $ = s => document.querySelector(s);
+    const $$ = s => [...document.querySelectorAll(s)];
+    const toastEl = $("#toast");
+    function toast(msg, ms=2400){
+      toastEl.textContent = msg; toastEl.hidden = false;
+      clearTimeout(toast._t); toast._t = setTimeout(()=>toastEl.hidden=true, ms);
+    }
 
-      function toast(msg, ms=2600){toastEl.textContent=msg;toastEl.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>toastEl.hidden=true,ms);}
-      function card(title, lines){const el=document.createElement("article");el.className="card";el.innerHTML=`<h3>${title}</h3><ul>${lines.map(li=>`<li>${li}</li>`).join("")}</ul>`;cardFeed.prepend(el);}
-      toast("✅ Aplikacja gotowa — JS działa");
+    const transEl = $("#transcript");
+    const cardFeed = $("#cardFeed");
+    const micBtn = $("#micBtn");
+    const pills = $$(".pill");
 
-      // ==== logika kafelków (jak wcześniej) ====
-      const presets={food:"Zamów capriciosę na wieczór do Demo Partner.",taxi:"Zamów taksówkę na 20:00 do Katowic.",hotel:"Zarezerwuj pokój dla dwóch osób w centrum Katowic."};
-      function setActive(cat){pills.forEach(p=>p.classList.toggle("active",p.dataset.cat===cat));}
-      pills.forEach(p=>p.addEventListener("click",()=>{const cat=p.dataset.cat;setActive(cat);const q=presets[cat]||"Złóż zamówienie.";transEl.textContent=q;handleOrder(q);})); setActive("food");
+    function card(title, lines){
+      const el = document.createElement("article");
+      el.className = "card";
+      el.innerHTML = `<h3>${title}</h3><ul>${(lines||[]).map(li=>`<li>${li}</li>`).join("")}</ul>`;
+      cardFeed.prepend(el);
+    }
 
-      // ==== mikrofon po kliknięciu logo ====
-      function speechSupported(){return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;}
-      let rec=null;
-      function startRec(){
-        if(!speechSupported()){toast("Mikrofon działa w Chrome/Edge (Web Speech API).");return;}
-        try{
-          const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-          rec=new SR(); rec.lang="pl-PL"; rec.continuous=false; rec.interimResults=true;
-          micBtn.classList.add("listening"); transEl.textContent="⏺️ Słucham…";
-          let final=""; rec.onresult=(e)=>{let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript; e.results[i].isFinal? final+=t+" ": interim+=t;} transEl.textContent=(final+interim).trim();};
-          rec.onerror=()=>{micBtn.classList.remove("listening");toast("Błąd mikrofonu / brak uprawnień.");};
-          rec.onend=()=>{micBtn.classList.remove("listening");const q=transEl.textContent.trim(); if(q&&!q.startsWith("⏺️")) handleOrder(q);};
-          rec.start();
-        }catch(e){micBtn.classList.remove("listening");toast("Błąd Web Speech: "+e.message);}
-      }
-      micBtn.addEventListener("click",startRec);
+    // ===== kafelki (presety) =====
+    const presets={
+      food:"Zamów capriciosę na wieczór do Demo Partner.",
+      taxi:"Zamów taksówkę na 20:00 do Katowic.",
+      hotel:"Zarezerwuj pokój dla dwóch osób w centrum Katowic."
+    };
+    function setActive(cat){pills.forEach(p=>p.classList.toggle("active", p.dataset.cat===cat));}
+    pills.forEach(p=>p.addEventListener("click", ()=>{
+      const cat = p.dataset.cat; setActive(cat);
+      const q = presets[cat] || "Złóż zamówienie.";
+      transEl.textContent = q;
+      handleOrder(q);
+    }));
+    setActive("food");
 
-      // ==== order (backend + cichy mock) ====
-      async function handleOrder(query){
-        const MOCK={title:"Propozycja (demo)",lines:["✅ Status: gotowe","🏬 Miejsce: Demo Partner","⏱️ Czas: 15–20 min","💵 Cena: PLN 38","ℹ️ Info: wersja testowa (mock)."]};
-        transEl.textContent=query;
-        try{
-          const res=await fetch("https://ffend-vercel.vercel.app/api/order?query="+encodeURIComponent(query),{mode:"cors"});
-          if(!res.ok) throw new Error("HTTP "+res.status);
-          const data=await res.json();
-          if(data && data.title && Array.isArray(data.lines)) card(data.title,data.lines); else card(MOCK.title,MOCK.lines);
-        }catch{ card(MOCK.title,MOCK.lines); }
-      }
+    // ===== mikrofon =====
+    function speechSupported(){return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;}
+    let rec=null;
+    function startRec(){
+      if(!speechSupported()){ toast("Mikrofon działa w Chrome/Edge (Web Speech API)."); return; }
+      try{
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        rec = new SR(); rec.lang="pl-PL"; rec.continuous=false; rec.interimResults=true;
+        micBtn.classList.add("listening");
+        transEl.textContent="⏺️ Słucham…";
+        let final="";
+        rec.onresult=(e)=>{
+          let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){
+            const t=e.results[i][0].transcript;
+            e.results[i].isFinal ? final+=t+" " : interim+=t;
+          }
+          transEl.textContent=(final+interim).trim();
+        };
+        rec.onerror=()=>{ micBtn.classList.remove("listening"); toast("Błąd mikrofonu / uprawnienia."); };
+        rec.onend=()=>{ micBtn.classList.remove("listening");
+          const q = transEl.textContent.replace(/^⏺️ Słucham…?$/,'').trim();
+          if(q) handleOrder(q);
+        };
+        rec.start();
+      }catch(e){ micBtn.classList.remove("listening"); toast("Błąd Web Speech: "+e.message); }
+    }
+    micBtn.addEventListener("click", startRec);
 
-      // pierwszy wpis
-      card("Witaj w FreeFlow",["Kliknij kafelek na dole albo naciśnij logo, by mówić."]);
-    });
+    // ===== order: backend + cichy mock =====
+    async function handleOrder(query){
+      const MOCK={title:"Propozycja (demo)",lines:["✅ Status: gotowe","🏬 Miejsce: Demo Partner","⏱️ Czas: 15–20 min","💵 Cena: PLN 38","ℹ️ Info: wersja testowa (mock)."]};
+      try{
+        const res = await fetch("https://ffend-vercel.vercel.app/api/order?query="+encodeURIComponent(query), {mode:"cors"});
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        const data = await res.json();
+        if(data && data.title && Array.isArray(data.lines)) card(data.title,data.lines);
+        else card(MOCK.title,MOCK.lines);
+      }catch{ card(MOCK.title,MOCK.lines); }
+    }
+
+    // init
+    card("Witaj w FreeFlow",["Kliknij kafelek na dole albo naciśnij logo, by mówić."]);
   </script>
 </body>
 </html>

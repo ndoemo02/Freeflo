@@ -1,129 +1,90 @@
+// freeflow-assistant.js
 (() => {
   const app        = document.getElementById('app');
   const logoBtn    = document.getElementById('logoBtn');
   const micBtn     = document.getElementById('micBtn');
   const transcript = document.getElementById('transcript');
   const dot        = document.getElementById('dot');
-  const backendMsg = document.getElementById('backendMsg');
 
-  // ——— UI helpers
-  const setListening = (on)=>{
+  let media, recorder, chunks = [], listening = false;
+
+  const setListening = (on) => {
+    listening = on;
     app.classList.toggle('listening', on);
     dot.style.background = on ? '#21d4fd' : '#86e2ff';
-    if(!on && !transcript.textContent.trim()){
-      transcript.classList.add('ghost');
-      transcript.textContent = 'Powiedz, co chcesz zamówić…';
-    }
+    if (on) transcript.classList.remove('ghost');
   };
 
-  // usuń powtórzenia typu "dwie dwie"
-  const dedupeWords = (s)=> s.replace(/\b(\w{2,})\b(?:\s+\1\b)+/gi, '$1');
-
-  // bardzo proste parsowanie: potrawa + czas
-  const parseOrder = (s)=>{
-    const text = s.toLowerCase();
-    const mTime = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
-    const time  = mTime ? (mTime[1].padStart(2,'0') + ':' + (mTime[2] ? mTime[2] : '00')) : null;
-
-    let dish = null;
-    const m1 = text.match(/\b(?:zamów|poproszę|weź)\s+([a-ząćęłńóśżź\- ]{3,})/);
-    const m2 = text.match(/\b(?:jedna|jedną|dwie|trzy|cztery)?\s*([a-ząćęłńóśżź\- ]{3,})\b/);
-    if(m1){ dish = m1[1]; } else if(m2){ dish = m2[1]; }
-    if(dish){ dish = dish.replace(/\b(na|o)\b.*$/,'').replace(/\s+/g,' ').trim(); }
-
-    return { dish: dish || null, time };
-  };
-
-  const speak = (txt)=>{
-    try{
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = 'pl-PL';
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-    }catch(_){}
-  };
-
-  // ——— ASR
-  const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, recognizing = false;
-
-  const startRec = ()=>{
-    if(!ASR){
-      transcript.classList.remove('ghost');
-      transcript.textContent = 'Rozpoznawanie mowy wymaga Chrome/Edge.';
-      return;
-    }
-    if(recognizing){ stopRec(); return; }
-
-    rec = new ASR();
-    rec.lang = 'pl-PL';
-    rec.interimResults = true;
-    rec.continuous = false;
-
-    rec.onstart = ()=>{
-      recognizing = true;
-      transcript.classList.remove('ghost');
-      transcript.textContent = 'Słucham…';
+  const startRecording = async () => {
+    if (listening) return stopRecording();
+    try {
+      media = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(media, { mimeType: 'audio/webm' });
+      chunks = [];
+      recorder.ondataavailable = (e)=> { if(e.data.size) chunks.push(e.data); };
+      recorder.onstop = onStop;
+      recorder.start();
       setListening(true);
-    };
-    rec.onerror = (e)=>{
-      recognizing = false; setListening(false);
-      transcript.classList.remove('ghost');
-      transcript.textContent = 'Błąd rozpoznawania: ' + (e.error || '');
-    };
-    rec.onend = ()=>{
-      recognizing = false; setListening(false);
-      if(!transcript.textContent.trim()){
-        transcript.classList.add('ghost');
-        transcript.textContent = 'Powiedz, co chcesz zamówić…';
-      }
-    };
-    rec.onresult = (ev)=>{
-      let finalText = '', interim = '';
-      for(let i=ev.resultIndex; i<ev.results.length; i++){
-        const t = ev.results[i][0].transcript;
-        if(ev.results[i].isFinal) finalText += t; else interim += t;
-      }
-      const txt = dedupeWords((finalText || interim).trim());
-      transcript.classList.toggle('ghost', !txt);
-      transcript.textContent = txt || 'Słucham…';
-
-      if(finalText){
-        const {dish, time} = parseOrder(finalText);
-        const parts = [];
-        if(dish) parts.push(`Zamawiam ${dish}`);
-        if(time) parts.push(`na ${time}`);
-        if(parts.length) speak('OK. ' + parts.join(' ') + '.');
-      }
-    };
-
-    try{ rec.start(); }catch(_){}
+      transcript.textContent = 'Słucham…';
+    } catch (e) {
+      transcript.textContent = 'Brak dostępu do mikrofonu.';
+    }
   };
-  const stopRec = ()=>{ try{ rec && rec.stop(); }catch(_){ } };
 
-  [logoBtn, micBtn].forEach(el=> el.addEventListener('click', startRec, {passive:true}));
-
-  // ——— Kafelki
-  const tiles = {
-    food:  document.getElementById('tileFood'),
-    taxi:  document.getElementById('tileTaxi'),
-    hotel: document.getElementById('tileHotel'),
+  const stopRecording = () => {
+    try { recorder && recorder.stop(); } catch(_) {}
+    try { media && media.getTracks().forEach(t=>t.stop()); } catch(_) {}
+    setListening(false);
   };
-  const selectTile = (key)=>{
-    Object.values(tiles).forEach(t=>t.classList.remove('active'));
-    tiles[key].classList.add('active');
+
+  async function onStop() {
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const fd = new FormData();
+    fd.append('audio', blob, 'voice.webm');
+    // opcjonalne meta:
+    // fd.append('city', 'Kraków'); fd.append('mode', 'food');
+
+    transcript.textContent = 'Przetwarzam…';
+
+    try {
+      const res = await fetch('/api/voice', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      // data: { transcript, intent, dish, time, place, reply }
+      transcript.textContent = data.transcript || '—';
+      speak(data.reply || 'OK.');
+      // tu możesz uzupełniać UI (sumę, kafelki itd.)
+      console.log('AI parsed:', data);
+    } catch (err) {
+      transcript.textContent = 'Błąd: ' + (err.message || 'nieznany');
+    }
+  }
+
+  function speak(text) {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'pl-PL'; window.speechSynthesis.speak(u);
+    } catch(_) {}
+  }
+
+  [logoBtn, micBtn].forEach(el => el.addEventListener('click', startRecording, { passive:true }));
+
+  // lekkie poprawki fonetyczne po stronie klienta (na żywo)
+  const phonFix = (s) => {
+    let x = ' ' + s + ' ';
+    x = x.replace(/\bkaplic(?:io|o|ó|a)sa\b/gi, ' capricciosa ');
+    x = x.replace(/\bcapriciosa\b/gi, ' capricciosa ');
+    x = x.replace(/\bgoogle\b/gi, ' kugel ');
+    x = x.replace(/\barial\b/gi, ' ariel ');
+    return x.trim().replace(/\s{2,}/g,' ');
   };
-  tiles.food.addEventListener('click',  ()=>selectTile('food'));
-  tiles.taxi.addEventListener('click',  ()=>selectTile('taxi'));
-  tiles.hotel.addEventListener('click', ()=>selectTile('hotel'));
 
-  // ——— Backend status (demo)
-  backendMsg.textContent = 'ok'; // tutaj wstawiasz realny status, gdy już masz fetch
-
-  // ——— Start
-  transcript.textContent = 'Powiedz, co chcesz zamówić…';
-  transcript.classList.add('ghost');
+  const obs = new MutationObserver(() => {
+    transcript.textContent = phonFix(transcript.textContent || '');
+  });
+  obs.observe(transcript, { childList: true });
 
   window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
 
+  transcript.textContent='Powiedz, co chcesz zamówić…';
 })();

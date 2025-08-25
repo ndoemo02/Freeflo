@@ -1,117 +1,331 @@
-// freeflow-assistant.js
-(() => {
+;(() => {
+  // -------------------- CONFIG --------------------
+  function cfg() {
+    const pick = (metaName, winKey) => {
+      const m = document.querySelector(`meta[name="${metaName}"]`);
+      if (m && m.content) return m.content.trim();
+      if (winKey && window[winKey]) return String(window[winKey]).trim();
+      return null;
+    };
+
+    return {
+      // ASR
+      useWhisper: (pick('asr-provider', 'ASR_PROVIDER') || '').toLowerCase() === 'whisper',
+      whisperUrl: pick('whisper-url', 'WHISPER_URL'),     // np. https://api.twojserwer/pl/whisper
+      whisperAuth: pick('whisper-auth', 'WHISPER_AUTH'),  // np. Bearer XXX (jeśli potrzebne)
+
+      // OpenAI (opcjonalnie)
+      openaiKey: pick('openai-key', 'OPENAI_API_KEY'),
+      openaiModel: pick('openai-model', 'OPENAI_MODEL') || 'gpt-4o-mini',
+
+      // Google Maps Places (opcjonalnie)
+      gmapsKey: pick('gmaps-key', 'GMAPS_KEY'),
+      // Proxy dla CORS (zalecane): Twój backend 1:1/forward do Google, np. /proxy/gmaps?path=...
+      gmapsProxy: pick('gmaps-proxy', 'GMAPS_PROXY'), // jeżeli brak → bezpośredni call (często zablokuje CORS)
+    };
+  }
+  const C = cfg();
+
+  // -------------------- DOM --------------------
   const app        = document.getElementById('app');
   const logoBtn    = document.getElementById('logoBtn');
   const micBtn     = document.getElementById('micBtn');
   const transcript = document.getElementById('transcript');
   const dot        = document.getElementById('dot');
 
-  let media, recorder, chunks = [], listening = false;
+  const tiles = {
+    food:  document.getElementById('tileFood'),
+    taxi:  document.getElementById('tileTaxi'),
+    hotel: document.getElementById('tileHotel'),
+  };
 
-  // --- TTS unlock (mobile Chrome wymaga gestu)
-  let ttsUnlocked = false;
-  function unlockTTS() {
-    if (ttsUnlocked || !('speechSynthesis' in window)) return;
-    try {
-      const u = new SpeechSynthesisUtterance('');
-      u.volume = 0; // bezgłośne "piknięcie"
-      window.speechSynthesis.speak(u);
-      ttsUnlocked = true;
-    } catch(_) {}
-  }
-  ['pointerdown','keydown','touchstart'].forEach(ev =>
-    window.addEventListener(ev, unlockTTS, { once:true, passive:true })
-  );
-
-  function pickPolishVoice() {
-    const voices = window.speechSynthesis?.getVoices?.() || [];
-    return voices.find(v => v.lang?.toLowerCase().startsWith('pl'))
-        || voices.find(v => /pol/i.test(v.name||''));
-  }
-
-  function speak(text) {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'pl-PL';
-      const v = pickPolishVoice();
-      if (v) u.voice = v;
-      window.speechSynthesis.cancel(); // wyczyść kolejkę
-      window.speechSynthesis.speak(u);
-    } catch(_) {}
-  }
-
-  const setListening = (on) => {
-    listening = on;
+  // -------------------- HELPERS --------------------
+  const setListening = (on)=>{
     app.classList.toggle('listening', on);
     dot.style.background = on ? '#21d4fd' : '#86e2ff';
-    if (on) transcript.classList.remove('ghost');
-  };
-
-  const startRecording = async () => {
-    unlockTTS(); // odblokuj przy pierwszym kliknięciu
-    if (listening) return stopRecording();
-    try {
-      media = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recorder = new MediaRecorder(media, { mimeType: 'audio/webm' });
-      chunks = [];
-      recorder.ondataavailable = (e)=> { if(e.data.size) chunks.push(e.data); };
-      recorder.onstop = onStop;
-      recorder.start();
-      setListening(true);
-      transcript.textContent = 'Słucham…';
-    } catch (e) {
-      transcript.textContent = 'Brak dostępu do mikrofonu.';
+    if(!on && !transcript.textContent.trim()){
+      setGhost('Powiedz, co chcesz zamówić…');
     }
   };
+  const setGhost = (msg)=>{
+    transcript.classList.add('ghost');
+    transcript.textContent = msg;
+  };
+  const setText = (msg)=>{
+    transcript.classList.remove('ghost');
+    transcript.textContent = msg;
+  };
+  const speak = (txt, lang='pl-PL')=>{
+    try{ window.speechSynthesis.cancel(); }catch(_){}
+    try{
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = lang;
+      window.speechSynthesis.speak(u);
+    }catch(_){}
+  };
+  const selectTile = (key)=>{
+    Object.values(tiles).forEach(t=>t.classList.remove('active'));
+    tiles[key].classList.add('active');
+  };
+  tiles.food.addEventListener('click', ()=>selectTile('food'));
+  tiles.taxi.addEventListener('click', ()=>selectTile('taxi'));
+  tiles.hotel.addEventListener('click',()=>selectTile('hotel'));
 
-  const stopRecording = () => {
-    try { recorder && recorder.stop(); } catch(_) {}
-    try { media && media.getTracks().forEach(t=>t.stop()); } catch(_) {}
+  const corrections = [
+    [/kaplic+oza/gi, 'capricciosa'],
+    [/kapric+i?oza/gi, 'capricciosa'],
+    [/kugelf/gi, 'kugel'], [/kugle?l/gi, 'kugel'],
+    [/w\s+ariel\b/gi, 'w Arielu'], [/do\s+ariel\b/gi, 'do Ariela'],
+  ];
+  const normalize = (s)=>{
+    let out = s.replace(/\b(\w{2,})\s+\1\b/gi, '$1'); // "dwie dwie" → "dwie"
+    for(const [re, to] of corrections) out = out.replace(re,to);
+    return out.trim();
+  };
+
+  const parseOrder = (s)=>{
+    const text = s.toLowerCase();
+    const timeMatch = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
+    const time = timeMatch ? `${String(timeMatch[1]).padStart(2,'0')}:${timeMatch[2]||'00'}` : null;
+
+    const noTime = text.replace(/\b(?:na|o)\s*\d{1,2}(?::?\d{2})?\b/, ' ').replace(/\s{2,}/g,' ').trim();
+    let dish = null;
+    const dm = noTime.match(/[a-ząćęłńóśżź\- ]{3,}/i);
+    if(dm){
+      dish = dm[0].replace(/\b(i|a|na|do|w|z|o)\b.*$/,'').replace(/\s{2,}/g,' ').trim();
+    }
+    return { dish, time };
+  };
+
+  // -------------------- ASR: Whisper backend (opcjonalny) --------------------
+  async function whisperListenOnce(){
+    if(!C.whisperUrl){
+      throw new Error('Brak konfiguracji Whisper: meta[name="whisper-url"] lub window.WHISPER_URL.');
+    }
+    // Minimalny UI: otwórz nagrywanie przez MediaRecorder → wyślij jako audio/webm
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const stopPromise = new Promise((resolve)=>{ rec.onstop = resolve; });
+    rec.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+
+    setListening(true); setText('Słucham… (Whisper)');
+    rec.start();
+
+    // nasłuch jednorazowy: klik ponownie, by zakończyć
+    const stop = ()=>{ try{rec.stop()}catch(_){ } window.removeEventListener('click', stop, true); };
+    window.addEventListener('click', stop, true);
+
+    await stopPromise;
     setListening(false);
-  };
 
-  async function onStop() {
     const blob = new Blob(chunks, { type: 'audio/webm' });
-    const fd = new FormData();
-    fd.append('audio', blob, 'voice.webm');
+    // Wyślij do Twojego endpointu
+    const form = new FormData();
+    form.append('audio', blob, 'speech.webm');
+    const headers = C.whisperAuth ? { 'Authorization': C.whisperAuth } : {};
 
-    transcript.textContent = 'Przetwarzam…';
-
-    try {
-      const res = await fetch('/api/voice', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json(); // { transcript, intent, dish, time, place, reply }
-      transcript.textContent = normalisePhonetics(data.transcript || '—');
-      if (data.reply) speak(data.reply);
-      console.log('AI parsed:', data);
-    } catch (err) {
-      transcript.textContent = 'Błąd: ' + (err.message || 'nieznany');
+    const res = await fetch(C.whisperUrl, { method: 'POST', headers, body: form });
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error(`Whisper ${res.status}: ${t}`);
     }
+    const data = await res.json().catch(()=> ({}));
+    // Oczekiwany kształt: { text: "..." }
+    if(!data || !data.text) throw new Error('Whisper: brak pola "text" w odpowiedzi.');
+    return data.text;
   }
 
-  // lekkie korekty fonetyczne dla wyświetlanego tekstu
-  function normalisePhonetics(s) {
-    let x = ' ' + (s||'') + ' ';
-    x = x.replace(/\bkaplic(?:io|o|ó|a)sa\b/gi, ' capricciosa ');
-    x = x.replace(/\bcapriciosa\b/gi, ' capricciosa ');
-    x = x.replace(/\bgoogle\b/gi, ' kugel ');
-    x = x.replace(/\barial\b/gi, ' ariel ');
-    return x.trim().replace(/\s{2,}/g,' ');
-  }
+  // -------------------- ASR: Web Speech (domyślny) --------------------
+  const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function browserListenOnce(){
+    return new Promise((resolve, reject)=>{
+      if(!ASR) return reject(new Error('Brak Web Speech API (użyj Chrome/Edge albo Whisper).'));
+      const rec = new ASR();
+      rec.lang = 'pl-PL';
+      rec.interimResults = true;
+      rec.continuous = false;
 
-  [logoBtn, micBtn].forEach(el => el.addEventListener('click', startRecording, { passive:true }));
-
-  // preload głosów (niektóre przeglądarki ładują asynchronicznie)
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => {};
-    // delikatny "resume" hack na niektórych Androidach
-    document.addEventListener('visibilitychange', () => {
-      try { if (!document.hidden) window.speechSynthesis.resume(); } catch(_) {}
+      rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
+      rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
+      rec.onend = ()=>{ setListening(false); };
+      rec.onresult = (ev)=>{
+        let finalText = '', interim = '';
+        for(let i=ev.resultIndex; i<ev.results.length; i++){
+          const t = ev.results[i][0].transcript;
+          if(ev.results[i].isFinal) finalText += t; else interim += t;
+        }
+        const raw = (finalText || interim).trim();
+        setText(normalize(raw || ''));
+        if(finalText) resolve(finalText);
+      };
+      try{ rec.start(); }catch(err){ reject(err); }
     });
   }
 
+  // -------------------- GPT (opcjonalny) --------------------
+  async function gptSumm(apiKey, text, dish, time){
+    const body = {
+      model: C.openaiModel,
+      messages: [
+        { role: 'system', content:
+          'Jesteś asystentem zamówień FreeFlow. Odpowiadasz po polsku, krótko i naturalnie. Jedno zdanie, max 18 słów.' },
+        { role: 'user', content:
+          `Transkrypcja: "${text}". ${dish?`Danie: ${dish}. `:''}${time?`Godzina: ${time}. `:''}Zwróć zwięzłe potwierdzenie.` }
+      ],
+      temperature: 0.3, max_tokens: 60
+    };
+    const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error(`OpenAI ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  }
+
+  // -------------------- Google Places (opcjonalny) --------------------
+  // Uwaga: bez proxy CORS może blokować wywołania. Przygotowane są dwie ścieżki:
+  // 1) proxy: GMAPS_PROXY?path=/maps/api/place/...&key=...  (zalecane)
+  // 2) direct: https://maps.googleapis.com/maps/api/place/... (działa, jeśli CORS OK, np. przez Twój backend statyczny)
+  function gmapsURL(path, params){
+    const query = new URLSearchParams(params).toString();
+    if(C.gmapsProxy){
+      return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${query}`;
+    }
+    return `https://maps.googleapis.com${path}?${query}`;
+  }
+
+  async function placesTextSearch(query, location /*"52.23,21.01"*/, radiusMeters = 6000){
+    if(!C.gmapsKey){
+      // Łagodny fallback do testów
+      console.debug('GMAPS: brak klucza – fallback na dane syntetyczne.');
+      return [{ name: `Syntetyczna knajpa: ${query}`, place_id: 'demo_'+Date.now() }];
+    }
+    const params = { query, key: C.gmapsKey };
+    if(location) params.location = location;
+    if(radiusMeters) params.radius = radiusMeters;
+
+    const url = gmapsURL('/maps/api/place/textsearch/json', params);
+    const res = await fetch(url);
+    if(!res.ok){
+      console.debug('GMAPS error', res.status);
+      return [{ name: `Knajpa (demo, ${res.status})`, place_id:'demo_'+Date.now() }];
+    }
+    const json = await res.json();
+    return json.results || [];
+  }
+
+  async function placeDetails(place_id){
+    if(!C.gmapsKey){
+      // Syntetyczne menu do testów
+      return {
+        name: 'Syntetyczna Restauracja',
+        formatted_address: 'ul. Testowa 1',
+        opening_hours: { open_now: true },
+        freeflow_menu_demo: synthMenu('włoska') // fallback menu
+      };
+    }
+    const url = gmapsURL('/maps/api/place/details/json', { place_id, key: C.gmapsKey, fields: 'name,formatted_address,opening_hours,website' });
+    const res = await fetch(url);
+    if(!res.ok){
+      console.debug('GMAPS details error', res.status);
+      return { name:'Restauracja (demo)', freeflow_menu_demo: synthMenu('włoska') };
+    }
+    const json = await res.json();
+    return json.result || {};
+  }
+
+  // Syntetyczne menu (fallback pod testy skali)
+  function synthMenu(cuisine='włoska'){
+    if(/włosk/.test(cuisine)) return [
+      { name:'Margherita', price: 26 },
+      { name:'Capricciosa', price: 32 },
+      { name:'Diavola', price: 34 },
+      { name:'Carbonara', price: 35 }
+    ];
+    if(/sushi|japoń/.test(cuisine)) return [
+      { name:'California roll', price: 28 },
+      { name:'Nigiri łosoś', price: 24 },
+      { name:'Ramen shoyu', price: 36 }
+    ];
+    return [
+      { name:'Pierogi ruskie', price: 24 },
+      { name:'Schabowy', price: 38 },
+      { name:'Żurek', price: 19 }
+    ];
+  }
+
+  // -------------------- FLOW --------------------
+  async function handleFinalText(rawText){
+    const text = normalize(rawText);
+    setText(text);
+
+    // parsowanie
+    const { dish, time } = parseOrder(text);
+
+    // natychmiastowe lokalne potwierdzenie
+    let say = 'OK.';
+    if(dish) say += ` Zamawiam ${dish}.`;
+    if(time) say += ` Na ${time}.`;
+    speak(say);
+
+    // (opcjonalnie) GPT – ładne jedno zdanie
+    if(C.openaiKey){
+      try{
+        const nice = await gptSumm(C.openaiKey, text, dish, time);
+        if(nice){
+          setText(nice);
+          speak(nice);
+        }
+      }catch(e){
+        console.debug('OpenAI err', e);
+        // Nie psujemy UI; zostawiamy lokalny tekst
+      }
+    }
+
+    // (opcjonalnie) Google Places – przykład użycia
+    // Tu możesz np. wykonać: "pizza w Piekarach" → szukaj miejsc
+    if(/pizza|pizz|restaurac|kuchnia|sushi|kebab|pierog/i.test(text)){
+      try{
+        const cityMatch = text.match(/\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż\-]+)\b/); // prymitywnie: "w Krakowie"
+        const city = cityMatch ? cityMatch[1] : '';
+        const query = city ? `pizzeria ${city}` : 'pizzeria';
+        const places = await placesTextSearch(query);
+        const top = places[0];
+        if(top){
+          const det = await placeDetails(top.place_id || '');
+          // jeśli brak realnego menu, pokaż syntetyczne do testów
+          if(det.freeflow_menu_demo){
+            console.debug('Menu DEMO:', det.freeflow_menu_demo);
+          }else{
+            console.debug('Place details:', det);
+          }
+        }
+      }catch(e){ console.debug('Places err', e); }
+    }
+  }
+
+  async function startListening(){
+    try{
+      if(C.useWhisper){
+        const txt = await whisperListenOnce();
+        await handleFinalText(txt);
+      }else{
+        const txt = await browserListenOnce();
+        await handleFinalText(txt);
+      }
+    }catch(e){
+      // Łagodny komunikat (bez HTML z błędu)
+      setText(e.message || 'Błąd rozpoznawania.');
+    }
+  }
+
+  [logoBtn, micBtn].forEach(el=> el.addEventListener('click', startListening, { passive:true }));
+  setGhost('Powiedz, co chcesz zamówić…');
+
+  // sprzątanie TTS przy nawigacji
   window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
 
-  transcript.textContent='Powiedz, co chcesz zamówić…';
 })();

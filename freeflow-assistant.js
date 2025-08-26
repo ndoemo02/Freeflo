@@ -1,141 +1,215 @@
-<!doctype html>
-<html lang="pl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>FreeFlow — zamów głosem</title>
-  <meta name="color-scheme" content="dark light" />
+;(() => {
+  // -------------------- CONFIG --------------------
+  function pick(metaName, winKey){
+    const m = document.querySelector(`meta[name="${metaName}"]`);
+    if (m && m.content) return m.content.trim();
+    if (winKey && window[winKey]) return String(window[winKey]).trim();
+    return '';
+  }
+  const C = {
+    // ASR
+    useWhisper : (pick('asr-provider','ASR_PROVIDER') || '').toLowerCase() === 'whisper',
+    whisperUrl : pick('whisper-url','WHISPER_URL'),
+    whisperAuth: pick('whisper-auth','WHISPER_AUTH'),
 
-  <!-- ====== KONFIG (możesz też ustawić w window.*) ====== -->
-  <!-- Google Places (opcjonalnie). Jeśli nie podasz – działa OSM + menu syntetyczne -->
-  <meta name="gmaps-key" content="">
-  <!-- (opcjonalnie) Twój backend proxy dla Places (ukrycie klucza + CORS) -->
-  <meta name="gmaps-proxy" content="">
-  <!-- Overpass API do OSM (public mirror wystarczy) -->
-  <meta name="osm-overpass" content="https://overpass.kumi.systems/api/interpreter">
+    // GPT proxy (bezpiecznie z backendu)
+    gptProxy   : pick('gpt-proxy','GPT_PROXY'),
+    openaiModel: pick('openai-model','OPENAI_MODEL') || 'gpt-4o-mini',
+  };
 
-  <!-- Whisper (opcjonalnie) -->
-  <meta name="asr-provider" content=""> <!-- 'whisper' aby wymusić whisper -->
-  <meta name="whisper-url" content="">
-  <meta name="whisper-auth" content="">
+  // -------------------- DOM --------------------
+  const app        = document.getElementById('app');
+  const logoBtn    = document.getElementById('logoBtn');
+  const micBtn     = document.getElementById('micBtn');
+  const transcript = document.getElementById('transcript');
+  const dot        = document.getElementById('dot');
+  const toast      = document.getElementById('toast');
 
-  <!-- OpenAI (opcjonalnie – ładne, krótkie potwierdzenia) -->
-  <meta name="openai-key" content="">
-  <meta name="openai-model" content="gpt-4o-mini">
+  const tiles = {
+    food : document.getElementById('tileFood'),
+    taxi : document.getElementById('tileTaxi'),
+    hotel: document.getElementById('tileHotel'),
+  };
 
-  <style>
-    :root{
-      --glass-bg: rgba(20,20,22,.55);
-      --glass-brd: rgba(255,255,255,.12);
-      --glass-blur: 18px;
-      --text: #f6f7fb;
-      --muted: #c7c9d1;
-      --brand: #ff8a30;
-      --focus: #21d4fd;
+  // -------------------- HELPERS --------------------
+  const setListening = (on)=>{
+    app.classList.toggle('listening', on);
+    dot.style.background = on ? '#21d4fd' : '#86e2ff';
+    if(!on && !transcript.textContent.trim()){
+      setGhost('Powiedz, co chcesz zamówić…');
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; color:var(--text);
-      font:500 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial;
-      background:#0d0f13 url(assets/Background.png) center/cover fixed no-repeat;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  };
+  const setGhost = (msg)=>{ transcript.classList.add('ghost'); transcript.textContent = msg; };
+  const setText  = (msg)=>{ transcript.classList.remove('ghost'); transcript.textContent = msg; };
+
+  const speak = (txt, lang='pl-PL')=>{
+    try{ window.speechSynthesis.cancel(); }catch(_){}
+    try{
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = lang; window.speechSynthesis.speak(u);
+    }catch(_){}
+  };
+
+  const showToast = (msg, ms=2500)=>{
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toast.classList.remove('show'), ms);
+  };
+
+  const selectTile = (key)=>{
+    Object.values(tiles).forEach(t=>t.classList.remove('active'));
+    tiles[key].classList.add('active');
+  };
+  tiles.food.addEventListener('click', ()=>selectTile('food'));
+  tiles.taxi.addEventListener('click', ()=>selectTile('taxi'));
+  tiles.hotel.addEventListener('click',()=>selectTile('hotel'));
+
+  // korekty typowych ASR-błędów
+  const corrections = [
+    [/kaplic+oza/gi, 'capricciosa'], [/kapric+i?oza/gi, 'capricciosa'],
+    [/kugelf/gi, 'kugel'], [/kugle?l/gi, 'kugel'],
+    [/w\s+ariel\b/gi, 'w Arielu'], [/do\s+ariel\b/gi, 'do Ariela'],
+  ];
+  const normalize = (s)=>{
+    let out = s.replace(/\b(\w{2,})\s+\1\b/gi, '$1'); // „dwie dwie” → „dwie”
+    for(const [re, to] of corrections) out = out.replace(re,to);
+    return out.trim();
+  };
+
+  const parseOrder = (s)=>{
+    const text = s.toLowerCase();
+    // godzina „na 18:45”/„o 18”
+    const tm = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
+    const time = tm ? `${String(tm[1]).padStart(2,'0')}:${tm[2] || '00'}` : null;
+
+    // danie (po wycięciu frazy z godziną)
+    const noTime = text.replace(/\b(?:na|o)\s*\d{1,2}(?::?\d{2})?\b/, ' ').replace(/\s{2,}/g,' ').trim();
+    let dish = null;
+    const dm = noTime.match(/[a-ząćęłńóśżź\- ]{3,}/i);
+    if(dm){
+      dish = dm[0].replace(/\b(i|a|na|do|w|z|o)\b.*$/,'').replace(/\s{2,}/g,' ').trim();
     }
-    .page{min-height:100dvh; display:flex; flex-direction:column; gap:16px;
-      padding:clamp(12px,2.2vw,24px);
-      padding-bottom:calc(24px + env(safe-area-inset-bottom));
-      background:radial-gradient(1200px 600px at 50% -200px, rgba(255,149,64,.12), transparent 60%);
-      backdrop-filter:blur(.5px);
+    return { dish, time };
+  };
+
+  // -------------------- GPT przez backend --------------------
+  async function gptSumm(text, dish, time){
+    if (!C.gptProxy) return ''; // brak proxy – po prostu pomiń
+    const r = await fetch(C.gptProxy, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, dish, time, model: C.openaiModel })
+    });
+    if(!r.ok){
+      const t = await r.text().catch(()=> '');
+      throw new Error(`GPT proxy ${r.status}: ${t.slice(0,120)}`);
     }
-    .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px}
-    .brand{display:flex; align-items:baseline; gap:10px; letter-spacing:.2px}
-    .brand b{color:var(--brand); font-weight:900; font-size:clamp(24px,4.5vw,36px)}
-    .brand span{font-weight:900; font-size:clamp(24px,4.5vw,36px)}
-    .tagline{color:var(--muted); font-size:clamp(14px,2.6vw,16px); margin-top:4px}
-    .subtag{color:var(--muted); font-size:clamp(12px,2.2vw,14px); opacity:.9; margin-top:2px}
-    .actions{display:flex; gap:10px}
-    .chip{width:44px; height:44px; display:grid; place-items:center; border-radius:14px;
-      background:var(--glass-bg); border:1px solid var(--glass-brd); backdrop-filter:blur(var(--glass-blur))}
-    .cart-badge{position:absolute; transform:translate(14px,-14px); background:#ff9e3d; color:#101217; font-weight:800;
-      min-width:26px; height:26px; padding:0 6px; border-radius:999px; display:grid; place-items:center; font-size:13px; border:2px solid #11151b}
-    .stage{display:grid; place-items:center; margin:clamp(14px,3vw,24px) 0 0}
-    .logoWrap{position:relative; width:min(82vw,420px); user-select:none; -webkit-user-drag:none; -webkit-tap-highlight-color:transparent;
-      filter:drop-shadow(0 12px 60px rgba(0,0,0,.55))}
-    .logoWrap img{width:100%; height:auto; display:block; pointer-events:none}
-    .hit{position:absolute; inset:0; border-radius:36px; background:transparent; border:0}
-    .listening .logoWrap{animation:pulse 1.1s ease-in-out infinite}
-    @keyframes pulse{0%,100%{filter:drop-shadow(0 10px 48px rgba(255,136,64,.36)); transform:scale(1)} 50%{filter:drop-shadow(0 12px 88px rgba(33,212,253,.55)); transform:scale(1.015)}}
-    .asr{margin:clamp(8px,2vw,14px) auto 0; width:min(92vw,720px); border-radius:20px; padding:18px 20px;
-      background:var(--glass-bg); border:1px solid var(--glass-brd); backdrop-filter:blur(var(--glass-blur));
-      display:flex; align-items:center; gap:10px; box-shadow:0 12px 50px rgba(0,0,0,.35)}
-    .dot{width:10px; height:10px; border-radius:999px; background:#86e2ff; box-shadow:0 0 16px #86e2ff}
-    .text{flex:1; min-height:1.2em}
-    .ghost{color:var(--muted)}
-    .micBtn{width:46px; height:46px; border-radius:14px; border:1px solid var(--glass-brd);
-      background:linear-gradient(180deg, rgba(255,143,67,.18), rgba(33,212,253,.14));
-      display:grid; place-items:center; cursor:pointer}
-    .dock{margin-top:clamp(16px,3.8vh,30px); display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
-    .tile{display:flex; align-items:center; gap:12px; min-width:150px; padding:14px 18px; border-radius:22px;
-      background:var(--glass-bg); border:1px solid var(--glass-brd); backdrop-filter:blur(var(--glass-blur)); color:#fff; font-weight:700}
-    .tile .i{font-size:22px}
-    .tile.active{outline:2px solid rgba(33,212,253,.6)}
-    .hidden{display:none !important}
-    a,button{color:inherit}
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || 'GPT proxy error');
+    return j.answer || '';
+  }
 
-    /* znikający debug box – zastępuje „Backend: ok” */
-    .toast{
-      position: fixed; left:50%; translate:-50% 0;
-      bottom: calc(120px + env(safe-area-inset-bottom));
-      width:min(92vw,740px);
-      border-radius:20px; padding:14px 16px;
-      background:var(--glass-bg); border:1px solid var(--glass-brd);
-      backdrop-filter: blur(var(--glass-blur));
-      box-shadow:0 12px 60px rgba(0,0,0,.4);
-      display:none;
-      color:#e9ecf6;
+  // -------------------- ASR: Whisper (opcjonalnie) --------------------
+  async function whisperListenOnce(){
+    if(!C.whisperUrl) throw new Error('Brak konfiguracji Whisper (meta whisper-url).');
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const stopP = new Promise((resolve)=> rec.onstop = resolve);
+    rec.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+
+    setListening(true); setText('Słucham… (Whisper)'); rec.start();
+    // klik gdziekolwiek zatrzymuje jednorazowe nagranie (mobile-friendly)
+    const stop = ()=>{ try{rec.stop()}catch(_){ } window.removeEventListener('click', stop, true); };
+    window.addEventListener('click', stop, true);
+
+    await stopP; setListening(false);
+    const blob = new Blob(chunks, { type:'audio/webm' });
+
+    const form = new FormData();
+    form.append('audio', blob, 'speech.webm');
+    const headers = C.whisperAuth ? { 'Authorization': C.whisperAuth } : {};
+
+    const res = await fetch(C.whisperUrl, { method:'POST', headers, body: form });
+    if(!res.ok) throw new Error(`Whisper ${res.status}`);
+    const data = await res.json().catch(()=> ({}));
+    if(!data.text) throw new Error('Whisper: brak pola "text".');
+    return data.text;
+  }
+
+  // -------------------- ASR: Web Speech (domyślny) --------------------
+  const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function browserListenOnce(){
+    return new Promise((resolve, reject)=>{
+      if(!ASR) return reject(new Error('Rozpoznawanie mowy wymaga Chrome/Edge lub użyj Whisper.'));
+      const rec = new ASR();
+      rec.lang = 'pl-PL'; rec.interimResults = true; rec.continuous = false;
+
+      rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
+      rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
+      rec.onend = ()=>{ setListening(false); };
+      rec.onresult = (ev)=>{
+        let finalText = '', interim = '';
+        for(let i=ev.resultIndex; i<ev.results.length; i++){
+          const t = ev.results[i][0].transcript;
+          if(ev.results[i].isFinal) finalText += t; else interim += t;
+        }
+        const raw = (finalText || interim).trim();
+        setText(normalize(raw || ''));
+        if(finalText) resolve(finalText);
+      };
+      try{ rec.start(); }catch(err){ reject(err); }
+    });
+  }
+
+  // -------------------- FLOW --------------------
+  async function handleFinalText(rawText){
+    const text = normalize(rawText);
+    setText(text);
+
+    // parsowanie podstawowe
+    const { dish, time } = parseOrder(text);
+
+    // lokalne potwierdzenie
+    let say = 'OK.';
+    if(dish) say += ` Zamawiam ${dish}.`;
+    if(time) say += ` Na ${time}.`;
+    speak(say);
+
+    // ładne jedno zdanie z backendowego GPT (opcjonalnie)
+    if(C.gptProxy){
+      try{
+        const nice = await gptSumm(text, dish, time);
+        if(nice){ setText(nice); speak(nice); }
+      }catch(e){
+        showToast('GPT chwilowo niedostępne'); // UI nie blokuje
+      }
     }
-    .toast.show{display:block}
-  </style>
-</head>
-<body>
-  <div class="page" id="app">
-    <header class="topbar">
-      <div>
-        <div class="brand"><b>Free</b><span>Flow</span></div>
-        <div class="tagline">Voice to order — Złóż zamówienie</div>
-        <div class="subtag">Restauracja, taxi albo hotel?</div>
-      </div>
-      <div class="actions">
-        <div class="chip" aria-label="Menu" title="Menu">≡</div>
-        <div class="chip" style="position:relative" aria-label="Koszyk" title="Koszyk">
-          🛒 <span class="cart-badge" id="cartCount">11</span>
-        </div>
-      </div>
-    </header>
+  }
 
-    <section class="stage">
-      <div class="logoWrap" id="logoWrap">
-        <img src="assets/Freeflowlogo.png?v=2" alt="FreeFlow" width="840" height="1080" />
-        <button class="hit" id="logoBtn" aria-label="Naciśnij, aby mówić"></button>
-      </div>
+  async function startListening(){
+    try{
+      if(C.useWhisper) {
+        const txt = await whisperListenOnce();
+        await handleFinalText(txt);
+      } else {
+        const txt = await browserListenOnce();
+        await handleFinalText(txt);
+      }
+    }catch(e){
+      setText(e.message || 'Błąd rozpoznawania.');
+      showToast(e.message || 'Błąd rozpoznawania.');
+    }
+  }
 
-      <div class="asr" id="asrBox" role="status" aria-live="polite">
-        <div class="dot" id="dot"></div>
-        <div class="text ghost" id="transcript">Powiedz, co chcesz zamówić…</div>
-        <button class="micBtn" id="micBtn" title="Start/Stop">🎤</button>
-      </div>
-    </section>
+  // klik logo i przycisk mic → start
+  [logoBtn, micBtn].forEach(el=> el.addEventListener('click', startListening, { passive:true }));
 
-    <nav class="dock" aria-label="Kategorie">
-      <button class="tile active" id="tileFood"><span class="i">🍽️</span> <span>Jedzenie</span></button>
-      <button class="tile" id="tileTaxi"><span class="i">🚕</span> <span>Taxi</span></button>
-      <button class="tile" id="tileHotel"><span class="i">🏡</span> <span>Hotel</span></button>
-    </nav>
-  </div>
+  // init
+  setGhost('Powiedz, co chcesz zamówić…');
 
-  <!-- znikający komunikat debug -->
-  <div class="toast" id="debugToast"></div>
+  // nawigacja: wyczyść TTS
+  window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
 
-  <script src="freeflow-assistant.js" defer></script>
-</body>
-</html>
+})();

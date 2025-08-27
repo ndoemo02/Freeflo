@@ -1,46 +1,94 @@
 ;(() => {
-  // ---------- CONFIG ----------
-  function pick(metaName){ const m=document.querySelector(`meta[name="${metaName}"]`); return m?.content?.trim()||''; }
-  const C = {
-    asrProvider: (pick('asr-provider')||'browser').toLowerCase(),
-    gmapsProxy: pick('gmaps-proxy') || '',     // Vercel: /api/places
-    gptProxy:   pick('gpt-proxy')   || '',     // Vercel: /api/gpt
-  };
+  // -------------------- CONFIG --------------------
+  function cfg() {
+    const pick = (metaName, winKey) => {
+      const m = document.querySelector(`meta[name="${metaName}"]`);
+      if (m && m.content) return m.content.trim();
+      if (winKey && window[winKey]) return String(window[winKey]).trim();
+      return null;
+    };
+    return {
+      // ASR
+      useWhisper: (pick('asr-provider', 'ASR_PROVIDER') || '').toLowerCase() === 'whisper',
+      whisperUrl: pick('whisper-url', 'WHISPER_URL'),     // np. https://twoj-vercel.app/api/whisper
+      whisperAuth: pick('whisper-auth', 'WHISPER_AUTH'),  // opcjonalnie (Bearer ...)
 
-  // ---------- DOM ----------
+      // OpenAI (opcjonalnie ładna odpowiedź)
+      openaiKey: pick('openai-key', 'OPENAI_API_KEY'),
+      openaiModel: pick('openai-model', 'OPENAI_MODEL') || 'gpt-4o-mini',
+
+      // Google Places
+      gmapsKey: pick('gmaps-key', 'GMAPS_KEY'),
+      gmapsProxy: pick('gmaps-proxy', 'GMAPS_PROXY'), // jeśli używasz proxy na backendzie
+    };
+  }
+  const C = cfg();
+
+  // -------------------- DOM --------------------
   const app        = document.getElementById('app');
   const logoBtn    = document.getElementById('logoBtn');
   const micBtn     = document.getElementById('micBtn');
   const transcript = document.getElementById('transcript');
   const dot        = document.getElementById('dot');
-  const banner     = document.getElementById('banner');
+
   const tiles = {
     food:  document.getElementById('tileFood'),
     taxi:  document.getElementById('tileTaxi'),
     hotel: document.getElementById('tileHotel'),
   };
 
-  // ---------- UI helpers ----------
-  const showBanner = (msg)=>{ banner.textContent = msg; banner.classList.remove('hidden'); };
-  const hideBanner = ()=> banner.classList.add('hidden');
+  // -------------------- UI HELPERS --------------------
+  const toastBoxId = 'ff-toast';
+  function ensureToastBox(){
+    if(document.getElementById(toastBoxId)) return;
+    const box = document.createElement('div');
+    box.id = toastBoxId;
+    box.style.cssText = `
+      position:fixed; left:16px; right:16px; bottom:16px; z-index:9999;
+      padding:14px 16px; border-radius:16px; color:#fff; font:500 14px/1.4 system-ui,Segoe UI,Roboto;
+      background:rgba(20,20,22,.75); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(10px);
+      display:none;
+    `;
+    document.body.appendChild(box);
+  }
+  function toast(msg, ms=3800){
+    ensureToastBox();
+    const box = document.getElementById(toastBoxId);
+    box.textContent = msg;
+    box.style.display = 'block';
+    clearTimeout(box._t);
+    box._t = setTimeout(()=> box.style.display='none', ms);
+  }
 
   const setListening = (on)=>{
     app.classList.toggle('listening', on);
     dot.style.background = on ? '#21d4fd' : '#86e2ff';
-    if(!on && !transcript.textContent.trim()) setGhost('Powiedz, co chcesz zamówić…');
+    if(!on && !transcript.textContent.trim()){
+      setGhost('Powiedz, co chcesz zamówić…');
+    }
   };
-  const setGhost = (msg)=>{ transcript.classList.add('ghost'); transcript.textContent = msg; };
+  const setGhost = (msg)=>{ transcript.classList.add('ghost');  transcript.textContent = msg; };
   const setText  = (msg)=>{ transcript.classList.remove('ghost'); transcript.textContent = msg; };
 
-  const speak = (txt)=>{
-    try{ speechSynthesis.cancel(); }catch(_){}
+  const speak = (txt, lang='pl-PL')=>{
+    try{ window.speechSynthesis.cancel(); }catch(_){}
     try{
       const u = new SpeechSynthesisUtterance(txt);
-      u.lang = 'pl-PL';
-      const pl = speechSynthesis.getVoices().find(v => v.lang?.toLowerCase().startsWith('pl'));
-      if (pl) u.voice = pl;
-      speechSynthesis.speak(u);
+      u.lang = lang;
+      window.speechSynthesis.speak(u);
     }catch(_){}
+  };
+  const fmtTime = (hhmm)=> {
+    // wymuś odczyt cyfrowy – TTS nie odmienia "osiemnastej", tylko czyta "18:00"
+    if(!hhmm) return '';
+    const [h,m] = hhmm.split(':');
+    return `${String(h).padStart(2,'0')}:${String(m||'00').padStart(2,'0')}`;
+  };
+  const niceSay = (dish, time) => {
+    if (dish && time)  return `OK, ${dish} na ${fmtTime(time)}.`;
+    if (dish)          return `OK, ${dish}.`;
+    if (time)          return `OK, na ${fmtTime(time)}.`;
+    return 'OK.';
   };
 
   const selectTile = (key)=>{
@@ -51,64 +99,73 @@
   tiles.taxi.addEventListener('click', ()=>selectTile('taxi'));
   tiles.hotel.addEventListener('click',()=>selectTile('hotel'));
 
-  // ---------- Normalizacja PL ----------
-  const correctionsPL = [
-    [/kaplic+oza/gi,'capricciosa'], [/kapryc+i?oza/gi,'capricciosa'], [/kapric+i?osa/gi,'capricciosa'],
-    [/kugelf/gi,'kugel'], [/kugle?l/gi,'kugel'],
-    [/\bw\s+arielu\b/gi,'w Arielu'], [/\bw\s+ariel\b/gi,'w Arielu'], [/\bdo\s+ariel\b/gi,'do Ariela'],
-    [/\bna\s+wpół\s+do\b/gi,'na 30 po'],
-    [/\bkwadrans\s+po\b/gi,'15 po'], [/\bza\s+kwadrans\b/gi,'za 15'],
+  // -------------------- NORMALIZACJE --------------------
+  const corrections = [
+    [/kaplic+oza/gi, 'capricciosa'],
+    [/kapric+i?oza/gi, 'capricciosa'],
+    [/kugelf/gi, 'kugel'], [/kugle?l/gi, 'kugel'],
+    [/w\s+ariel\b/gi, 'w Arielu'], [/do\s+ariel\b/gi, 'do Ariela'],
   ];
-  function normalize(s){
-    let out = s.replace(/\b(\w{2,})\s+\1\b/gi,'$1');
-    for (const [re,to] of correctionsPL) out = out.replace(re,to);
+  const normalize = (s)=>{
+    let out = s.replace(/\b(\w{2,})\s+\1\b/gi, '$1'); // duplikaty
+    for(const [re, to] of corrections) out = out.replace(re,to);
     return out.trim();
-  }
+  };
 
-  // ---------- Parser ----------
-  function parseOrder(s){
+  const parseOrder = (s)=>{
     const text = s.toLowerCase();
+    const timeMatch = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
+    const time = timeMatch ? `${String(timeMatch[1]).padStart(2,'0')}:${timeMatch[2]||'00'}` : null;
 
-    // godzina HH:MM lub HH
-    const m = text.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
-    const time = m ? `${String(m[1]).padStart(2,'0')}:${m[2]||'00'}` : null;
+    const noTime = text.replace(/\b(?:na|o)\s*\d{1,2}(?::?\d{2})?\b/, ' ').replace(/\s{2,}/g,' ').trim();
+    let dish = null;
+    const dm = noTime.match(/[a-ząćęłńóśżź\- ]{3,}/i);
+    if(dm){
+      dish = dm[0].replace(/\b(i|a|na|do|w|z|o)\b.*$/,'').replace(/\s{2,}/g,' ').trim();
+    }
+    return { dish, time };
+  };
 
-    // „za 15” → +15 minut (tylko do komunikatu)
-    const rel = text.match(/\bza\s+(\d{1,2})\b/);
-    const relMin = rel ? parseInt(rel[1],10) : null;
+  // -------------------- ASR: Whisper (opcjonalnie) --------------------
+  async function whisperListenOnce(){
+    if(!C.whisperUrl){
+      throw new Error('Whisper nie skonfigurowany (meta[name="whisper-url"]).');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const stopPromise = new Promise((resolve)=>{ rec.onstop = resolve; });
+    rec.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
 
-    // danie – cokolwiek sensownego, bez przyimków ogonowych
-    const noTime = text.replace(/\b(?:na|o)\s*\d{1,2}(?::?\d{2})?\b/,' ').replace(/\s{2,}/g,' ');
-    const dm = noTime.match(/[a-ząćęłńóśżź0-9\- ]{3,}/i);
-    const dish = dm ? dm[0].replace(/\b(i|a|na|do|w|z|o)\b.*$/,'').trim() : null;
+    setListening(true); setText('Słucham… (Whisper)');
+    rec.start();
 
-    return { dish, time, relMin };
+    const stop = ()=>{ try{rec.stop()}catch(_){ } window.removeEventListener('click', stop, true); };
+    window.addEventListener('click', stop, true);
+
+    await stopPromise;
+    setListening(false);
+
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const headers = C.whisperAuth ? { 'Authorization': C.whisperAuth } : {};
+    const form = new FormData();
+    form.append('audio', blob, 'speech.webm');
+
+    const res = await fetch(C.whisperUrl, { method: 'POST', headers, body: blob }); // serwer akceptuje surowe body
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error(`Whisper ${res.status}: ${t}`);
+    }
+    const data = await res.json().catch(()=> ({}));
+    if(!data || !data.text) throw new Error('Whisper: brak pola "text" w odpowiedzi.');
+    return data.text;
   }
 
-  // ---------- Geolokalizacja ----------
-  let geo = null;   // {lat,lng}
-  async function ensureGeoloc(){
-    if (geo) return geo;
-    if (!('geolocation' in navigator)) {
-      showBanner('Brak geolokalizacji: przeglądarka nie wspiera. Użyję zapytań ogólnych.');
-      return null;
-    }
-    try{
-      const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000}));
-      geo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      hideBanner();
-      return geo;
-    }catch(err){
-      showBanner('Nie mam dostępu do lokalizacji — wyszukuję globalnie (możesz udzielić zgody w przeglądarce).');
-      return null;
-    }
-  }
-
-  // ---------- ASR (browser) ----------
+  // -------------------- ASR: Web Speech (domyślny) --------------------
   const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
   function browserListenOnce(){
     return new Promise((resolve, reject)=>{
-      if(!ASR) return reject(new Error('Brak Web Speech API (Chrome/Edge).'));
+      if(!ASR) return reject(new Error('Brak Web Speech API (użyj Chrome/Edge lub przełącz na Whisper).'));
       const rec = new ASR();
       rec.lang = 'pl-PL';
       rec.interimResults = true;
@@ -116,7 +173,7 @@
 
       rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
       rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
-      rec.onend   = ()=>{ setListening(false); };
+      rec.onend = ()=>{ setListening(false); };
       rec.onresult = (ev)=>{
         let finalText = '', interim = '';
         for(let i=ev.resultIndex; i<ev.results.length; i++){
@@ -131,108 +188,176 @@
     });
   }
 
-  // ---------- GPT nice summary (proxy) ----------
-  async function niceReply(input, dish, time){
-    if(!C.gptProxy) return '';
-    const res = await fetch(C.gptProxy, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ input, dish, time })
+  // -------------------- GPT (ładne jedno zdanie – opcjonalnie) --------------------
+  async function gptSumm(apiKey, text, dish, time){
+    const body = {
+      model: C.openaiModel,
+      messages: [
+        { role: 'system', content:
+          'Jesteś asystentem zamówień FreeFlow. Po polsku, krótko (≤18 słów). Używaj godzin w formacie 18:00.' },
+        { role: 'user', content:
+          `Transkrypcja: "${text}". ${dish?`Danie: ${dish}. `:''}${time?`Godzina: ${fmtTime(time)}. `:''}Zwróć zwięzłe potwierdzenie.` }
+      ],
+      temperature: 0.3, max_tokens: 60
+    };
+    const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
     });
-    if(!res.ok) return '';
-    const data = await res.json().catch(()=>({}));
-    return data.text || '';
+    if(!res.ok) throw new Error(`OpenAI ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
   }
 
-  // ---------- Places (proxy) ----------
-  function q(obj){ return new URLSearchParams(obj).toString(); }
-
-  async function placesTextSearch({query, lat, lng, radius=6000}){
-    if(!C.gmapsProxy){
-      // demo fallback (bez klucza/proxy)
-      return [{ name:`Syntetyczna knajpa: ${query}`, place_id:`demo_${Date.now()}` }];
+  // -------------------- Google Places + GEO --------------------
+  function gmapsURL(path, params){
+    const query = new URLSearchParams(params).toString();
+    if(C.gmapsProxy){
+      return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${query}`;
     }
-    const url = `${C.gmapsProxy}?type=textsearch&${q({query,lat,lng,radius})}`;
+    return `https://maps.googleapis.com${path}?${query}`;
+  }
+
+  async function getGeoMaybe(){
+    if(!('geolocation' in navigator)) return null;
+    try{
+      // Permissions API – pokaż użytkownikowi wskazówkę
+      if (navigator.permissions?.query) {
+        try {
+          const p = await navigator.permissions.query({ name: 'geolocation' });
+          if (p.state === 'prompt') {
+            toast('Pozwól na lokalizację, aby szukać miejsc w pobliżu.');
+          }
+          if (p.state === 'denied') {
+            toast('Lokalizacja zablokowana w przeglądarce – wyszukam globalnie.');
+            return null;
+          }
+        } catch(_) {}
+      }
+
+      const pos = await new Promise((res, rej)=>
+        navigator.geolocation.getCurrentPosition(
+          p => res([p.coords.latitude, p.coords.longitude]),
+          e => rej(e),
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        )
+      );
+      return pos; // [lat, lng]
+    }catch(e){
+      toast('Nie mam dostępu do lokalizacji — wyszukuję globalnie (możesz włączyć w ustawieniach).');
+      return null;
+    }
+  }
+
+  async function placesTextSearch(query, location /* [lat,lng] */, radiusMeters = 6000){
+    if(!C.gmapsKey){
+      console.debug('GMAPS: brak klucza – demo wyniki.');
+      return [{ name: `Syntetyczna knajpa: ${query}`, place_id: 'demo_'+Date.now() }];
+    }
+    const params = { query, key: C.gmapsKey };
+    if(location) params.location = location.join(',');
+    if(radiusMeters) params.radius = radiusMeters;
+
+    const url = gmapsURL('/maps/api/place/textsearch/json', params);
     const res = await fetch(url);
-    if(!res.ok) return [{ name:`Knajpa (demo ${res.status})`, place_id:`demo_${Date.now()}` }];
-    const json = await res.json().catch(()=>({results:[]}));
+    if(!res.ok){
+      console.debug('GMAPS error', res.status);
+      return [{ name: `Knajpa (demo, ${res.status})`, place_id:'demo_'+Date.now() }];
+    }
+    const json = await res.json();
     return json.results || [];
   }
 
   async function placeDetails(place_id){
-    if(!C.gmapsProxy){
-      return { name:'Syntetyczna Restauracja', formatted_address:'ul. Testowa 1',
-               opening_hours:{open_now:true}, freeflow_menu_demo: synthMenu('włoska') };
+    if(!C.gmapsKey){
+      return {
+        name: 'Syntetyczna Restauracja',
+        formatted_address: 'ul. Testowa 1',
+        opening_hours: { open_now: true },
+        freeflow_menu_demo: synthMenu('włoska')
+      };
     }
-    const url = `${C.gmapsProxy}?type=details&${q({place_id})}`;
+    const url = gmapsURL('/maps/api/place/details/json', {
+      place_id, key: C.gmapsKey, fields: 'name,formatted_address,opening_hours,website'
+    });
     const res = await fetch(url);
-    if(!res.ok) return { name:'Restauracja (demo)', freeflow_menu_demo: synthMenu('włoska') };
-    const json = await res.json().catch(()=>({}));
+    if(!res.ok){
+      console.debug('GMAPS details error', res.status);
+      return { name:'Restauracja (demo)', freeflow_menu_demo: synthMenu('włoska') };
+    }
+    const json = await res.json();
     return json.result || {};
   }
 
-  function synthMenu(kind='włoska'){
-    if(/włosk/.test(kind)) return [
-      { name:'Margherita', price:26 }, { name:'Capricciosa', price:32 },
-      { name:'Diavola', price:34 }, { name:'Carbonara', price:35 },
+  function synthMenu(cuisine='włoska'){
+    if(/włosk/.test(cuisine)) return [
+      { name:'Margherita', price: 26 },
+      { name:'Capricciosa', price: 32 },
+      { name:'Diavola',     price: 34 },
+      { name:'Carbonara',   price: 35 }
+    ];
+    if(/sushi|japoń/.test(cuisine)) return [
+      { name:'California roll', price: 28 },
+      { name:'Nigiri łosoś',    price: 24 },
+      { name:'Ramen shoyu',     price: 36 }
     ];
     return [
-      { name:'Pierogi ruskie', price:24 }, { name:'Schabowy', price:38 }, { name:'Żurek', price:19 },
+      { name:'Pierogi ruskie', price: 24 },
+      { name:'Schabowy',       price: 38 },
+      { name:'Żurek',          price: 19 }
     ];
   }
 
-  // ---------- FLOW ----------
-  function sayConfirm({dish,time,relMin}){
-    let msg = 'OK.';
-    if (dish) msg += ` Zamawiam ${dish}.`;
-    if (time) msg += ` Na ${time}.`;
-    else if (relMin) msg += ` Za ${relMin} minut.`;
-    return msg;
-  }
-
+  // -------------------- FLOW --------------------
   async function handleFinalText(rawText){
     const text = normalize(rawText);
     setText(text);
 
-    // geolokalizacja (poproś jeżeli brak)
-    await ensureGeoloc();
+    // parsowanie
+    const { dish, time } = parseOrder(text);
 
-    const { dish, time, relMin } = parseOrder(text);
+    // lokalne potwierdzenie – wymuszamy format 18:00
+    speak(niceSay(dish, time));
 
-    // lokalne, szybkie potwierdzenie
-    const fallback = sayConfirm({dish,time,relMin});
-    speak(fallback);
-
-    // ładna odpowiedź (proxy → OpenAI)
-    try{
-      const pretty = await niceReply(text, dish, time);
-      if(pretty){
-        setText(pretty);
-        speak(pretty);
-      }
-    }catch(_){ /* cicho, mamy lokalny fallback */ }
-
-    // przykładowe użycie Places z biasem lokalnym
-    if (/pizza|pizz|restaurac|sushi|kebab|pierog|kuchni|kuchnia/i.test(text)){
+    // (opcjonalnie) GPT
+    if(C.openaiKey){
       try{
-        let query = 'restauracja';
-        if (/pizza|pizz/i.test(text)) query = 'pizzeria';
-        if (/sushi/i.test(text))     query = 'sushi';
-        const coords = geo ? {lat:geo.lat,lng:geo.lng} : {};
-        const places = await placesTextSearch({query, ...coords});
+        const nice = await gptSumm(C.openaiKey, text, dish, time);
+        if(nice){
+          setText(nice);
+          speak(nice);
+        }
+      }catch(e){ console.debug('OpenAI err', e); }
+    }
+
+    // (opcjonalnie) Google Places – z GEO
+    if(/pizza|pizz|restaurac|kuchnia|sushi|kebab|pierog/i.test(text)){
+      try{
+        const cityMatch = text.match(/\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż\-]+)\b/); // np. "w Krakowie"
+        const city = cityMatch ? cityMatch[1] : '';
+        const geo = await getGeoMaybe(); // [lat,lng] albo null
+        const query = city ? `restauracja ${city}` : (dish ? `${dish} restauracja` : 'restauracja');
+
+        const places = await placesTextSearch(query, geo);
         const top = places[0];
         if(top){
           const det = await placeDetails(top.place_id || '');
-          // nic nie wypisujemy do UI; to hook pod dalszą integrację koszyka
-          console.debug('Places:', top, det);
+          console.debug('Place:', det);
         }
-      }catch(e){ console.debug('Places error', e); }
+      }catch(e){ console.debug('Places err', e); }
     }
   }
 
   async function startListening(){
     try{
-      const txt = await browserListenOnce();
-      await handleFinalText(txt);
+      if(C.useWhisper){
+        const txt = await whisperListenOnce();
+        await handleFinalText(txt);
+      }else{
+        const txt = await browserListenOnce();
+        await handleFinalText(txt);
+      }
     }catch(e){
       setText(e.message || 'Błąd rozpoznawania.');
     }
@@ -241,7 +366,6 @@
   [logoBtn, micBtn].forEach(el=> el.addEventListener('click', startListening, { passive:true }));
   setGhost('Powiedz, co chcesz zamówić…');
 
-  // sprzątanie TTS przy nawigacji
-  window.addEventListener('beforeunload', ()=>{ try{speechSynthesis.cancel()}catch(_){}});
+  window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
 
 })();

@@ -1,7 +1,8 @@
-// FreeFlow - assistant (PL) — pełny script.js
+// FreeFlow – asystent (PL) – uproszczony do: restauracja / taxi / hotel
+// Wklej 1:1 jako script.js
 
 (() => {
-  // -------------------- CONFIG --------------------
+  // =================== CONFIG ===================
   function pick(metaName, winKey) {
     const m = document.querySelector(`meta[name="${metaName}"]`);
     if (m && m.content) return m.content.trim();
@@ -10,286 +11,301 @@
   }
 
   const C = {
-    // STT: tylko Web Speech (stabilne testy). Hook pod Whisper zostaje wyłączony.
     lang: 'pl-PL',
+    // Preferuj PROXY (Vercel API), nie wystawiaj klucza z przeglądarki
+    gmapsProxy: pick('gmaps-proxy', 'GMAPS_PROXY'), // np. https://twoj-projekt.vercel.app/api/places
+    gmapsKey:   pick('gmaps-key',   'GMAPS_KEY'),   // NIE używaj w prod z frontu; tylko do demo
 
-    // Google Places
-    gmapsKey: pick('gmaps-key', 'GMAPS_KEY'),
-    gmapsProxy: pick('gmaps-proxy', 'GMAPS_PROXY'), // opcjonalny proxy (CORS)
+    ids: {
+      app: 'app',
+      transcript: 'transcript',
+      micBtn: 'micBtn',
+      logoBtn: 'logoBtn',
+      dot: 'dot',
+      tileFood: 'tileFood',
+      tileTaxi: 'tileTaxi',
+      tileHotel: 'tileHotel',
+    },
 
-    // UI
+    // UI / limit listy miejsc
+    maxList: 5,
     ttsEnabled: true,
   };
 
-  // -------------------- DOM --------------------
-  const app        = document.getElementById('app');
-  const logoBtn    = document.getElementById('logoBtn');
-  const micBtn     = document.getElementById('micBtn');
-  const transcript = document.getElementById('transcript');
-  const dot        = document.getElementById('dot');
+  // =================== DOM ===================
+  const app        = document.getElementById(C.ids.app);
+  const transcript = document.getElementById(C.ids.transcript);
+  const micBtn     = document.getElementById(C.ids.micBtn);
+  const logoBtn    = document.getElementById(C.ids.logoBtn);
+  const dot        = document.getElementById(C.ids.dot);
 
   const tiles = {
-    food:  document.getElementById('tileFood'),
-    taxi:  document.getElementById('tileTaxi'),
-    hotel: document.getElementById('tileHotel'),
+    food:  document.getElementById(C.ids.tileFood),
+    taxi:  document.getElementById(C.ids.tileTaxi),
+    hotel: document.getElementById(C.ids.tileHotel),
   };
 
-  // -------------------- UI helpers --------------------
-  let speakingId = 0; // anty-dubler TTS
-
-  function setListening(on) {
-    app.classList.toggle('listening', on);
-    dot && (dot.style.background = on ? '#21d4fd' : '#86e2ff');
-    if (!on && !transcript.textContent.trim()) {
-      setGhost('Powiedz, co chcesz zamówić…');
-    }
-  }
+  // =================== HELPERS (UI) ===================
   function setGhost(msg) {
+    if (!transcript) return;
     transcript.classList.add('ghost');
     transcript.textContent = msg;
   }
   function setText(msg) {
+    if (!transcript) return;
     transcript.classList.remove('ghost');
     transcript.textContent = msg;
   }
-  function speakOnce(txt) {
+  function setListening(on) {
+    app && app.classList.toggle('listening', on);
+    if (dot) dot.style.background = on ? '#21d4fd' : '#86e2ff';
+    if (!on && transcript && !transcript.textContent.trim()) {
+      setGhost('Powiedz, co chcesz zamówić…');
+    }
+  }
+
+  // =================== TTS ===================
+  let speakingId = 0;
+  function speakOnce(txt, lang = C.lang) {
     if (!C.ttsEnabled || !txt) return;
-    try { window.speechSynthesis.cancel(); } catch (_) {}
+    try { window.speechSynthesis.cancel(); } catch (_){}
     try {
       const id = ++speakingId;
       const u = new SpeechSynthesisUtterance(txt);
-      u.lang = C.lang;
-      u.onend = () => { if (id === speakingId) {/* zakończone */} };
+      u.lang = lang;
+      u.onend = () => { if (id === speakingId) {/* nic */} };
       window.speechSynthesis.speak(u);
-    } catch (_) {}
+    } catch (_){}
   }
 
+  // =================== Kafelki (aktywacja) ===================
   function selectTile(key) {
-    Object.values(tiles).forEach(t => t.classList.remove('active'));
-    tiles[key].classList.add('active');
+    Object.values(tiles).forEach(t => t && t.classList.remove('active'));
+    tiles[key] && tiles[key].classList.add('active');
   }
-  tiles.food?.addEventListener('click', () => selectTile('food'));
-  tiles.taxi?.addEventListener('click', () => selectTile('taxi'));
-  tiles.hotel?.addEventListener('click', () => selectTile('hotel'));
+  tiles.food  && tiles.food.addEventListener('click', ()=>selectTile('food'));
+  tiles.taxi  && tiles.taxi.addEventListener('click', ()=>selectTile('taxi'));
+  tiles.hotel && tiles.hotel.addEventListener('click',()=>selectTile('hotel'));
 
-  // -------------------- Normalizacja & parser --------------------
-  // lekkie poprawki wymowy
+  // =================== Normalizacja mowy ===================
   const corrections = [
     [/kaplic+oza/gi, 'capricciosa'],
     [/kapric+i?oza/gi, 'capricciosa'],
-    [/kugle?l/gi, 'kugel'],
-    // „w Ariel” → „w Arielu”
-    /\bw\s+arielu?\b/gi, 'w Arielu',
+    [/kugelf?/gi, 'kugel'],
+    // Jeśli nie chcesz ogólnej zamiany "google" → "Kugel", usuń:
+    // [/\bgoogle\b/gi, 'Kugel'],
   ];
-
   function normalize(s) {
-    if (!s) return '';
-    let out = s.replace(/\b(\w{2,})\s+\1\b/gi, '$1'); // „dwie dwie” → „dwie”
-    for (let i = 0; i < corrections.length; i += 2) {
-      out = out.replace(corrections[i], corrections[i + 1]);
-    }
-    return out.trim();
+    let out = (s || '')
+      .replace(/\b(\w{2,})\s+\1\b/gi, '$1') // usuń powtórzenia „dwie dwie”
+      .trim();
+    for (const [re, to] of corrections) out = out.replace(re, to);
+    return out;
   }
 
-  // liczebniki słowne → cyfry (podstawowy zakres)
-  const polishNums = {
-    'zero': 0, 'jeden': 1, 'jedną': 1, 'jedna': 1, 'dwa': 2, 'dwóch': 2, 'dwie': 2,
-    'trzy': 3, 'cztery': 4, 'pięć': 5, 'sześć': 6, 'siedem': 7, 'osiem': 8, 'dziewięć': 9,
-    'dziesięć': 10, 'jedenaście': 11, 'dwanaście': 12, 'trzynaście': 13, 'czternaście': 14,
-    'piętnaście': 15, 'szesnaście': 16, 'siedemnaście': 17, 'osiemnaście': 18, 'dziewiętnaście': 19,
-    'dwadzieścia': 20, 'trzydzieści': 30, 'czterdzieści': 40, 'pięćdziesiąt': 50
+  // =================== Parser czasu ===================
+  function parseTime(textLower) {
+    const m = textLower.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
+    if (!m) return null;
+    const hh = String(m[1]).padStart(2,'0');
+    const mm = m[2] ? m[2] : '00';
+    return `${hh}:${mm}`;
+  }
+
+  // =================== Liczebniki (1..10) ===================
+  const numWords = {
+    'jeden':1,'jedną':1,'jedno':1,'jedna':1,'jednego':1,
+    'dwa':2,'dwie':2,'dwóch':2,
+    'trzy':3,'cztery':4,'pięć':5,'sześć':6,'siedem':7,'osiem':8,'dziewięć':9,'dziesięć':10
   };
-  function wordsToNumber(words) {
-    // prosta suma dziesiątek+jedn.
-    let sum = 0;
-    words.toLowerCase().split(/[\s-]+/).forEach(w => {
-      if (polishNums[w] != null) sum += polishNums[w];
-      else if (/^\d+$/.test(w)) sum += parseInt(w, 10);
-    });
-    return sum || null;
+  function wantedCount(text) {
+    const n = text.match(/\b(\d{1,2})\b/);
+    if (n) { const v = parseInt(n[1],10); if (v>=1 && v<=10) return v; }
+    const w = text.toLowerCase().match(/\b(jed(en|ną|no|na|nego)|dwie|dwa|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć)\b/);
+    return w ? (numWords[w[0]] || 1) : 1;
   }
 
-  function parseTime(text) {
-    // 1) „o 19”, „na 21:15”, „o 7 30”
-    const m1 = text.match(/\b(?:o|na)\s*(\d{1,2})(?:[:\s\.](\d{1,2}))?\b/);
-    if (m1) {
-      const hh = String(Math.min(23, parseInt(m1[1], 10))).padStart(2, '0');
-      const mm = String(m1[2] ? Math.min(59, parseInt(m1[2], 10)) : 0).padStart(2, '0');
-      return `${hh}:${mm}`;
-    }
-    // 2) słownie „na dwudziestą pierwszą”, „o siódmej trzydzieści”
-    const m2 = text.match(/\b(?:o|na)\s+([a-ząćęłńóśżź\- ]{3,})(?:\s+(?:pierwszą|drugą|trzecią|czwartą))?/i);
-    if (m2) {
-      const n = wordsToNumber(m2[1]);
-      if (n != null) return `${String(Math.min(23, n)).padStart(2, '0')}:00`;
-    }
-    // 3) „za kwadrans”, „na wpół do X” → uproszczone: +15m / :30
-    if (/za\s+kwadrans/i.test(text)) {
-      const d = new Date(Date.now() + 15 * 60000);
-      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-    const half = text.match(/na\s+wpół\s+do\s+([a-ząćęłńóśżź\- ]{3,}|\d{1,2})/i);
-    if (half) {
-      const val = /^\d/.test(half[1]) ? parseInt(half[1], 10) : wordsToNumber(half[1]);
-      if (val != null) {
-        let hh = (val - 1 + 24) % 24;
-        return `${String(hh).padStart(2, '0')}:30`;
-      }
-    }
+  // =================== KATEGORIE: tylko jedzenie / taxi / hotel ===================
+  const categoryMap = [
+    { re: /(pizz|pizzer|restaurac|knajp|jedzeni|obiad|kolac)/i, query: 'restauracja' },
+    { re: /(taxi|taksówk|przejazd)/i,                          query: 'taxi' },
+    { re: /(hotel|nocleg)/i,                                   query: 'hotel' }
+  ];
+  function detectCategory(text) {
+    for (const c of categoryMap) if (c.re.test(text)) return c.query;
     return null;
   }
 
-  function parseIntent(raw) {
-    const text = normalize(raw);
-    const low = text.toLowerCase();
-
-    // tryb „znajdź knajpy…”
-    const askBest = /\b(znajdź|wyszukaj|pokaż)\b.*\b(najlepsze|dobre)\b.*\b(kna?jpy|restauracje|pizzerie)\b.*\bw\s*okolicy\b/i.test(low);
-    const countMatch = low.match(/\b(\d+|jeden|jedną|dwie|dwa|trzy)\b/);
-    const count = countMatch ? (wordsToNumber(countMatch[1]) || 2) : 2;
-
-    // proste rozpoznanie kategorii i miasta
-    let category = null;
-    if (/pizza|pizz/i.test(low)) category = 'pizzeria';
-    else if (/sushi|ramen/i.test(low)) category = 'sushi';
-    else if (/pierogi|pieróg/i.test(low)) category = 'pierogi';
-    else if (/kebab/i.test(low)) category = 'kebab';
-    else if (/restaurac/i.test(low)) category = 'restauracja';
-
-    const cityMatch = low.match(/\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż\-]+)\b/);
-    const city = cityMatch ? cityMatch[1] : null;
-
-    // danie (dla „zamów”)
-    let dish = null;
-    if (!askBest) {
-      const d = text.match(/(?:chcę|poproszę|zamówić|zamawiam|potrzebuję|i need|proszę)\s+([a-ząćęłńóśżź\- ]{3,})/i);
-      if (d) dish = d[1].replace(/\s+(na|o)\s+.*$/, '').trim();
-      if (!dish) {
-        // fallback: pierwsze sensowne słowo kulinarne
-        const k = text.match(/\b(pizza|capricciosa|margherita|carbonara|pierogi|sushi|kebab|ramen)\b/i);
-        if (k) dish = k[0];
-      }
-    }
-
-    const time = parseTime(low);
-
-    return { text, askBest, count, category, city, dish, time };
+  // =================== Fraza „na / w / przy / koło …” (landmark/miasto) ===================
+  function detectNearPhrase(text) {
+    const m = text.match(/\b(na|w|we|przy|koło|obok)\s+([a-ząćęłńóśżź\-]+[a-ząćęłńóśżź]+)\b/iu);
+    return m ? m[0] : '';
   }
 
-  // -------------------- Geolokalizacja --------------------
-  function getGeo() {
-    return new Promise(resolve => {
-      if (!navigator.geolocation) return resolve({ ok: false });
+  // =================== GEO ===================
+  async function getGeo() {
+    if (!('geolocation' in navigator)) return null;
+    return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
-        pos => resolve({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        _err => resolve({ ok: false }),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        _   => resolve(null),
+        { enableHighAccuracy: false, timeout: 5000 }
       );
     });
   }
 
-  // -------------------- Google Places --------------------
+  // =================== Google Places (przez PROXY) ===================
   function gmapsURL(path, params) {
-    const qs = new URLSearchParams(params).toString();
-    if (C.gmapsProxy) return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${qs}`;
-    return `https://maps.googleapis.com${path}?${qs}`;
-  }
-
-  async function placesTextSearch({ query, lat, lng, radius = 6000 }) {
-    if (!C.gmapsKey) {
-      // fallback syntetyczny
-      return [
-        { name: `Demo: ${query}`, rating: 4.6, formatted_address: 'ul. Testowa 1', place_id: 'demo1' },
-        { name: `Demo 2: ${query}`, rating: 4.4, formatted_address: 'ul. Przykładowa 2', place_id: 'demo2' }
-      ];
+    const q = new URLSearchParams(params).toString();
+    if (C.gmapsProxy) {
+      // proxy: przekazujemy ścieżkę i parametry – backend dopnie ?key=...
+      return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${q}`;
     }
-    const params = { query, key: C.gmapsKey };
-    if (lat && lng) { params.location = `${lat},${lng}`; params.radius = radius; }
-    const res = await fetch(gmapsURL('/maps/api/place/textsearch/json', params));
-    const json = await res.json().catch(() => ({}));
-    return json.results || [];
+    // fallback – BEZPIECZEŃSTWO: to może ubić CORS; używaj tylko do testów
+    return `https://maps.googleapis.com${path}?${q}`;
   }
 
-  // -------------------- FLOW --------------------
-  async function handleFinalText(rawText) {
-    const { text, askBest, count, category, city, dish, time } = parseIntent(rawText);
-
-    // 1) Tryb „znajdź knajpy”
-    if (askBest) {
-      let geo = { ok: false };
-      let note = '';
-      try {
-        geo = await getGeo();
-        if (!geo.ok) note = ' — wyszukuję globalnie (możesz udzielić zgody w przeglądarce).';
-      } catch (_) {}
-      const q = city ? `${category || 'restauracja'} ${city}` : (category || 'restauracja');
-      const results = await placesTextSearch({ query: q, lat: geo.lat, lng: geo.lng });
-
-      const top = results.slice(0, Math.max(1, count));
-      if (top.length) {
-        const list = top.map((r, i) => `${i + 1}. ${r.name}${r.rating ? ` (${r.rating.toFixed(1)})` : ''}`).join('  •  ');
-        const human = `Najlepsze w okolicy: ${list}.${note}`;
-        setText(human);
-        speakOnce(human);
-      } else {
-        const msg = `Nie znalazłem miejsc dla zapytania „${q}”.`;
-        setText(msg);
-        speakOnce(msg);
-      }
-      return;
+  async function placesTextSearch(query, around, radius=6000) {
+    // Brak proxy i klucza → demo
+    if (!C.gmapsProxy && !C.gmapsKey) {
+      setGhost('Tryb DEMO (brak proxy/klucza do Google Places).');
+      return [{ name:`Demo: ${query}`, formatted_address:'(demo)', rating:4.5 }];
     }
-
-    // 2) Zamówienie (lokalne potwierdzenie)
-    let confirm = 'OK.';
-    if (dish) confirm += ` Zamawiam ${dish}.`;
-    if (time) confirm += ` Na ${time}.`;
-    if (!dish && !time) confirm = text; // nic nie wnioskowaliśmy – przeczytaj transkrypcję
-
-    setText(confirm);
-    speakOnce(confirm);
+    const params = { query };
+    if (!C.gmapsProxy && C.gmapsKey) params.key = C.gmapsKey;
+    if (around) {
+      params.location = around;
+      params.radius = radius;
+    }
+    try {
+      const res = await fetch(gmapsURL('/maps/api/place/textsearch/json', params));
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const json = await res.json();
+      return json.results?.slice(0, C.maxList) || [];
+    } catch (e) {
+      // łagodny fallback
+      return [{ name:`Miejsce (offline): ${query}`, formatted_address:'—', rating:4.4 }];
+    }
   }
 
-  // -------------------- STT (Web Speech) --------------------
+  // =================== Prezentacja listy miejsc ===================
+  function summarizePlaces(list, howMany=1) {
+    if (!Array.isArray(list) || list.length===0) return null;
+    const pick = list
+      .map(r => ({name:r.name, rating: r.rating || null, vicinity: r.formatted_address || r.vicinity || ''}))
+      .sort((a,b) => (b.rating||0) - (a.rating||0))
+      .slice(0, howMany);
+
+    const lines = pick.map((r,i)=> {
+      const rt = typeof r.rating === 'number' ? ` (${r.rating.toFixed(1)}★)` : (r.rating ? ` (${r.rating}★)` : '');
+      return `${i+1}. ${r.name}${rt}${r.vicinity ? `, ${r.vicinity}` : ''}`;
+    });
+    return { text: lines.join(' • '), topName: pick[0]?.name || '' };
+  }
+
+  // =================== ASR (Web Speech API) ===================
   const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  function listenOnce() {
-    return new Promise((resolve, reject) => {
-      if (!ASR) return reject(new Error('Brak Web Speech API (Chrome/Edge).'));
+  function listenOnce(){
+    return new Promise((resolve, reject)=>{
+      if(!ASR) return reject(new Error('Brak Web Speech API (Chrome/Edge).'));
       const rec = new ASR();
       rec.lang = C.lang;
       rec.interimResults = true;
       rec.continuous = false;
 
-      rec.onstart = () => { setListening(true); setText('Słucham…'); };
-      rec.onerror = e => { setListening(false); reject(new Error(e.error || 'ASR error')); };
-      rec.onend = () => { setListening(false); };
-      rec.onresult = ev => {
+      let lastInterim = '';
+
+      rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
+      rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
+      rec.onend   = ()=>{
+        setListening(false);
+        if (lastInterim) resolve(lastInterim);
+      };
+      rec.onresult = (ev)=>{
         let finalText = '', interim = '';
-        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        for(let i=ev.resultIndex; i<ev.results.length; i++){
           const t = ev.results[i][0].transcript;
-          if (ev.results[i].isFinal) finalText += t; else interim += t;
+          if(ev.results[i].isFinal) finalText += t; else interim += t;
         }
         const raw = (finalText || interim).trim();
-        if (raw) setText(normalize(raw));
+        if (interim) lastInterim = interim.trim();
+        setText(normalize(raw || ''));
         if (finalText) resolve(finalText);
       };
-      try { rec.start(); } catch (err) { reject(err); }
+      try { rec.start(); } catch(err) { reject(err); }
     });
   }
 
-  async function startListening() {
+  // =================== FLOW ===================
+  function isFoodQuery(t) {
+    return /(pizz|restaurac|knajp|jedzeni|obiad|kolac)/i.test(t);
+  }
+
+  async function handleQuery(raw) {
+    const text = normalize(raw);
+    setText(text);
+
+    const time = parseTime(text.toLowerCase());
+    const count = wantedCount(text);
+    const cat   = detectCategory(text);           // 'restauracja' | 'taxi' | 'hotel' | null
+    const near  = detectNearPhrase(text);         // np. „na Mariackiej”
+
+    let geo = null, placesSummary = null;
+
+    if (cat) {
+      geo = await getGeo(); // poprosi usera tylko gdy to ma sens
+      const around = geo ? `${geo.lat},${geo.lng}` : null;
+
+      // Budujemy zapytanie do Text Search: kategoria + ewentualny landmark/miasto
+      // Drobny bias: jeśli jest pizza w tekście → "pizzeria", inaczej ogólna "restauracja"
+      let q = cat;
+      if (cat === 'restauracja' && /pizz/i.test(text)) q = 'pizzeria';
+      if (near) q = `${q} ${near}`;
+
+      const list = await placesTextSearch(q, around);
+      placesSummary = summarizePlaces(list, Math.max(1, Math.min(count, C.maxList)));
+    }
+
+    // Składanie odpowiedzi
+    let say = 'Okej.';
+    if (time) say += ` Przyjmuję na ${time}.`;
+    if (!cat && !time) say = 'Okej, słucham.';
+
+    if (placesSummary) {
+      if (count > 1) {
+        // Pokaż listę (1..5) + powiedz top 1
+        setText(placesSummary.text);
+        speakOnce(`Mam ${count} propozycje. Najwyżej oceniana to ${placesSummary.topName}.`);
+        return;
+      } else {
+        say += ` Najbliżej: ${placesSummary.topName}.`;
+      }
+    }
+
+    setText(say);
+    speakOnce(say);
+  }
+
+  async function start() {
     try {
-      const txt = await listenOnce();        // Web Speech
-      await handleFinalText(txt);            // pełna logika
+      const finalText = await listenOnce();
+      await handleQuery(finalText);
     } catch (e) {
-      setText('Nie mogę teraz słuchać. Upewnij się, że udzielono zgody na mikrofon.');
-      speakOnce('Nie mogę teraz słuchać. Sprawdź zgodę na mikrofon.');
+      setText(e.message || 'Błąd rozpoznawania.');
     }
   }
 
-  [logoBtn, micBtn].forEach(el => el?.addEventListener('click', startListening, { passive: true }));
+  // =================== BIND UI ===================
+  // Upewnij się, że te ID istnieją w HTML:
+  // <button id="logoBtn"> ... </button>
+  // <button id="micBtn"> ... </button>
+  if (logoBtn) logoBtn.addEventListener('click', start, { passive:true });
+  if (micBtn)  micBtn .addEventListener('click', start, { passive:true });
+
+  // pierwszy tekst
   setGhost('Powiedz, co chcesz zamówić…');
 
   // sprzątanie TTS przy nawigacji
-  window.addEventListener('beforeunload', () => { try { window.speechSynthesis.cancel(); } catch (_) {} });
+  window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
+
 })();

@@ -6,51 +6,65 @@
   <title>FreeFlow — zamów głosem</title>
   <meta name="color-scheme" content="dark light" />
 
-  <!-- Konfiguracja -->
-  <meta name="asr-provider" content="browser" />
+  <!-- Konfiguracja czytana przez script.js -->
   <meta name="gmaps-proxy" content="/api/places" />
   <meta name="gpt-proxy" content="/api/gpt" />
 
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root{--glass-bg:rgba(20,20,22,.55);--glass-brd:rgba(255,255,255,.12);--glass-blur:18px;--text:#f6f7fb;--muted:#c7c9d1;--brand:#ff8a30}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;color:var(--text);font:500 16px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial;background:#0d0f13 url(assets/Background.png) center/cover fixed no-repeat}
+    .page{min-height:100dvh;display:flex;flex-direction:column;gap:16px;padding:16px}
+    .brand{display:flex;gap:8px;align-items:baseline}
+    .brand b{color:var(--brand);font:900 32px/1 Inter,system-ui}
+    .brand span{font:900 32px/1 Inter,system-ui}
+    .tagline{color:var(--muted)}
+    .stage{display:grid;place-items:center;margin-top:10px}
+    .logoWrap{position:relative;width:min(82vw,420px);filter:drop-shadow(0 12px 60px rgba(0,0,0,.55))}
+    .logoWrap img{width:100%;height:auto;display:block}
+    .hit{position:absolute;inset:0;border:0;background:transparent}
+    .asr{margin:12px auto 0;width:min(92vw,720px);border-radius:20px;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-brd);backdrop-filter:blur(var(--glass-blur));display:flex;gap:10px;align-items:center}
+    .dot{width:10px;height:10px;border-radius:999px;background:#86e2ff;box-shadow:0 0 16px #86e2ff}
+    .text{flex:1;min-height:1.2em}
+    .ghost{color:var(--muted)}
+    .micBtn{width:46px;height:46px;border-radius:14px;border:1px solid var(--glass-brd);background:linear-gradient(180deg, rgba(255,143,67,.18), rgba(33,212,253,.14))}
+    .dock{margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .tile{display:flex;gap:10px;align-items:center;min-width:150px;padding:12px 16px;border-radius:20px;background:var(--glass-bg);border:1px solid var(--glass-brd)}
+    .tile.active{outline:2px solid rgba(33,212,253,.6)}
+    .banner{width:min(92vw,720px);margin:8px auto 0;padding:10px 12px;border-radius:12px;border:1px solid var(--glass-brd);background:rgba(255,203,72,.15);color:#ffe6a3;font-size:14px}
+    .hidden{display:none!important}
+  </style>
 </head>
 <body>
   <div class="page" id="app">
-    <header class="topbar">
-      <div>
-        <div class="brand"><b>Free</b><span>Flow</span></div>
-        <div class="tagline">Voice to order — Złóż zamówienie</div>
-        <div class="subtag">Restauracja, taxi albo hotel?</div>
-      </div>
-      <div class="actions">
-        <div class="chip" aria-label="Menu" title="Menu">≡</div>
-        <div class="chip" style="position:relative" aria-label="Koszyk" title="Koszyk">
-          🛒 <span class="cart-badge" id="cartCount">0</span>
-        </div>
-      </div>
+    <header>
+      <div class="brand"><b>Free</b><span>Flow</span></div>
+      <div class="tagline">Voice to order — Złóż zamówienie</div>
     </header>
 
     <section class="stage">
-      <div class="logoWrap" id="logoWrap">
-        <img src="assets/Freeflowlogo.png?v=1" alt="FreeFlow" width="840" height="1080" />
-        <button class="hit" id="logoBtn" aria-label="Naciśnij, aby mówić"></button>
+      <div class="logoWrap">
+        <img src="assets/Freeflowlogo.png" alt="FreeFlow">
+        <button id="logoBtn" class="hit" aria-label="Naciśnij, aby mówić"></button>
       </div>
 
-      <div class="asr" id="asrBox">
-        <div class="dot" id="dot"></div>
-        <div class="text ghost" id="transcript">Powiedz, co chcesz zamówić…</div>
-        <button class="micBtn" id="micBtn">🎤</button>
+      <div class="asr" role="status" aria-live="polite">
+        <div id="dot" class="dot"></div>
+        <div id="transcript" class="text ghost">Powiedz, co chcesz zamówić…</div>
+        <button id="micBtn" class="micBtn" title="Start/Stop">🎤</button>
       </div>
 
       <div id="banner" class="banner hidden"></div>
     </section>
 
-    <nav class="dock">
-      <button class="tile active" id="tileFood">🍽️ Jedzenie</button>
-      <button class="tile" id="tileTaxi">🚕 Taxi</button>
-      <button class="tile" id="tileHotel">🏡 Hotel</button>
+    <nav class="dock" aria-label="Kategorie">
+      <button id="tileFood"  class="tile active">🍽️ Jedzenie</button>
+      <button id="tileTaxi"  class="tile">🚕 Taxi</button>
+      <button id="tileHotel" class="tile">🏡 Hotel</button>
     </nav>
   </div>
 
+  <!-- WAŻNE: ładujemy OSOBNY plik JS -->
   <script src="script.js" defer></script>
 </body>
 </html>

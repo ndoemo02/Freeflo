@@ -1,312 +1,56 @@
-;(() => {
-  // ====================== CONFIG ======================
-  function pick(meta, winKey){
-    const m = document.querySelector(`meta[name="${meta}"]`);
-    if (m?.content) return m.content.trim();
-    if (winKey && window[winKey]) return String(window[winKey]).trim();
-    return null;
-  }
-  const C = {
-    // ASR
-    useWhisper: (pick('asr-provider', 'ASR_PROVIDER') || '').toLowerCase() === 'whisper',
-    whisperUrl:  pick('whisper-url', 'WHISPER_URL'),
-    whisperAuth: pick('whisper-auth', 'WHISPER_AUTH'),
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FreeFlow — zamów głosem</title>
+  <meta name="color-scheme" content="dark light" />
 
-    // GPT (proxy na Vercel)
-    gptProxy:    pick('gpt-proxy', 'GPT_PROXY'),
-    openaiModel: pick('openai-model', 'OPENAI_MODEL') || 'gpt-4o-mini',
+  <!-- Konfiguracja -->
+  <meta name="asr-provider" content="browser" />
+  <meta name="gmaps-proxy" content="/api/places" />
+  <meta name="gpt-proxy" content="/api/gpt" />
 
-    // Google Places (proxy na Vercel lub bezpośrednio)
-    gmapsProxy:  pick('gmaps-proxy', 'GMAPS_PROXY'),
-    gmapsKey:    pick('gmaps-key', 'GMAPS_KEY'),
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page" id="app">
+    <header class="topbar">
+      <div>
+        <div class="brand"><b>Free</b><span>Flow</span></div>
+        <div class="tagline">Voice to order — Złóż zamówienie</div>
+        <div class="subtag">Restauracja, taxi albo hotel?</div>
+      </div>
+      <div class="actions">
+        <div class="chip" aria-label="Menu" title="Menu">≡</div>
+        <div class="chip" style="position:relative" aria-label="Koszyk" title="Koszyk">
+          🛒 <span class="cart-badge" id="cartCount">0</span>
+        </div>
+      </div>
+    </header>
 
-    // Dev
-    debug: /\bdebug=1\b/.test(location.search) || /\b#debug\b/.test(location.hash),
-  };
+    <section class="stage">
+      <div class="logoWrap" id="logoWrap">
+        <img src="assets/Freeflowlogo.png?v=1" alt="FreeFlow" width="840" height="1080" />
+        <button class="hit" id="logoBtn" aria-label="Naciśnij, aby mówić"></button>
+      </div>
 
-  // ====================== DOM ======================
-  const app        = document.getElementById('app');
-  const logoBtn    = document.getElementById('logoBtn');
-  const micBtn     = document.getElementById('micBtn');
-  const transcript = document.getElementById('transcript');
-  const dot        = document.getElementById('dot');
-  const banner     = document.getElementById('banner');
+      <div class="asr" id="asrBox">
+        <div class="dot" id="dot"></div>
+        <div class="text ghost" id="transcript">Powiedz, co chcesz zamówić…</div>
+        <button class="micBtn" id="micBtn">🎤</button>
+      </div>
 
-  const tiles = {
-    food:  document.getElementById('tileFood'),
-    taxi:  document.getElementById('tileTaxi'),
-    hotel: document.getElementById('tileHotel'),
-  };
+      <div id="banner" class="banner hidden"></div>
+    </section>
 
-  // ====================== UI HELPERS ======================
-  const setListening = (on)=>{
-    app.classList.toggle('listening', on);
-    dot.style.background = on ? '#21d4fd' : '#86e2ff';
-    if(!on && !transcript.textContent.trim()){
-      setGhost('Powiedz, co chcesz zamówić…');
-    }
-  };
-  const setGhost = (msg)=>{ transcript.classList.add('ghost'); transcript.textContent = msg; };
-  const setText  = (msg)=>{ transcript.classList.remove('ghost'); transcript.textContent = msg; };
+    <nav class="dock">
+      <button class="tile active" id="tileFood">🍽️ Jedzenie</button>
+      <button class="tile" id="tileTaxi">🚕 Taxi</button>
+      <button class="tile" id="tileHotel">🏡 Hotel</button>
+    </nav>
+  </div>
 
-  const showBanner = (msg)=>{ banner.textContent = msg; banner.classList.remove('hidden'); };
-  const hideBanner = ()=> banner.classList.add('hidden');
-
-  let ttsLock = false;
-  function speakOnce(txt, lang='pl-PL'){
-    if (ttsLock) return;
-    ttsLock = true;
-    try { window.speechSynthesis.cancel(); } catch(_){}
-    try {
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = lang;
-      u.onend = ()=> { ttsLock = false; };
-      window.speechSynthesis.speak(u);
-    } catch(_) { ttsLock = false; }
-  }
-
-  const selectTile = (key)=>{
-    Object.values(tiles).forEach(t=>t.classList.remove('active'));
-    tiles[key].classList.add('active');
-  };
-  tiles.food?.addEventListener('click',  ()=>selectTile('food'));
-  tiles.taxi?.addEventListener('click',  ()=>selectTile('taxi'));
-  tiles.hotel?.addEventListener('click', ()=>selectTile('hotel'));
-
-  // ====================== NORMALIZACJA + PARSER ======================
-  const corrections = [
-    [/kaplic+oza/gi, 'capricciosa'],
-    [/kapric+i?oza/gi, 'capricciosa'],
-    [/kugelf?/gi, 'kugel'],
-    [/w\s+ariel\b/gi, 'w Arielu'], [/do\s+ariel\b/gi, 'do Ariela'],
-  ];
-  const normalize = (s)=>{
-    let out = s.replace(/\b(\w{2,})\s+\1\b/gi, '$1'); // "dwie dwie" → "dwie"
-    for(const [re, to] of corrections) out = out.replace(re,to);
-    return out.trim();
-  };
-
-  function parseOrder(s){
-    const text = s.toLowerCase();
-
-    // godzina: 18, 18:00, 21 30 -> 21:30
-    const h = text.match(/\b(\d{1,2})(?:[:\.\s]?(\d{2}))?\b/);
-    let time = null;
-    if (h){
-      const hh = Math.min(23, Math.max(0, parseInt(h[1],10)));
-      const mm = h[2] ? Math.min(59, Math.max(0, parseInt(h[2],10))) : 0;
-      time = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-    }
-
-    // prymitywne "danie"
-    let dish = null;
-    const m = text.match(/([a-ząćęłńóśżź \-]{3,})/i);
-    if (m) dish = m[1].replace(/\b(i|a|na|do|w|z|o)\b.*$/,'').replace(/\s{2,}/g,' ').trim();
-
-    return { dish, time };
-  }
-
-  // ====================== ASR: Web Speech ======================
-  const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  function browserListenOnce(){
-    return new Promise((resolve, reject)=>{
-      if(!ASR) return reject(new Error('Brak Web Speech API (użyj Chrome/Edge albo Whisper).'));
-      const rec = new ASR();
-      rec.lang = 'pl-PL';
-      rec.interimResults = true;
-      rec.continuous = false;
-
-      rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
-      rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
-      rec.onend = ()=>{ setListening(false); };
-      rec.onresult = (ev)=>{
-        let finalText = '', interim = '';
-        for(let i=ev.resultIndex; i<ev.results.length; i++){
-          const t = ev.results[i][0].transcript;
-          if(ev.results[i].isFinal) finalText += t; else interim += t;
-        }
-        const raw = (finalText || interim).trim();
-        setText(normalize(raw || ''));
-        if(finalText) resolve(finalText);
-      };
-      try{ rec.start(); }catch(err){ reject(err); }
-    });
-  }
-
-  // ====================== GPT (przez proxy) ======================
-  async function gptConfirm(text, dish, time){
-    if(!C.gptProxy){
-      if (C.debug) console.warn('Brak meta gpt-proxy – fallback lokalny');
-      return null;
-    }
-    try{
-      const body = {
-        model: C.openaiModel,
-        messages: [
-          { role:'system', content: 'Jesteś asystentem zamówień FreeFlow. Mów po polsku, krótko (≤18 słów), grzecznie. Potwierdzaj intencję.' },
-          { role:'user', content:
-              `Transkrypcja: "${text}". ${dish?`Danie: ${dish}. `:''}${time?`Godzina: ${time}. `:''}Zwróć jedno krótkie potwierdzenie.` }
-        ],
-        temperature: 0.3, max_tokens: 80
-      };
-      const r = await fetch(C.gptProxy, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      if (!r.ok){
-        if (r.status === 500){
-          const j = await r.json().catch(()=> ({}));
-          if (j?.error === 'NO_OPENAI_KEY') setError('Brak klucza OpenAI na backendzie.');
-        }
-        return null;
-      }
-      const j = await r.json().catch(()=> ({}));
-      return j?.text || null;
-    }catch(e){
-      if (C.debug) console.debug('gptConfirm error', e);
-      return null;
-    }
-  }
-
-  // ====================== PLACES ======================
-  function gmapsURL(path, params){
-    const query = new URLSearchParams(params).toString();
-    if (C.gmapsProxy) return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${query}`;
-    return `https://maps.googleapis.com${path}?${query}`;
-  }
-
-  async function placesTextSearch(query, location /* "lat,lng" */, radius=5000){
-    const params = { query };
-    if (C.gmapsKey) params.key = C.gmapsKey;
-    if (location) params.location = location;
-    if (radius)   params.radius   = radius;
-
-    const url = gmapsURL('/maps/api/place/textsearch/json', params);
-    try{
-      const r = await fetch(url);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
-      if (j?.error_message) throw new Error(j.error_message);
-      return j?.results || [];
-    }catch(e){
-      setError(`Błąd Places: ${String(e.message||e)}`);
-      // syntetyczny fallback, żeby UI żyło
-      return [{ name: `Syntetyczna knajpa: ${query}`, place_id: 'demo_'+Date.now() }];
-    }
-  }
-
-  async function placeDetails(place_id){
-    const params = { place_id, fields:'name,formatted_address,opening_hours,website' };
-    if (C.gmapsKey) params.key = C.gmapsKey;
-    const url = gmapsURL('/maps/api/place/details/json', params);
-    try{
-      const r = await fetch(url);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
-      return j?.result || {};
-    }catch(e){
-      return { name:'Restauracja (demo)' };
-    }
-  }
-
-  // ====================== GEO ======================
-  async function getGeo(){
-    if(!('geolocation' in navigator)) { showBanner('Twoja przeglądarka nie obsługuje lokalizacji.'); return null; }
-
-    try{
-      const perm = await (navigator.permissions?.query?.({name:'geolocation'}) || Promise.resolve({state:'prompt'}));
-      if (perm.state === 'denied') {
-        showBanner('Brak zgody na lokalizację — wyszukuję globalnie (możesz włączyć w ustawieniach).');
-        return null;
-      }
-    }catch(_){ /* starsze Androidy */ }
-
-    hideBanner();
-    return new Promise(resolve=>{
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        _err => { showBanner('Nie udało się pobrać pozycji — szukam globalnie.'); resolve(null); },
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
-      );
-    });
-  }
-
-  // ====================== ERROR UX ======================
-  function setError(msg){
-    setText(`⚠️ ${msg}`);
-    speakOnce(msg);
-  }
-
-  // ====================== FLOW ======================
-  async function handleFinalText(rawText){
-    const text = normalize(rawText);
-    setText(text);
-
-    const { dish, time } = parseOrder(text);
-
-    // Potrzeba geolokalizacji?
-    const needsPlaces = /pizz|sushi|restaurac|kebab|pierog|knajp|najlepsze/i.test(text);
-    let geo = null;
-    let placesTop = null;
-
-    if (needsPlaces){
-      geo = await getGeo(); // poprosi tylko wtedy gdy trzeba
-      const around = geo ? `${geo.lat},${geo.lng}` : null;
-      const list = await placesTextSearch('pizzeria', around);
-      placesTop = list?.[0]?.name || null;
-    }
-
-    showBanner('Myślę i sprawdzam…');
-    let gpt = null;
-    try{
-      gpt = await Promise.race([
-        gptConfirm(text, dish, time),
-        new Promise(res => setTimeout(()=>res(null), 1200)) // miękki timeout
-      ]);
-    }catch(_){}
-    hideBanner();
-
-    let say = gpt;
-    if (!say){
-      say = 'Okej.';
-      if (dish) say += ` Zamawiam ${dish}.`;
-      if (time) say += ` Na ${time}.`;
-      if (!dish && !time) say = `Okej ${text}`;
-    }
-    if (placesTop && !/^ok(ej)?\b/i.test(say)) say += `. W pobliżu jest ${placesTop}.`;
-
-    setText(say);
-    speakOnce(say);
-  }
-
-  async function startListening(){
-    try{
-      const txt = await browserListenOnce();
-      await handleFinalText(txt);
-    }catch(e){
-      setError(e.message || 'Błąd rozpoznawania.');
-    }
-  }
-
-  // ====================== SELF-TEST (double tap logo) ======================
-  let lastTap = 0;
-  function maybeSelfTest(){
-    const now = Date.now();
-    if (now - lastTap < 400) {
-      const tests = [
-        `ASR: ${ASR ? 'OK' : 'BRAK'}`,
-        `GPT proxy: ${C.gptProxy ? C.gptProxy : 'BRAK'}`,
-        `Model: ${C.openaiModel}`,
-        `Places: ${C.gmapsProxy ? 'proxy' : (C.gmapsKey?'direct':'BRAK')}`,
-      ].join(' • ');
-      setText(`🧪 ${tests}`);
-      speakOnce('Sprawdzam ustawienia');
-    }
-    lastTap = now;
-  }
-
-  // ====================== INIT ======================
-  [logoBtn, micBtn].forEach(el=> el?.addEventListener('click', startListening, { passive:true }));
-  document.getElementById('logoWrap')?.addEventListener('click', maybeSelfTest, { passive:true });
-  setGhost('Powiedz, co chcesz zamówić…');
-
-  window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
-
-})();
+  <script src="script.js" defer></script>
+</body>
+</html>

@@ -1,349 +1,263 @@
-// FreeFlow – pełny script.js (PL) – UI + ASR + TTS + GEO + PLACES + GPT
+// ===== FreeFlow Assistant (frontend) =====
+// Działa z index.html, czyta meta-konfigurację i uderza do Twojego backendu na Vercelu
+
 (() => {
-  // =================== CONFIG ===================
-  function pick(metaName, winKey) {
-    const m = document.querySelector(`meta[name="${metaName}"]`);
-    if (m?.content) return m.content.trim();
-    if (winKey && window[winKey]) return String(window[winKey]).trim();
-    return null;
+  // ---- Konfiguracja z <meta> ----
+  const meta = (name, fallback = "") =>
+    document.querySelector(`meta[name="${name}"]`)?.content || fallback;
+
+  const ASR_PROVIDER = meta("asr-provider", "browser");
+  const GMAPS_PROXY  = meta("gmaps-proxy", "/api/places");
+  const GPT_PROXY    = meta("gpt-proxy",   "/api/gpt");
+
+  // ---- Elementy UI ----
+  const $ = (sel) => document.querySelector(sel);
+  const page       = $("#app");
+  const logoWrap   = $("#logoWrap");
+  const logoBtn    = $("#logoBtn");
+  const micBtn     = $("#micBtn");
+  const dot        = $("#dot");
+  const transcript = $("#transcript");
+  const banner     = $("#banner");
+  const tileFood   = $("#tileFood");
+  const tileTaxi   = $("#tileTaxi");
+  const tileHotel  = $("#tileHotel");
+
+  // aktywna kategoria (wpływa na dobór słów kluczowych)
+  let activeCategory = "food";
+  tileFood.addEventListener("click", () => setCategory("food"));
+  tileTaxi.addEventListener("click", () => setCategory("taxi"));
+  tileHotel.addEventListener("click", () => setCategory("hotel"));
+  function setCategory(cat) {
+    activeCategory = cat;
+    [tileFood, tileTaxi, tileHotel].forEach(el => el.classList.remove("active"));
+    ({food: tileFood, taxi: tileTaxi, hotel: tileHotel}[cat].classList.add("active"));
   }
 
-  const C = {
-    lang: 'pl-PL',
-    gmapsProxy: pick('gmaps-proxy', 'GMAPS_PROXY') || '/api/places',
-    gptProxy:   pick('gpt-proxy',   'GPT_PROXY')   || '/api/gpt',
-    ids: {
-      app: 'app',
-      transcript: 'transcript',
-      micBtn: 'micBtn',
-      logoBtn: 'logoBtn',
-      dot: 'dot',
-      tileFood: 'tileFood',
-      tileTaxi: 'tileTaxi',
-      tileHotel: 'tileHotel',
-    },
-    maxList: 5,
-    ttsEnabled: true,
-    searchRadius: 6000,     // 6 km domyślnie
-    healthPath: '/api/health'
-  };
+  // ---- Geolokalizacja ----
+  let coords = null; // { lat, lng }
+  askGeoOnce();
 
-  // =================== DOM ===================
-  const app        = document.getElementById(C.ids.app);
-  const transcript = document.getElementById(C.ids.transcript);
-  const micBtn     = document.getElementById(C.ids.micBtn);
-  const logoBtn    = document.getElementById(C.ids.logoBtn);
-  const dot        = document.getElementById(C.ids.dot);
-  const tiles = {
-    food:  document.getElementById(C.ids.tileFood),
-    taxi:  document.getElementById(C.ids.tileTaxi),
-    hotel: document.getElementById(C.ids.tileHotel),
-  };
-
-  // =================== HELPERS (UI) ===================
-  function setGhost(msg) {
-    if (!transcript) return;
-    transcript.classList.add('ghost');
-    transcript.textContent = msg;
-  }
-  function setText(msg) {
-    if (!transcript) return;
-    transcript.classList.remove('ghost');
-    transcript.textContent = msg;
-  }
-  function setListening(on) {
-    app && app.classList.toggle('listening', on);
-    if (dot) dot.style.background = on ? '#21d4fd' : '#86e2ff';
-    if (!on && transcript && !transcript.textContent.trim()) {
-      setGhost('Powiedz, co chcesz zamówić…');
-    }
-  }
-
-  // =================== TTS ===================
-  let speakingId = 0;
-  function speakOnce(txt, lang = C.lang) {
-    if (!C.ttsEnabled || !txt) return;
-    try { window.speechSynthesis.cancel(); } catch (_){}
+  async function askGeoOnce() {
+    if (!navigator.geolocation) return;
     try {
-      const id = ++speakingId;
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = lang;
-      u.onend = () => { if (id === speakingId) {/* no-op */} };
-      window.speechSynthesis.speak(u);
-    } catch (_){}
-  }
-
-  // =================== Kafelki ===================
-  function selectTile(key) {
-    Object.values(tiles).forEach(t => t && t.classList.remove('active'));
-    tiles[key] && tiles[key].classList.add('active');
-  }
-  tiles.food  && tiles.food.addEventListener('click', ()=>selectTile('food'));
-  tiles.taxi  && tiles.taxi.addEventListener('click', ()=>selectTile('taxi'));
-  tiles.hotel && tiles.hotel.addEventListener('click',()=>selectTile('hotel'));
-
-  // =================== Normalizacja mowy ===================
-  const corrections = [
-    [/kaplic+oza/gi, 'capricciosa'],
-    [/kapric+i?oza/gi, 'capricciosa'],
-  ];
-  function normalize(s) {
-    let out = (s || '')
-      .replace(/\b(\w{2,})\s+\1\b/gi, '$1') // usuń powtórzenia
-      .trim();
-    for (const [re, to] of corrections) out = out.replace(re, to);
-    return out;
-  }
-
-  // =================== Parser czasu ===================
-  function parseTime(textLower) {
-    const m = textLower.match(/\b(?:na|o)\s*(\d{1,2})(?::?(\d{2}))?\b/);
-    if (!m) return null;
-    const hh = String(m[1]).padStart(2,'0');
-    const mm = m[2] ? m[2] : '00';
-    return `${hh}:${mm}`;
-  }
-
-  // =================== Liczebniki (1..10) + „najlepsze” ===================
-  const numWords = {
-    'jeden':1,'jedną':1,'jedno':1,'jedna':1,'jednego':1,
-    'dwa':2,'dwie':2,'dwóch':2,
-    'trzy':3,'cztery':4,'pięć':5,'sześć':6,'siedem':7,'osiem':8,'dziewięć':9,'dziesięć':10
-  };
-  function wantedCount(text) {
-    const n = text.match(/\b(\d{1,2})\b/);
-    if (n) { const v = parseInt(n[1],10); if (v>=1 && v<=10) return v; }
-    const w = text.toLowerCase().match(/\b(jed(en|ną|no|na|nego)|dwie|dwa|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć)\b/);
-    return w ? (numWords[w[0]] || 1) : 1;
-  }
-  function wantsBest(text) {
-    return /\bnajlepsze?\b/i.test(text); // „najlepsze”, „najlepsza” itp.
-  }
-
-  // =================== KATEGORIE ===================
-  const categoryMap = [
-    { re: /(pizz|pizzer|restaurac|knajp|jedzeni|obiad|kolac)/i, query: 'restauracja' },
-    { re: /(taxi|taksówk|przejazd)/i,                          query: 'taxi' },
-    { re: /(hotel|nocleg)/i,                                   query: 'hotel' }
-  ];
-  function detectCategory(text) {
-    for (const c of categoryMap) if (c.re.test(text)) return c.query;
-    return null;
-  }
-
-  // =================== Fraza „na / w / przy …” ===================
-  function detectNearPhrase(text) {
-    const m = text.match(/\b(na|w|we|przy|koło|obok)\s+([a-ząćęłńóśżź\-]+[a-ząćęłńóśżź]+)\b/iu);
-    return m ? m[0] : '';
-  }
-
-  // =================== GEO (diag + czytelne błędy) ===================
-  async function getGeo() {
-    if (!('geolocation' in navigator)) {
-      setText('🔒 Brak geolokalizacji w tej przeglądarce (HTTPS wymagany).');
-      return null;
-    }
-    return new Promise((resolve) => {
-      const started = Date.now();
-      const opts = { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 };
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const secs = ((Date.now() - started) / 1000).toFixed(1);
-          const lat = Number(pos.coords.latitude.toFixed(5));
-          const lng = Number(pos.coords.longitude.toFixed(5));
-          setGhost(`📍 Lokalizacja OK (${lat}, ${lng}) • ${secs}s`);
-          resolve({ lat, lng });
-        },
-        (err) => {
-          let why = 'Nieznany błąd geolokalizacji.';
-          switch (err.code) {
-            case err.PERMISSION_DENIED:
-              why = 'Odmowa dostępu do lokalizacji. Włącz: kłódka → Uprawnienia → Lokalizacja: Zezwól.';
-              break;
-            case err.POSITION_UNAVAILABLE:
-              why = 'Pozycja niedostępna. Włącz “Dokładna lokalizacja” i GPS.';
-              break;
-            case err.TIMEOUT:
-              why = 'Przekroczono czas oczekiwania. Spróbuj ponownie.';
-              break;
-          }
-          setText(`⚠️ ${why}`);
-          resolve(null);
-        },
-        opts
-      );
-    });
-  }
-
-  // =================== BACKEND: Google Places (proxy) ===================
-  // /api/places obsługuje tryb: ?path=/maps/api/place/textsearch/json&query=...&location=lat,lng&radius=...
-  function gmapsURL(path, params) {
-    const q = new URLSearchParams(params).toString();
-    return `${C.gmapsProxy}?path=${encodeURIComponent(path)}&${q}`;
-  }
-
-  async function placesTextSearch(query, around, radius=C.searchRadius) {
-    const params = { query };
-    if (around) { params.location = around; params.radius = radius; }
-    try {
-      const url = gmapsURL('/maps/api/place/textsearch/json', params);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const json = await res.json();
-      return json.results?.slice(0, C.maxList) || [];
-    } catch (e) {
-      // łagodny fallback – offline
-      return [{ name:`Miejsce (offline): ${query}`, formatted_address:'—', rating:4.4 }];
+      coords = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          }),
+          (err) => resolve(null), // brak zgody = brak blokady
+          { enableHighAccuracy: true, maximumAge: 30_000, timeout: 12_000 }
+        );
+      });
+      if (!coords) {
+        showInfo("Brak dostępu do lokalizacji — szukam ogólnie (możesz włączyć dostęp).", "warn");
+      } else {
+        hideBanner();
+      }
+    } catch {
+      // ignoruj
     }
   }
 
-  function summarizePlaces(list, howMany=1, preferBest=false) {
-    if (!Array.isArray(list) || list.length===0) return null;
-    const sorted = [...list].sort((a,b) => (b.rating||0) - (a.rating||0));
-    const pick = sorted.slice(0, Math.max(1, Math.min(howMany, C.maxList)))
-      .map(r => ({
-        name: r.name,
-        rating: typeof r.rating === 'number' ? r.rating : null,
-        vicinity: r.formatted_address || r.vicinity || '',
-      }));
-    const lines = pick.map((r,i)=> {
-      const rt = (r.rating!=null) ? ` (${r.rating.toFixed(1)}★)` : '';
-      return `${i+1}. ${r.name}${rt}${r.vicinity ? `, ${r.vicinity}` : ''}`;
-    });
-    return {
-      text: lines.join(' • '),
-      topName: (preferBest ? pick[0]?.name : (list[0]?.name || pick[0]?.name)) || ''
+  // ---- Rozpoznawanie mowy (browser) ----
+  let listening = false;
+  let recognizer = null;
+
+  function initASR() {
+    if (ASR_PROVIDER !== "browser") return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      showInfo("Ten browser nie obsługuje rozpoznawania mowy. Użyj Chrome/Edge na Android/desktop.", "warn");
+      return;
+    }
+    recognizer = new SR();
+    recognizer.lang = "pl-PL";
+    recognizer.interimResults = true;
+    recognizer.continuous = false;
+
+    let finalText = "";
+
+    recognizer.onstart = () => {
+      listening = true;
+      page.classList.add("listening");
+      transcript.classList.remove("ghost");
+      setTranscript("Słucham…");
+    };
+
+    recognizer.onresult = (e) => {
+      let interim = "";
+      for (const res of e.results) {
+        if (res.isFinal) finalText += res[0].transcript;
+        else interim += res[0].transcript;
+      }
+      setTranscript((finalText || interim || "…").trim());
+    };
+
+    recognizer.onerror = () => stopASR();
+    recognizer.onend    = () => {
+      // zakończone; jeśli jest tekst — wyślij; jeśli nie, po prostu zatrzymaj stan
+      page.classList.remove("listening");
+      listening = false;
+      if (transcript.textContent && transcript.textContent !== "Powiedz, co chcesz zamówić…") {
+        handleUserUtterance(transcript.textContent.trim());
+      } else {
+        setTranscriptPlaceholder();
+      }
     };
   }
 
-  // =================== BACKEND: GPT ===================
-  async function askGPT(prompt) {
-    try {
-      const r = await fetch(C.gptProxy, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      if (!r.ok) {
-        const txt = await r.text().catch(()=> '');
-        throw new Error(`GPT ${r.status}: ${txt}`);
-      }
-      const data = await r.json();
-      return (data?.reply || '').trim();
-    } catch (e) {
-      return ''; // nie blokuj głównego flow
-    }
+  function startASR() {
+    if (!recognizer) return;
+    try { recognizer.start(); } catch {}
   }
 
-  // =================== ASR (Web Speech API) ===================
-  const ASR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  function listenOnce(){
-    return new Promise((resolve, reject)=>{
-      if(!ASR) return reject(new Error('Brak Web Speech API (użyj Chrome/Edge).'));
-      const rec = new ASR();
-      rec.lang = C.lang;
-      rec.interimResults = true;
-      rec.continuous = false;
-
-      let lastInterim = '';
-
-      rec.onstart = ()=>{ setListening(true); setText('Słucham…'); };
-      rec.onerror = (e)=>{ setListening(false); reject(new Error('ASR błąd: '+(e.error||''))); };
-      rec.onend   = ()=>{
-        setListening(false);
-        if (lastInterim) resolve(lastInterim);
-      };
-      rec.onresult = (ev)=>{
-        let finalText = '', interim = '';
-        for(let i=ev.resultIndex; i<ev.results.length; i++){
-          const t = ev.results[i][0].transcript;
-          if(ev.results[i].isFinal) finalText += t; else interim += t;
-        }
-        const raw = (finalText || interim).trim();
-        if (interim) lastInterim = interim.trim();
-        setText(normalize(raw || ''));
-        if (finalText) resolve(finalText);
-      };
-      try { rec.start(); } catch(err) { reject(err); }
-    });
+  function stopASR() {
+    if (!recognizer) return;
+    try { recognizer.stop(); } catch {}
   }
 
-  // =================== FLOW ===================
-  async function handleQuery(raw) {
-    const text = normalize(raw);
-    setText(text);
+  // UI bind
+  initASR();
+  micBtn.addEventListener("click", () => listening ? stopASR() : startASR());
+  logoBtn.addEventListener("click", () => listening ? stopASR() : startASR());
 
-    const lower = text.toLowerCase();
-    const time  = parseTime(lower);
-    const count = wantedCount(lower);
-    const best  = wantsBest(lower);
-    const cat   = detectCategory(lower); // 'restauracja' | 'taxi' | 'hotel' | null
-    const near  = detectNearPhrase(lower);
+  // ---- Główna obsługa wypowiedzi użytkownika ----
+  async function handleUserUtterance(text) {
+    // 1) GPT — krótka odpowiedź
+    askGPT(text).catch(() => {});
 
-    let geo = null, placesSummary = null;
-
-    if (cat) {
-      geo = await getGeo(); // poprosi usera tylko gdy ma sens
-      const around = geo ? `${geo.lat},${geo.lng}` : null;
-
-      let q = cat;
-      if (cat === 'restauracja' && /pizz/i.test(lower)) q = 'pizzeria';
-      if (near) q = `${q} ${near}`;
-
-      const list = await placesTextSearch(q, around);
-      const howMany = Math.max(1, Math.min(count, C.maxList));
-      placesSummary = summarizePlaces(list, howMany, best);
-    }
-
-    // Składanie odpowiedzi (lokalnie)
-    let say = 'Okej.';
-    if (time) say += ` Przyjmuję na ${time}.`;
-    if (!cat && !time) say = 'Okej, słucham.';
-
-    // Krótki prompt do GPT – dopasowanie odpowiedzi do listy
-    if (placesSummary) {
-      const gptMsg =
-        `Użytkownik powiedział: "${text}". Mamy listę: ${placesSummary.text}. ` +
-        `Odpowiedz krótko po polsku (max 18 słów), naturalnie. ` +
-        `Jeśli proszono o kilka najlepszych, powiedz że wyświetlam listę, a wymień top 1.`;
-      const gptReply = await askGPT(gptMsg);
-
-      if (count > 1 || best) {
-        setText(placesSummary.text);
-        speakOnce(gptReply || `Mam ${count} propozycje. Najwyżej oceniana to ${placesSummary.topName}.`);
-        return;
+    // 2) Places — jeśli wykryjemy intencję wyszukiwania miejsca
+    const keyword = extractKeyword(text);
+    if (keyword) {
+      const places = await searchPlaces(keyword);
+      if (places && places.length) {
+        const top2 = places.slice(0, 2);
+        showPlaces(top2);
       } else {
-        say = gptReply || (say + ` Najbliżej: ${placesSummary.topName}.`);
+        showInfo("Niestety nie znalazłem miejsc dla tego zapytania.", "warn");
       }
     }
-
-    setText(say);
-    speakOnce(say);
   }
 
-  async function start() {
+  // ---- Słowa kluczowe ↔ intencje ----
+  const WORDS = {
+    food: ["pizzeria","pizza","kebab","sushi","burger","restauracja","tajska","włoska","chińska","indyjska","bar","bistro"],
+    taxi: ["taxi","taksówka","uber","bolt"],
+    hotel:["hotel","nocleg","hostel","apartament","spa"]
+  };
+  function extractKeyword(text) {
+    const t = text.toLowerCase();
+    const base = new Set([...(WORDS.food), ...(WORDS.taxi), ...(WORDS.hotel)]);
+    // preferencja wg aktywnej kategorii
+    const prefer = WORDS[activeCategory];
+    const all = [...prefer, ...base];
+    for (const w of all) {
+      if (t.includes(w)) return w;
+    }
+    // fallback: szukaj po "dwie najlepsze X", "najbliższe X"
+    const m = t.match(/najlepsze|najbliższe|w okolicy|blisko/i);
+    if (m) {
+      const noun = t.split(/\bnajlepsze\b|\bnajbliższe\b|\bw okolicy\b|\bblisko\b/i).pop().trim().split(/\s+/)[0];
+      if (noun && noun.length > 2) return noun;
+    }
+    return null;
+  }
+
+  // ---- GPT ----
+  async function askGPT(userText) {
     try {
-      const finalText = await listenOnce();
-      await handleQuery(finalText);
+      const res = await fetch(GPT_PROXY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userText })
+      });
+      const data = await res.json();
+      if (data?.reply) {
+        showInfo(`🧠 ${data.reply}`, "info");
+      }
     } catch (e) {
-      setText(e.message || 'Błąd rozpoznawania.');
+      showInfo("Błąd połączenia z GPT.", "error");
     }
   }
 
-  // =================== BIND UI ===================
-  if (logoBtn) logoBtn.addEventListener('click', start, { passive:true });
-  if (micBtn)  micBtn .addEventListener('click', start, { passive:true });
-
-  // Pierwszy tekst + szybki healthcheck backendu (niewymagane)
-  setGhost('Powiedz, co chcesz zamówić…');
-  (async () => {
+  // ---- Places ----
+  async function searchPlaces(keyword) {
     try {
-      const r = await fetch(C.healthPath).catch(()=>null);
-      if (r?.ok) { /* opcjonalnie: setGhost('System gotowy.'); */ }
-    } catch (_){}
-  })();
+      // preferujemy textsearch z location, jeśli mamy GPS
+      const params = new URLSearchParams({
+        path: "/maps/api/place/textsearch/json",
+        query: keyword,
+        language: "pl"
+      });
 
-  // Sprzątanie TTS przy nawigacji
-  window.addEventListener('beforeunload', ()=>{ try{window.speechSynthesis.cancel()}catch(_){}});
+      if (coords) {
+        params.set("location", `${coords.lat},${coords.lng}`);
+        params.set("radius", "5000");
+      }
 
+      const url = `${GMAPS_PROXY}?${params.toString()}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const list = (data?.results || []).map(r => ({
+        name: r.name,
+        rating: r.rating ?? 0,
+        votes: r.user_ratings_total ?? 0,
+        address: r.formatted_address ?? r.vicinity ?? "-"
+      }));
+
+      // sortowanie: najpierw ocena, potem liczba opinii
+      list.sort((a,b) => (b.rating - a.rating) || (b.votes - a.votes));
+      return list;
+    } catch (e) {
+      showInfo("Błąd połączenia z Google Places.", "error");
+      return null;
+    }
+  }
+
+  // ---- UI helpers ----
+  function setTranscript(t) {
+    transcript.textContent = t || "";
+  }
+  function setTranscriptPlaceholder() {
+    transcript.classList.add("ghost");
+    transcript.textContent = "Powiedz, co chcesz zamówić…";
+  }
+  setTranscriptPlaceholder();
+
+  function showPlaces(items) {
+    if (!items?.length) return hideBanner();
+    const html = items.map((p,i) =>
+      `<div><b>${i+1}. ${escapeHTML(p.name)}</b> — ${p.address}<br/>⭐ ${p.rating} • ${p.votes} opinii</div>`
+    ).join("<hr style='border:0;border-top:1px solid rgba(255,255,255,.12);margin:6px 0'/>");
+
+    banner.classList.remove("hidden");
+    banner.style.background = "rgba(33,212,253,.12)";
+    banner.style.color = "#bfefff";
+    banner.innerHTML = html;
+  }
+
+  function showInfo(msg, type="info") {
+    banner.classList.remove("hidden");
+    banner.innerHTML = escapeHTML(msg);
+    if (type === "warn") {
+      banner.style.background = "rgba(255,203,72,.15)";
+      banner.style.color = "#ffe6a3";
+    } else if (type === "error") {
+      banner.style.background = "rgba(255,72,72,.18)";
+      banner.style.color = "#ffd2d2";
+    } else {
+      banner.style.background = "rgba(33,212,253,.12)";
+      banner.style.color = "#cfefff";
+    }
+  }
+  function hideBanner() {
+    banner.classList.add("hidden");
+    banner.textContent = "";
+  }
+  function escapeHTML(s="") {
+    return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
 })();

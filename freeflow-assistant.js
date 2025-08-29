@@ -1,264 +1,240 @@
 // freeflow-assistant.js
-// ----------------------------------------------------------
-// Mowa → szukanie → krótka odpowiedź + TTS
-// ----------------------------------------------------------
+// Lekki formatter + TTS + baner na odpowiedzi (PL)
 
-const $  = (s) => document.querySelector(s);
-const app        = $('#app');
-const transcript = $('#transcript');
-const micBtn     = $('#micBtn');
-const logoBtn    = $('#logoBtn');
-const dot        = $('#dot');
-const banner     = $('#banner');
-const tileFood   = $('#tileFood');
-const tileTaxi   = $('#tileTaxi');
-const tileHotel  = $('#tileHotel');
+(() => {
+  // ----------- Config -----------
+  const MAX_WORDS = 25;
+  const LANG = "pl-PL";
+  const BANNER_ID = "ff-response-banner";
 
-const GMAPS_PROXY = (document.querySelector('meta[name="gmaps-proxy"]')?.content || '/api/places').trim();
-const GPT_PROXY   = (document.querySelector('meta[name="gpt-proxy"]')?.content   || '/api/gpt').trim();
-const TTS_PROXY   = '/api/tts';
+  // ----------- Utils -----------
+  const normalizeWhitespace = (s) =>
+    (s || "")
+      .replace(/\s+/g, " ")
+      .replace(/[“”„]+/g, '"')
+      .trim();
 
-// ---------- UI helpers ----------
-function showBanner(msg, type = 'info') {
-  banner.textContent = msg;
-  banner.classList.remove('hidden');
-  banner.style.background = type === 'err'
-    ? 'rgba(255,72,72,.15)'
-    : type === 'warn'
-    ? 'rgba(255,203,72,.15)'
-    : 'rgba(72,179,255,.12)';
-  banner.style.color = type === 'err' ? '#ffd1d1' : type === 'warn' ? '#ffe6a3' : '#dff1ff';
-}
-function hideBanner() { banner.classList.add('hidden'); banner.textContent=''; }
+  const stripSystemish = (s) => {
+    if (!s) return "";
+    // usuń linie meta i prefiksy roli
+    const lines = s
+      .split(/\n+/)
+      .map((l) =>
+        l
+          .replace(/^\s*(user|assistant|system|role|prompt|instruction)[:\-]\s*/i, "")
+          .replace(/^\s*(Użytkownik|User)\s+poprosił.*$/i, "")
+          .replace(/^\s*Odpowiedź(?:\s*krótko.*)?[:\-]?\s*/i, "")
+      )
+      .filter((l) => l.trim().length > 0);
 
-function setGhostText(msg){ transcript.classList.add('ghost'); transcript.textContent = msg; }
-function setFinalText(msg){ transcript.classList.remove('ghost'); transcript.textContent = msg; }
-function setListening(on){
-  document.body.classList.toggle('listening', !!on);
-  dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000';
-}
+    let t = lines.join(" ");
 
-// ---------- Geo ----------
-async function getPositionOrNull(timeoutMs = 6000) {
-  if (!('geolocation' in navigator)) {
-    showBanner('Twoja przeglądarka nie obsługuje lokalizacji.', 'warn');
-    return null;
-  }
-  const p = () => new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (pos)=>resolve(pos.coords),
-      (err)=>reject(err),
-      { enableHighAccuracy:true, timeout:timeoutMs, maximumAge:25000 }
-    );
-  });
-  try { const c = await p(); hideBanner(); return c; }
-  catch(e){
-    const map={1:'Brak zgody na lokalizację.',2:'Lokalizacja niedostępna.',3:'Przekroczono czas oczekiwania.'};
-    showBanner(`${map[e.code] ?? 'Błąd lokalizacji.'} — szukam po tekście.`, 'warn');
-    return null;
-  }
-}
+    // usuń cytaty użytkownika / echa promptu
+    t = t.replace(/"(?:[^"]{3,})"\s*—?\s*(?:powiedział|napisał|użytkownik).*?$/i, "");
+    t = t.replace(/(?:użytkownik|klient)\s+(mówi|napisał|poprosił).*?:?\s*".*?"/gi, "");
 
-// ---------- NLP (bardzo proste) ----------
-function extractQuery(text) {
-  const t=(text||'').trim();
-  const re=/(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(.*?)(?:\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
-  const m=t.match(re);
-  if(!m) return null;
-  const base=(m[1]||'').toLowerCase();
-  const city=m[3]?` w ${m[3]}`:'';
-  const normalized=
-    /restaurac/.test(base)?'restauracje':
-    /pizz/.test(base)?'pizzeria':
-    /(hotel|nocleg)/.test(base)?'hotel':
-    /taxi/.test(base)?'taxi':base;
-  return (normalized+city).trim();
-}
-
-// ---------- API helpers ----------
-async function callPlaces(params){
-  const sp=new URLSearchParams();
-  if(params.query) sp.set('query', params.query);
-  if(params.lat)   sp.set('lat', params.lat);
-  if(params.lng)   sp.set('lng', params.lng);
-  if(params.radius)sp.set('radius', params.radius);
-  if(params.rankby)sp.set('rankby', params.rankby);
-  if(params.keyword)sp.set('keyword', params.keyword);
-  if(params.n)     sp.set('n', params.n);
-  sp.set('language', params.language || 'pl');
-  const res=await fetch(`${GMAPS_PROXY}?${sp.toString()}`,{method:'GET'});
-  if(!res.ok) throw new Error(`Places HTTP ${res.status}`);
-  return res.json();
-}
-
-async function callGPTSummary(userText, results){
-  // Jeżeli backend GPT jest w trybie „echo”, nie używamy odpowiedzi do UI, tylko TTS i tak ją przykryje.
-  try{
-    const prompt =
-      `Odpowiedz jednym krótkim zdaniem po polsku (max 25 słów), bez cytowania użytkownika i bez wstępów. `+
-      `Użyj danych: ${results.map(r=>`${r.name} (${r.rating}★)`).join('; ')}. `+
-      `Zakończ: "Skorzystaj z aplikacji FreeFlow, aby zamówić szybko i wygodnie!"`;
-    const res=await fetch(GPT_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-    if(!res.ok) throw new Error('GPT HTTP '+res.status);
-    const j=await res.json();
-    const raw=(j.reply||'').trim();
-    return raw.replace(/^echo:\s*/i,'').replace(/^użytkownik.*?:/i,'').trim();
-  }catch{ return ''; }
-}
-
-async function speakTTS(text, voice='alloy'){
-  if(!text) return;
-  try{
-    const res=await fetch(TTS_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice})});
-    if(!res.ok) throw new Error('TTS HTTP '+res.status);
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    const audio=new Audio(url);
-    audio.play();
-  }catch(e){
-    // Fallback: Web Speech API (może kaleczyć przecinki)
-    try{
-      const u=new SpeechSynthesisUtterance(text);
-      u.lang='pl-PL';
-      speechSynthesis.speak(u);
-    }catch{}
-  }
-}
-
-// ---------- Główna ścieżka ----------
-async function handleUserQuery(userText){
-  try{
-    setFinalText(userText);
-
-    const coords = await getPositionOrNull(6000);
-
-    const q = extractQuery(userText);
-    const params = { language:'pl', n:2 };
-
-    if (coords){
-      params.lat = coords.latitude.toFixed(6);
-      params.lng = coords.longitude.toFixed(6);
-      params.radius = 5000;
-      if(q) params.keyword = q;
-    } else if(q){
-      params.query = q;
-    } else {
-      showBanner('Powiedz np. „dwie najlepsze restauracje w Katowicach”.', 'warn');
-      return;
-    }
-
-    // Krótki komunikat statusu
-    showBanner('Szukam miejsc…');
-
-    const data = await callPlaces(params);
-
-    const list = (data?.results || data || [])
-      .filter(x => x && (x.rating ?? null) !== null)
-      .map(x => ({
-        name: x.name,
-        rating: Number(x.rating || 0),
-        votes: Number(x.user_ratings_total || 0),
-        address: (x.formatted_address || x.vicinity || '—')
-      }))
-      .sort((a,b)=>(b.rating-a.rating)||(b.votes-a.votes));
-
-    const results = list.slice(0,2);
-    if(!results.length){
-      showBanner('Nic nie znalazłem. Spróbuj inną frazę.', 'warn');
-      return;
-    }
-
-    // Krótki baner z wynikiem (bez „Użytkownik prosił…”)
-    if(results.length===1){
-      const a=results[0];
-      showBanner(`Najlepsze w pobliżu: ${a.name} (${a.rating}★).`);
-    }else{
-      const [a,b]=results;
-      showBanner(`Top 2: ${a.name} (${a.rating}★), ${b.name} (${b.rating}★).`);
-    }
-
-    // Zbuduj zwięzły tekst do TTS (nie pokazujemy go w ramce)
-    let summary = await callGPTSummary(userText, results);
-    if(!summary){
-      // Fallback bez GPT
-      summary = results.length===1
-        ? `Polecam ${results[0].name}, ocena ${results[0].rating.toString().replace('.',',')} gwiazdki. Skorzystaj z aplikacji FreeFlow, aby zamówić szybko i wygodnie!`
-        : `Polecam ${results[0].name} i ${results[1].name}, odpowiednio ${results[0].rating.toString().replace('.',',')} i ${results[1].rating.toString().replace('.',',')} gwiazdki. Skorzystaj z aplikacji FreeFlow, aby zamówić szybko i wygodnie!`;
-    }
-
-    // Mówimy
-    speakTTS(summary, 'aria'); // „aria” zwykle ładniej czyta PL
-
-  }catch(e){
-    console.error(e);
-    showBanner('Ups, coś poszło nie tak. Spróbuj ponownie.', 'err');
-  }
-}
-
-// ---------- ASR ----------
-let recognition=null, listening=false;
-
-function initASR(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) return null;
-  const rec=new SR();
-  rec.lang='pl-PL'; rec.interimResults=true; rec.maxAlternatives=1;
-
-  rec.onstart=()=>{ listening=true; setListening(true); setGhostText('Słucham…'); };
-  rec.onerror=(e)=>{ console.warn('ASR error',e); showBanner('Błąd rozpoznawania mowy.', 'warn'); };
-  rec.onresult=(ev)=>{
-    let interim='', final='';
-    for(let i=ev.resultIndex;i<ev.results.length;i++){
-      const chunk=ev.results[i][0].transcript;
-      if(ev.results[i].isFinal) final+=chunk; else interim+=chunk;
-    }
-    if(final){
-      setFinalText(final.trim());
-      try{ rec.stop(); }catch{}
-      listening=false; setListening(false);
-      handleUserQuery(final.trim());
-    }else if(interim){ setGhostText(interim.trim()); }
+    return normalizeWhitespace(t);
   };
-  rec.onend=()=>{
-    listening=false; setListening(false);
-    if(!transcript.textContent || transcript.classList.contains('ghost')){
-      setGhostText('Powiedz, co chcesz zamówić…');
+
+  // Zamień 4.9★ → 4,9 gwiazdki; 5.0★ → 5,0 gwiazdek itp.
+  function polishStars(s) {
+    if (!s) return s;
+    let t = String(s);
+    // kropka dziesiętna → przecinek
+    t = t.replace(/(\d+)\.(\d+)/g, "$1,$2");
+    // symbol gwiazdek na słowo
+    t = t.replace(/★/g, " gwiazdki");
+    // „5,0 gwiazdki” → „5,0 gwiazdek”
+    t = t.replace(/\b([2-4]),\d\s+gwiazdki\b/g, "$1,$2 gwiazdki"); // 2–4: gwiazdki (OK)
+    t = t.replace(/\b(0|1|[5-9]),\d\s+gwiazdki\b/g, "$1,$2 gwiazdek"); // 0/1/5-9: gwiazdek
+    t = t.replace(/\b([2-4])\s+gwiazdki\b/g, "$1 gwiazdki");
+    t = t.replace(/\b(0|1|[5-9])\s+gwiazdki\b/g, "$1 gwiazdek");
+    return t;
+  }
+
+  const toPolishShort = (s) => {
+    let t = normalizeWhitespace(s);
+
+    // usuń ang. wstępy
+    t = t.replace(/^Here(?:'|’)s.*?:\s*/i, "");
+    t = t.replace(/^Sure[,!\s]*/i, "");
+    t = t.replace(/^Okay[,!\s]*/i, "");
+    t = t.replace(/^Note[:\-]\s*/i, "");
+    t = t.replace(/^\**(Answer|Response)\**[:\-]?\s*/i, "");
+
+    // usuń dyrektywy typu „w 25 słowach…”
+    t = t.replace(/\b(w\s*\d+\s*słowach|krótko|skróć odpowiedź)\b.*$/i, "");
+
+    // popraw gwiazdki/liczby
+    t = polishStars(t);
+
+    // przytnij do MAX_WORDS
+    const words = t.split(/\s+/).filter(Boolean);
+    if (words.length > MAX_WORDS) {
+      t = words.slice(0, MAX_WORDS).join(" ") + "…";
     }
+
+    // usuń „Cytując …”
+    t = t.replace(/^Cytując.*?:\s*/i, "");
+
+    return t.trim();
   };
-  return rec;
-}
 
-function toggleMic(){
-  if(!recognition){
-    const typed=prompt('Rozpoznawanie mowy niedostępne. Wpisz, co chcesz zamówić:');
-    if(typed?.trim()){ setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
-    return;
+  // ----------- Banner -----------
+  const ensureBanner = () => {
+    let el = document.getElementById(BANNER_ID);
+    if (el) return el;
+
+    el = document.createElement("div");
+    el.id = BANNER_ID;
+    el.setAttribute("role", "status");
+    el.style.position = "fixed";
+    el.style.left = "50%";
+    el.style.transform = "translateX(-50%)";
+    el.style.bottom = "24px";
+    el.style.maxWidth = "min(92vw, 920px)";
+    el.style.zIndex = "99999";
+    el.style.padding = "12px 16px";
+    el.style.borderRadius = "12px";
+    el.style.boxShadow = "0 6px 20px rgba(0,0,0,.18)";
+    el.style.backdropFilter = "blur(8px)";
+    el.style.background = "rgba(18, 18, 18, .85)";
+    el.style.color = "white";
+    el.style.fontFamily =
+      "system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'";
+    el.style.fontSize = "15px";
+    el.style.lineHeight = "1.35";
+    el.style.letterSpacing = "0.2px";
+    el.style.userSelect = "text";
+    el.style.cursor = "default";
+    el.style.border = "1px solid rgba(255,255,255,.06)";
+    el.style.display = "none";
+
+    const txt = document.createElement("div");
+    txt.id = `${BANNER_ID}-text`;
+    txt.style.whiteSpace = "pre-wrap";
+    el.appendChild(txt);
+
+    document.body.appendChild(el);
+    return el;
+  };
+
+  const showBanner = (message = "") => {
+    const el = ensureBanner();
+    const txt = el.querySelector(`#${BANNER_ID}-text`);
+    if (txt) txt.textContent = message || "";
+    el.style.display = message ? "block" : "none";
+
+    clearTimeout(showBanner._hideT);
+    showBanner._hideT = setTimeout(() => {
+      if (!el.matches(":hover")) el.style.display = "none";
+    }, 8000);
+  };
+
+  // ----------- TTS -----------
+  async function speakWithWebSpeech(text) {
+    return new Promise((resolve) => {
+      try {
+        if (!("speechSynthesis" in window)) return resolve(false);
+
+        window.speechSynthesis.cancel();
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = LANG;
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+        utter.volume = 1.0;
+
+        const pickVoice = () => {
+          const voices = window.speechSynthesis.getVoices() || [];
+          const plPriority = voices.find((v) => /pl[-_]PL/i.test(v.lang || ""));
+          const anyPL = voices.find((v) => /pl/i.test(v.lang || ""));
+          const fallback =
+            voices.find((v) => /google.*polish/i.test((v.name || "").toLowerCase())) ||
+            voices[0];
+
+          utter.voice = plPriority || anyPL || fallback || null;
+          window.speechSynthesis.speak(utter);
+        };
+
+        utter.onend = () => resolve(true);
+        utter.onerror = () => resolve(false);
+
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) {
+          window.speechSynthesis.onvoiceschanged = () => {
+            pickVoice();
+            window.speechSynthesis.onvoiceschanged = null;
+          };
+          setTimeout(() => {
+            window.speechSynthesis.getVoices();
+          }, 0);
+        } else {
+          pickVoice();
+        }
+      } catch {
+        resolve(false);
+      }
+    });
   }
-  if(listening){ try{recognition.stop();}catch{} }
-  else{
-    try{ recognition.start(); }
-    catch(e){
-      const typed=prompt('Nie udało się włączyć mikrofonu. Wpisz, co chcesz zamówić:');
-      if(typed?.trim()){ setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
-    }
+
+  const speak = async (text) => {
+    // (NotebookLM nie ma publicznego TTS API – pomijamy)
+    const okWeb = await speakWithWebSpeech(text);
+    return okWeb;
+  };
+
+  // ----------- Public API -----------
+  const formatAssistantReply = (raw) => {
+    const cleaned = stripSystemish(raw);
+    const shortPL = toPolishShort(cleaned);
+    return shortPL;
+  };
+
+  // Główne wejście – podaj tu surową odpowiedź (np. GPT albo z Places)
+  const handleAssistantOutput = async (raw) => {
+    const msg = formatAssistantReply(raw);
+    showBanner(msg);
+    await speak(msg);
+    return msg;
+  };
+
+  // Z Places: obiekt → zdanie (krótko)
+  const handlePlacesResult = async (result) => {
+    const parts = [];
+    if (result?.name) parts.push(result.name);
+    if (result?.address) parts.push(result.address);
+    if (result?.distanceText) parts.push("~" + result.distanceText);
+    if (result?.openNow === true) parts.push("teraz otwarte");
+    if (result?.openNow === false) parts.push("teraz zamknięte");
+
+    let raw = parts.filter(Boolean).join(", ");
+    if (!raw) raw = String(result ?? "");
+    return handleAssistantOutput(raw);
+  };
+
+  // Sprzątanie ewentualnych „echo promptów” (opcjonalne)
+  const removePromptEchoes = () => {
+    const selectors = [
+      "[data-role='prompt-echo']",
+      ".prompt-echo",
+      "pre[data-kind='prompt']",
+      "div:has(> .prompt-echo)",
+    ].join(",");
+    document.querySelectorAll(selectors).forEach((el) => el.remove());
+  };
+  document.addEventListener("DOMContentLoaded", removePromptEchoes);
+
+  // ----------- Export -----------
+  const api = {
+    handleAssistantOutput,
+    handlePlacesResult,
+    formatAssistantReply,
+    showBanner,
+    speak,
+  };
+  window.FreeFlowAssistant = api;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = api;
   }
-}
-
-// ---------- UI ----------
-function bindUI(){
-  micBtn?.addEventListener('click', toggleMic);
-  logoBtn?.addEventListener('click', toggleMic);
-  const activate=(btn)=>[tileFood,tileTaxi,tileHotel].forEach(b=>b?.classList.toggle('active', b===btn));
-  tileFood?.addEventListener('click',()=>activate(tileFood));
-  tileTaxi?.addEventListener('click',()=>activate(tileTaxi));
-  tileHotel?.addEventListener('click',()=>activate(tileHotel));
-  setGhostText('Powiedz, co chcesz zamówić…');
-}
-
-// ---------- start ----------
-(function(){
-  recognition=initASR();
-  bindUI();
-  // miękkie „rozgrzanie” geo
-  getPositionOrNull(3000).then(()=>{ /*no-op*/ });
 })();

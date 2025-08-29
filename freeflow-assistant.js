@@ -1,6 +1,6 @@
 // freeflow-assistant.js
 // ----------------------------------------------------------
-// Minimalny asystent dla index.html (mowa → wyszukiwanie → feedback)
+// Asystent FreeFlow: mowa → wyszukiwanie (Google Places) → feedback (baner + TTS + GPT)
 // ----------------------------------------------------------
 
 // === skróty do DOM ===
@@ -53,6 +53,15 @@ function setListening(on) {
   dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000';
 }
 
+// === TTS (Text-to-Speech) ===
+function speak(text, lang = 'pl-PL') {
+  if (!('speechSynthesis' in window)) return;
+  try { window.speechSynthesis.cancel(); } catch {}
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  window.speechSynthesis.speak(u);
+}
+
 // === GEO: stabilna lokalizacja z timeoutem i komunikatami ===
 async function getPositionOrNull(timeoutMs = 6000) {
   if (!('geolocation' in navigator)) {
@@ -85,7 +94,6 @@ async function getPositionOrNull(timeoutMs = 6000) {
 // === Ekstrakcja intencji: „pizzeria|restauracje … (w Mieście)” ===
 function extractQuery(text) {
   const t = (text || '').trim();
-  // np.: „dwie najlepsze restauracje w Katowicach”, „pizzeria w Gdańsku”, „hotel”
   const re = /(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(.*?)(?:\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
   const m = t.match(re);
   if (!m) return null;
@@ -105,14 +113,11 @@ function extractQuery(text) {
 // === Wywołanie backendu Places ===
 async function callPlaces(params) {
   const sp = new URLSearchParams();
-  // Tekst:
   if (params.query)  sp.set('query', params.query);
-  // GPS:
   if (params.lat)    sp.set('lat', params.lat);
   if (params.lng)    sp.set('lng', params.lng);
-  if (params.radius) sp.set('radius', params.radius);  // gdy rankby=distance, backend zignoruje radius
-  if (params.rankby) sp.set('rankby', params.rankby);  // distance | prominence (opcjonalnie)
-  // Pozostałe:
+  if (params.radius) sp.set('radius', params.radius);
+  if (params.rankby) sp.set('rankby', params.rankby);
   if (params.keyword) sp.set('keyword', params.keyword);
   if (params.n)       sp.set('n', params.n);
   sp.set('language', params.language || 'pl');
@@ -123,7 +128,7 @@ async function callPlaces(params) {
   return res.json();
 }
 
-// === Wywołanie backendu GPT (nie blokuje całego flow) ===
+// === Wywołanie backendu GPT ===
 async function callGPT(prompt) {
   try {
     const res = await fetch(GPT_PROXY, {
@@ -134,20 +139,16 @@ async function callGPT(prompt) {
     if (!res.ok) throw new Error(`GPT HTTP ${res.status}`);
     return res.json();
   } catch (e) {
-    // GPT jest „nice to have”; brak nie zatrzymuje logiki
     return null;
   }
 }
 
-// === Główna ścieżka: obsługa zapytania użytkownika ===
+// === Główna ścieżka ===
 async function handleUserQuery(userText) {
   try {
     setFinalText(userText);
 
-    // 1) Najpierw spróbujmy wziąć GPS; jeśli się nie uda, będzie fallback
     const coords = await getPositionOrNull(6000);
-
-    // 2) Przygotuj parametry /api/places
     const q = extractQuery(userText);
     const params = { language: 'pl', n: 2 };
 
@@ -155,9 +156,9 @@ async function handleUserQuery(userText) {
       params.lat    = coords.latitude.toFixed(6);
       params.lng    = coords.longitude.toFixed(6);
       params.radius = 5000;
-      if (q) params.keyword = q; // keyword pomaga zawęzić (np. pizzeria)
+      if (q) params.keyword = q;
     } else if (q) {
-      params.query = q;          // tryb tekstowy (np. „restauracje w Katowicach”)
+      params.query = q;
     } else {
       showBanner('Nie rozumiem frazy. Powiedz np. „dwie najlepsze restauracje w Katowicach”.', 'warn');
       return;
@@ -165,10 +166,8 @@ async function handleUserQuery(userText) {
 
     showBanner('Szukam miejsc w okolicy…');
 
-    // 3) Pobierz z backendu
     const data = await callPlaces(params);
 
-    // 4) Ujednolicenie i sortowanie (gdyby backend nie posortował)
     const list = (data?.results || data || [])
       .filter(x => x && (x.rating ?? null) !== null)
       .map(x => ({
@@ -183,29 +182,36 @@ async function handleUserQuery(userText) {
 
     if (!results.length) {
       showBanner('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.', 'warn');
+      speak('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.');
       return;
     }
 
-    // 5) Feedback natychmiast
+    // natychmiastowy feedback + TTS
     if (results.length === 1) {
       const a = results[0];
-      showBanner(`Najlepsze w pobliżu: ${a.name} (${a.rating}★, ${a.address})`);
+      const msg = `Najlepsze w pobliżu: ${a.name} ${a.rating} gwiazdek.`;
+      showBanner(`${msg} ${a.address}`);
+      speak(msg);
     } else {
       const [a,b] = results;
+      const msg = `Top dwa miejsca: ${a.name} i ${b.name}.`;
       showBanner(`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`);
+      speak(msg);
     }
 
-    // 6) Króciutka odpowiedź GPT (opcjonalnie)
+    // GPT — też czytamy
     const g = await callGPT(
-      `Użytkownik poprosił: "${userText}". \
-Wyświetl krótko i po polsku maksymalnie dwa najlepsze miejsca. \
-Dane: ${results.map(r => `${r.name} (${r.rating}★, ${r.address})`).join('; ')}.`
+      `Użytkownik: "${userText}". Miejsca: ${results.map(r => `${r.name} (${r.rating}★)`).join('; ')}.`
     );
-    if (g?.reply) showBanner(g.reply);
+    if (g?.reply) {
+      showBanner(g.reply);
+      speak(g.reply);
+    }
 
   } catch (err) {
     console.error(err);
     showBanner('Ups, coś poszło nie tak. Spróbuj ponownie.', 'err');
+    speak('Ups, coś poszło nie tak. Spróbuj ponownie.');
   }
 }
 
@@ -230,7 +236,7 @@ function initASR() {
 
   rec.onerror = (e) => {
     console.warn('ASR error:', e.error);
-    showBanner('Błąd rozpoznawania mowy. Spróbuj ponownie lub wpisz ręcznie.', 'warn');
+    showBanner('Błąd rozpoznawania mowy.', 'warn');
   };
 
   rec.onresult = (ev) => {
@@ -243,7 +249,6 @@ function initASR() {
     }
     if (final) {
       setFinalText(final.trim());
-      // kończymy i odpalamy logikę
       try { rec.stop(); } catch {}
       listening = false;
       setListening(false);
@@ -266,7 +271,6 @@ function initASR() {
 
 function toggleMic() {
   if (!recognition) {
-    // fallback do promptu
     const typed = prompt('Rozpoznawanie mowy niedostępne. Wpisz, co chcesz zamówić:');
     if (typed && typed.trim()) {
       setFinalText(typed.trim());
@@ -293,7 +297,6 @@ function bindUI() {
   micBtn?.addEventListener('click', toggleMic);
   logoBtn?.addEventListener('click', toggleMic);
 
-  // prosta zmiana kategorii (stylistyka)
   function activateTile(active) {
     [tileFood, tileTaxi, tileHotel].forEach(btn => btn?.classList.remove('active'));
     active?.classList.add('active');
@@ -302,7 +305,6 @@ function bindUI() {
   tileTaxi?.addEventListener('click', () => activateTile(tileTaxi));
   tileHotel?.addEventListener('click', () => activateTile(tileHotel));
 
-  // startowy „placeholder”
   setGhostText('Powiedz, co chcesz zamówić…');
 }
 
@@ -310,9 +312,5 @@ function bindUI() {
 (function bootstrap(){
   recognition = initASR();
   bindUI();
-
-  // Przy pierwszym wejściu spróbuj delikatnie "rozgrzać" geo (bez wymuszania promptu)
-  // Jeżeli użytkownik jest w incognito i odrzucił — baner poinformuje i będzie fallback.
-  // Nie blokujemy niczym UI.
   getPositionOrNull(3000).then(()=>{/*no-op*/});
 })();

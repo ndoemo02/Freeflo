@@ -1,4 +1,4 @@
-// freeflow-assistant.js  — TTS (Google + fallback), miasto>GPS, bez echo-promptów
+// freeflow-assistant.js — Google TTS (priority) + dystans + ciepłe komunikaty
 
 /* ----------------- skróty do DOM ----------------- */
 const $  = (sel) => document.querySelector(sel);
@@ -51,24 +51,20 @@ async function getPositionOrNull(timeoutMs = 6000){
   }
 }
 
-/* ----------------- Intencja (kategoria + opcjonalne miasto) ----------------- */
+/* ----------------- Intencja/miasto (proste) ----------------- */
 function extractQuery(text){
   const t = (text||'').trim();
-  // “pizzeria / restauracje / kebab / sushi / hotel / taxi … (w Mieście)”
-  const re = /(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(?:[^a-ząćęłńóśźż]+.*)?(?:\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
+  const re = /(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(.*?)(?:\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
   const m = t.match(re);
   if (!m) return null;
-
   const base = (m[1]||'').toLowerCase();
-  const city = m[2] || null;
-
-  const category =
+  const city = m[3] ? ` w ${m[3]}` : '';
+  const normalized =
     /restaurac/.test(base) ? 'restauracje' :
     /pizz/.test(base)      ? 'pizzeria'    :
     /(hotel|nocleg)/.test(base) ? 'hotel'  :
     /taxi/.test(base)      ? 'taxi'        : base;
-
-  return { category, city };
+  return (normalized + city).trim();
 }
 
 /* ----------------- Backend calls ----------------- */
@@ -105,15 +101,14 @@ const sayQueue = [];
 let speaking = false;
 
 async function speakEnqueue(text){
+  if (!text) return;
   sayQueue.push(text);
   if (speaking) return;
   speaking = true;
   while (sayQueue.length){
     const t = sayQueue.shift();
     const okCloud = await speakWithGoogleTTS(t);
-    if (!okCloud){
-      await speakWithWebSpeech(t);
-    }
+    if (!okCloud){ await speakWithWebSpeech(t); }
   }
   speaking = false;
 }
@@ -123,7 +118,7 @@ async function speakWithGoogleTTS(text){
     const r = await fetch('/api/tts', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, lang:'pl-PL' })
+      body: JSON.stringify({ text, lang:'pl-PL', voice:'pl-PL-Wavenet-D' })
     });
     const j = await r.json();
     if (!j?.audioContent) return false;
@@ -131,7 +126,7 @@ async function speakWithGoogleTTS(text){
     await audio.play();
     await new Promise(res => audio.addEventListener('ended', res, { once:true }));
     return true;
-  }catch(e){ console.warn('Google TTS error', e); return false; }
+  }catch{ return false; }
 }
 
 function speakWithWebSpeech(text){
@@ -160,84 +155,115 @@ function speakWithWebSpeech(text){
   });
 }
 
+/* ----------------- Dystans (Haversine) ----------------- */
+const R_EARTH = 6371e3; // m
+function haversineMeters(lat1, lon1, lat2, lon2){
+  const toRad = (d)=> (d*Math.PI/180);
+  const φ1 = toRad(lat1), φ2 = toRad(lat2);
+  const Δφ = toRad(lat2-lat1), Δλ = toRad(lon2-lon1);
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R_EARTH*c;
+}
+function fmtDist(m){
+  if (m < 50)  return `${Math.round(m)} m`;
+  if (m < 950) return `${Math.round(m/10)*10} m`;
+  return `${(m/1000).toFixed(m<1500?1:1)} km`;
+}
+
 /* ----------------- Główna obsługa zapytań ----------------- */
 async function handleUserQuery(userText){
   try{
     setFinalText(userText);
     const coords = await getPositionOrNull(6000);
 
-    const intent = extractQuery(userText);
-    const params = { language:'pl', n:2 };
+    const q = extractQuery(userText);
+    const params = { language:'pl', n:4 }; // weźmy do 4, potem i tak wybierzemy 2
 
-    if (intent?.city) {
-      // Użytkownik podał miasto → Text Search w tym mieście (ignorujemy GPS/VPN)
-      params.query = `${intent.category} w ${intent.city}`;
-      // Jeśli chcesz mocniej przytrzymać Polskę, odkomentuj:
-      // params.query = `${intent.category} w ${intent.city}, Polska`;
-    } else if (coords) {
-      // Brak miasta → Nearby na GPS
+    if (coords){
       params.lat    = coords.latitude.toFixed(6);
       params.lng    = coords.longitude.toFixed(6);
       params.radius = 5000;
-      if (intent?.category) params.keyword = intent.category;
-    } else if (intent?.category) {
-      // Fallback bez GPS → Text Search samej kategorii
-      params.query = intent.category;
-    } else {
-      showBanner('Nie rozumiem frazy. Powiedz np. „dwie najlepsze restauracje w Katowicach”.','warn');
-      await speakEnqueue('Nie rozumiem. Spróbuj powiedzieć: dwie najlepsze restauracje w Katowicach.');
-      return;
+      if (q) params.keyword = q;
+    }else if (q){
+      params.query = q;
+    }else{
+      const msg = 'Nie rozumiem. Powiedz np. „najbliższa pizzeria w Katowicach”.';
+      showBanner(msg,'warn'); await speakEnqueue(msg); return;
     }
 
-    showBanner('Szukam miejsc…');
+    showBanner('Szukam miejsc w okolicy…');
 
     const data = await callPlaces(params);
 
-    const list = (data?.results || data || [])
+    let list = (data?.results || data || [])
       .filter(x => x && (x.rating ?? null) !== null)
       .map(x => ({
         name: x.name,
         rating: Number(x.rating||0),
         votes: Number(x.user_ratings_total||0),
-        address: (x.formatted_address || x.vicinity || '—')
-      }))
-      .sort((a,b)=> (b.rating-a.rating) || (b.votes-a.votes));
+        address: (x.formatted_address || x.vicinity || '—'),
+        lat: x.geometry?.location?.lat ?? null,
+        lng: x.geometry?.location?.lng ?? null
+      }));
+
+    // dystanse jeśli mamy gps i współrzędne lokalu
+    if (coords){
+      list = list.map(x=>{
+        if (x.lat!=null && x.lng!=null){
+          x.meters = haversineMeters(coords.latitude, coords.longitude, x.lat, x.lng);
+        } else {
+          x.meters = Number.POSITIVE_INFINITY;
+        }
+        return x;
+      }).sort((a,b)=>{
+        // preferuj bliższe, a potem lepiej oceniane
+        const d = (a.meters - b.meters);
+        if (isFinite(d) && Math.abs(d) > 1) return d;
+        return (b.rating - a.rating) || (b.votes - a.votes);
+      });
+    } else {
+      list = list.sort((a,b)=> (b.rating-a.rating) || (b.votes-a.votes));
+    }
 
     const results = list.slice(0,2);
 
     if (!results.length){
-      showBanner('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.','warn');
-      await speakEnqueue('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.');
-      return;
+      const msg = 'Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.';
+      showBanner(msg,'warn'); await speakEnqueue(msg); return;
     }
 
+    // Przyjazny komunikat z dystansem
+    let spoken;
     if (results.length===1){
       const a = results[0];
-      const line = `Najlepsze w pobliżu: ${a.name} (${a.rating}★, ${a.address}).`;
-      showBanner(line);
-      await speakEnqueue(line);
+      const near = (a.meters!=null && isFinite(a.meters)) ? ` — ${fmtDist(a.meters)} od Ciebie` : '';
+      spoken = `Najbliżej masz ${a.name}${near}. Chcesz tam zamówić, czy szukać dalej?`;
+      showBanner(`Najbliżej: ${a.name} (${a.rating}★, ${a.address})`);
     }else{
       const [a,b] = results;
-      const line = `Top 2: ${a.name} i ${b.name}.`;
+      const nearA = (a.meters!=null && isFinite(a.meters)) ? ` — ${fmtDist(a.meters)} od Ciebie` : '';
+      const nearB = (b.meters!=null && isFinite(b.meters)) ? ` — ${fmtDist(b.meters)} dalej` : '';
+      spoken = `Najbliżej masz ${a.name}${nearA}. Alternatywa: ${b.name}${nearB}. Którą wybierasz?`;
       showBanner(`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`);
-      await speakEnqueue(line);
     }
+    await speakEnqueue(spoken);
 
+    // Krótka wersja marketingowa z GPT (opcjonalnie)
     const g = await callGPT(
-      `Krótko po polsku (max 25 słów) poleć 1–2 miejsca z listy: ` +
+      `Krótko po polsku (max 22 słowa) poleć 1–2 miejsca z listy: ` +
       results.map(r=>`${r.name} (${r.rating}★, ${r.address})`).join('; ') +
-      `. Zakończ jednym zdaniem: „Skorzystaj z aplikacji FreeFlow, aby zamówić szybko i wygodnie!”.`
+      `. Zakończ jednym zdaniem: „Skorzystaj z FreeFlow, aby zamówić szybko i wygodnie!”.`
     );
     if (g?.reply){
-      const trimmed = g.reply.replace(/^echo[:\-\s]*/i,'').trim();
-      showBanner(trimmed);
-      await speakEnqueue(trimmed);
+      const trimmed = String(g.reply).replace(/^echo[:\-\s]*/i,'').trim();
+      if (trimmed) { showBanner(trimmed); await speakEnqueue(trimmed); }
     }
 
   }catch(err){
     console.error(err);
-    showBanner('Ups, coś poszło nie tak. Spróbuj ponownie.','err');
-    await speakEnqueue('Coś poszło nie tak. Spróbuj ponownie.');
+    const msg = 'Ups, coś poszło nie tak. Sprawdź połączenie i spróbuj ponownie.';
+    showBanner(msg,'err'); await speakEnqueue(msg);
   }
 }
 

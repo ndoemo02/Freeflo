@@ -8,16 +8,13 @@
 
   <!-- Konfiguracja dla asystenta -->
   <meta name="asr-provider" content="browser" />
-  <!-- ZMIEŃ na swój backend, albo zostaw względne gdy front i backend na tej samej domenie -->
-  <meta name="gmaps-proxy" content="/api/places" />
-  <meta name="gpt-proxy"   content="/api/gpt" />
+  <!-- Pełne URL-e backendu na Vercelu -->
+  <meta name="gmaps-proxy" content="https://freeflow-backend-vercel.vercel.app/api/places" />
+  <meta name="gpt-proxy"   content="https://freeflow-backend-vercel.vercel.app/api/gpt" />
+  <meta name="tts-proxy"   content="https://freeflow-backend-vercel.vercel.app/api/tts" />
 
   <!-- Prywatność w UI: lekki CSP (reszta w vercel.json) -->
   <meta http-equiv="referrer" content="strict-origin-when-cross-origin" />
-
-  <!-- Preload assets -->
-  <link rel="preload" as="image" href="assets/Background.png">
-  <link rel="preload" as="image" href="assets/Freeflowlogo.png">
 
   <style>
     :root{

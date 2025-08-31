@@ -2,32 +2,54 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Freeflow — po prostu zamów</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="wrap">
-    <h1>Freeflow — <span>po prostu zamów</span></h1>
-    <p class="lead">
+  <header class="hero">
+    <h1>Freeflow — po prostu zamów</h1>
+    <p class="tagline">
       Powiedz, czego potrzebujesz: „dwie pizze w Krakowie o 20:00”, „zamów taxi na 18:30”, „nocleg w Warszawie”.
     </p>
+  </header>
 
-    <section class="card">
-      <div class="io">
-        <button id="micBtn" class="mic" type="button" title="Nagraj">
-          🎤
-        </button>
-        <input id="queryInput" type="text" placeholder="Powiedz lub wpisz" />
-        <button id="sendBtn" class="primary" type="button">Wyślij</button>
-      </div>
-
-      <div id="note" class="note">Kliknij 🎤 aby mówić lub wpisz i naciśnij Wyślij.</div>
-      <div id="status" class="status"></div>
-      <div id="result" class="result"></div>
+  <main class="container">
+    <!-- KAFELKI -->
+    <section class="tiles">
+      <button class="tile" data-example="dwie pizze w Krakowie o 20:00">
+        <div class="tile-emoji">🍕</div>
+        <div class="tile-title">Jedzenie</div>
+        <div class="tile-sub">Pizzeria / restauracja</div>
+      </button>
+      <button class="tile" data-example="zamów taxi z Dworca Głównego do Kazimierza o 18:30 jutro">
+        <div class="tile-emoji">🚕</div>
+        <div class="tile-title">Taxi</div>
+        <div class="tile-sub">Start → Cel + godzina</div>
+      </button>
+      <button class="tile" data-example="potrzebuję noclegu w Warszawie 2 noce od piątku">
+        <div class="tile-emoji">🏨</div>
+        <div class="tile-title">Hotel</div>
+        <div class="tile-sub">Miasto + daty</div>
+      </button>
     </section>
+
+    <!-- INPUT + MIKROFON -->
+    <section class="composer">
+      <button id="micBtn" title="Mów"><span>🎤</span></button>
+      <input id="query" type="text" placeholder="Powiedz lub wpisz" />
+      <button id="sendBtn">Wyślij</button>
+    </section>
+
+    <!-- STATUS + WYNIKI -->
+    <section class="status" id="status"></section>
+    <section class="result" id="result"></section>
   </main>
 
-  <script src="./app.js"></script>
+  <footer class="foot">
+    Bez profilowania. Sesja tylko w pamięci przeglądarki.
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>

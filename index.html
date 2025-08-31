@@ -4,174 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Freeflow — po prostu zamów</title>
-  <style>
-    :root{
-      --bg:#0b0b0c; --panel:#141417; --muted:#9aa0a6; --text:#e6e6e6;
-      --accent:#25d366; --danger:#ff6b6b; --ring:#2a2a2e;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font:16px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      display:flex; align-items:flex-start; justify-content:center;
-    }
-    .wrap{width:100%; max-width:860px; padding:28px 18px 64px}
-    h1{font-size:clamp(28px,5vw,48px); line-height:1.1; margin:18px 0 6px}
-    .lead{color:var(--muted); font-size:clamp(16px,2.5vw,18px); margin:0 0 28px}
-    .card{background:var(--panel); border:1px solid var(--ring); border-radius:18px; padding:18px}
-    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-    .mic{
-      width:52px; height:52px; border-radius:50%;
-      border:1px solid var(--ring); background:#0e0e12; display:grid; place-items:center;
-      cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease
-    }
-    .mic.on{box-shadow:0 0 0 3px rgba(37,211,102,.25); border-color:#3bd07f}
-    .mic svg{width:22px; height:22px; fill:#c9d1d9}
-    input[type=text]{
-      flex:1; min-width:220px; padding:14px 16px; border-radius:12px;
-      background:#0f0f13; border:1px solid var(--ring); color:var(--text);
-      outline:none; transition:border-color .12s ease;
-    }
-    input[type=text]:focus{border-color:#3bd07f}
-    button{
-      padding:12px 18px; border-radius:12px; border:none; font-weight:600; cursor:pointer;
-      background:var(--accent); color:#04140a; transition:transform .08s ease, filter .08s ease
-    }
-    button:active{transform:translateY(1px)}
-    .hint{color:var(--muted); margin-top:8px}
-    .err{color:var(--danger)}
-    .log{margin-top:18px; border-top:1px solid var(--ring); padding-top:14px}
-    .badge{display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#1b1b20; color:#b6beca; border:1px solid var(--ring)}
-    pre{white-space:pre-wrap; word-break:break-word; background:#0f0f13; border:1px solid var(--ring); padding:12px; border-radius:12px; margin:10px 0 0; max-height:260px; overflow:auto}
-    .fade{animation:fade .25s ease}
-    @keyframes fade{from{opacity:.4; transform:translateY(2px)} to{opacity:1; transform:none}}
-  </style>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <main class="wrap">
-    <h1>Freeflow — po prostu zamów</h1>
-    <p class="lead">Powiedz, czego potrzebujesz: „dwie pizze w Krakowie o 20:00”, „zamów taxi na 18:30”, „nocleg w Warszawie”.</p>
+    <h1>Freeflow — <span>po prostu zamów</span></h1>
+    <p class="lead">
+      Powiedz, czego potrzebujesz: „dwie pizze w Krakowie o 20:00”, „zamów taxi na 18:30”, „nocleg w Warszawie”.
+    </p>
 
-    <section class="card fade">
-      <div class="row">
-        <div class="mic" id="micBtn" title="Włącz/wyłącz nasłuch">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V20H8v2h8v-2h-3v-2.08A7 7 0 0 0 19 11h-2z"/></svg>
-        </div>
-        <input id="query" type="text" placeholder="Powiedz lub wpisz" />
-        <button id="sendBtn">Wyślij</button>
+    <section class="card">
+      <div class="io">
+        <button id="micBtn" class="mic" type="button" title="Nagraj">
+          🎤
+        </button>
+        <input id="queryInput" type="text" placeholder="Powiedz lub wpisz" />
+        <button id="sendBtn" class="primary" type="button">Wyślij</button>
       </div>
-      <div class="hint" id="hint">Mikrofon włączony. Mów śmiało!</div>
-      <div class="log" id="log" hidden>
-        <span class="badge">Odpowiedź</span>
-        <pre id="out"></pre>
-      </div>
+
+      <div id="note" class="note">Kliknij 🎤 aby mówić lub wpisz i naciśnij Wyślij.</div>
+      <div id="status" class="status"></div>
+      <div id="result" class="result"></div>
     </section>
   </main>
 
-  <script>
-    // <<< SKONFIGURUJ HOST BACKENDU >>>
-    const HOST = 'https://freeflow-backend-vercel.vercel.app'; // <— TU WSTAW SWÓJ DZIAŁAJĄCY HOST
-
-    // —— UI
-    const micBtn  = document.getElementById('micBtn');
-    const sendBtn = document.getElementById('sendBtn');
-    const input   = document.getElementById('query');
-    const hint    = document.getElementById('hint');
-    const logBox  = document.getElementById('log');
-    const out     = document.getElementById('out');
-
-    // —— STT (przeglądarka)
-    let rec, listening = false;
-    const hasSTT = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    function startRec(){
-      if(!hasSTT || listening) return;
-      rec = new SR();
-      rec.lang = 'pl-PL';
-      rec.interimResults = false;
-      rec.onstart  = () => { listening = true; micBtn.classList.add('on'); hint.textContent = 'Słucham… powiedz zamówienie.'; };
-      rec.onerror  = () => { hint.innerHTML = 'Błąd rozpoznawania mowy. Możesz też <b>wpisać</b> treść.'; stopRec(); };
-      rec.onend    = () => { listening = false; micBtn.classList.remove('on'); if(input.value.trim()==='') hint.textContent='Powiedz lub wpisz zamówienie.'; };
-      rec.onresult = (e) => {
-        const t = Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();
-        if(t) { input.value = t; send(); }
-      };
-      try { rec.start(); } catch {}
-    }
-    function stopRec(){ try{ rec && rec.stop(); }catch{} listening=false; micBtn.classList.remove('on'); }
-
-    // auto-start nasłuchu po first-paint (jeśli przeglądarka pozwoli)
-    window.addEventListener('load', () => setTimeout(()=>startRec(), 300));
-
-    micBtn.addEventListener('click', () => listening ? stopRec() : startRec());
-
-    // —— HELPERS
-    function show(data){
-      logBox.hidden = false;
-      out.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-    }
-    async function call(path, body){
-      const r = await fetch(HOST + path, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(body||{})
-      });
-      if(!r.ok){
-        let msg='Błąd połączenia';
-        try{ const j=await r.json(); msg=j.error||JSON.stringify(j); }catch{}
-        throw new Error(msg);
-      }
-      return r.json();
-    }
-
-    // —— GŁÓWNY PRZEPŁYW
-    async function send(){
-      const q = (input.value||'').trim();
-      if(!q){ hint.innerHTML = '<span class="err">Podaj treść zamówienia.</span>'; return; }
-      hint.textContent = 'Przetwarzam…';
-
-      try {
-        const plan = await call('/api/plan', { query: q });
-
-        // reakcje na limity/guardy z backendu
-        if(plan.status === 'error' && plan.error === 'rate_limited'){
-          hint.innerHTML = '<span class="err">Za dużo próśb. Spróbuj za chwilę.</span>';
-          show(plan);
-          return;
-        }
-        if(plan.status === 'error'){
-          hint.innerHTML = '<span class="err">' + (plan.error || 'Błąd zapytania') + '</span>';
-          show(plan);
-          return;
-        }
-
-        show(plan);
-
-        // spróbuj odtworzyć krótki TTS z podsumowaniem
-        const summary =
-          plan?.steps?.[0]?.message ||
-          'Zapisano zamówienie w Freeflow.';
-        try {
-          const tts = await call('/api/tts', { text: summary, lang: 'pl-PL' });
-          if(tts && tts.url){
-            const a = new Audio(tts.url);
-            a.play().catch(()=>{ /* autoplay może zostać zablokowany */ });
-          }
-        } catch {/* TTS opcjonalny */}
-
-        hint.textContent = 'Gotowe. Możesz dodać kolejne zamówienie.';
-        input.value = '';
-        // po odpowiedzi znów włącz lekko nasłuch
-        setTimeout(()=>startRec(), 400);
-      } catch (e){
-        hint.innerHTML = '<span class="err">' + (e.message || 'Błąd połączenia') + '</span>';
-      }
-    }
-
-    sendBtn.addEventListener('click', send);
-    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') send(); });
-  </script>
+  <script src="./app.js"></script>
 </body>
 </html>

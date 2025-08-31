@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>FreeFlow — po prostu zamów</title>
+  <title>FreeFlow — zamów głosem</title>
   <meta name="color-scheme" content="dark light" />
 
-  <!-- Konfiguracja dla app.js (zmień tylko jeśli backend na innym hoście) -->
-  <meta name="asr-provider" content="browser" />
-  <meta name="gmaps-proxy" content="/api/places" />
-  <meta name="gpt-proxy"   content="/api/gpt" />
-  <!-- TTS leci na /api/tts na tym samym hoście -->
+  <!-- USTAW backend (tu: Twój Vercel) -->
+  <meta name="gmaps-proxy" content="https://freeflow-backend-vercel.vercel.app/api/places" />
+  <meta name="gpt-proxy"   content="https://freeflow-backend-vercel.vercel.app/api/gpt" />
+  <!-- TTS w app.js wołamy pod: https://freeflow-backend-vercel.vercel.app/api/tts -->
 
   <meta http-equiv="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="style.css" />
@@ -20,7 +19,7 @@
     <header class="topbar">
       <div>
         <div class="brand"><b>Free</b><span>Flow</span></div>
-        <div class="tagline">Po prostu zamów — głosem</div>
+        <div class="tagline">Voice to order — Złóż zamówienie</div>
         <div class="subtag">Restauracja, taxi albo hotel?</div>
       </div>
       <div class="actions">

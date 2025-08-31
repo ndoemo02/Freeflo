@@ -1,20 +1,23 @@
-// FreeFlow front — UI + klikany nasłuch + Places/GPT/TTS
+// ---------- KONFIG ----------
+const BASE_URL = 'https://freeflow-backend-vercel.vercel.app'; // <— TWÓJ backend
+const ENDPOINTS = {
+  plan:   `${BASE_URL}/api/plan`,
+  places: `${BASE_URL}/api/places`,
+  gpt:    `${BASE_URL}/api/gpt`,
+  tts:    `${BASE_URL}/api/tts`,
+};
 
-const $  = (s)=>document.querySelector(s);
+// ---------- POMOCNICZE ----------
+const $ = (s)=>document.querySelector(s);
+const banner = $('#banner');       // pasek komunikatów
 const transcript = $('#transcript');
-const micBtn     = $('#micBtn');
-const logoBtn    = $('#logoBtn');
-const dot        = $('#dot');
-const banner     = $('#banner');
-const inputEl    = $('#textInput');
-const sendBtn    = $('#sendBtn');
+const micBtn = $('#micBtn');
+const logoBtn = $('#logoBtn');
+const dot = $('#dot');
 
-const GMAPS_PROXY = (document.querySelector('meta[name="gmaps-proxy"]')?.content || '/api/places').trim();
-const GPT_PROXY   = (document.querySelector('meta[name="gpt-proxy"]')?.content   || '/api/gpt').trim();
-
-function showBanner(msg,type='info'){
+function show(msg, type='info'){
   if(!banner) return;
-  banner.textContent = msg || '';
+  banner.textContent = msg;
   banner.classList.remove('hidden');
   banner.style.background =
     type==='err' ? 'rgba(255,72,72,.15)' :
@@ -23,229 +26,187 @@ function showBanner(msg,type='info'){
     type==='err' ? '#ffd1d1' :
     type==='warn'? '#ffe6a3' : '#dff1ff';
 }
-function hideBanner(){ banner?.classList.add('hidden'); banner && (banner.textContent=''); }
-function setGhostText(t){ transcript?.classList.add('ghost'); if(transcript) transcript.textContent=t; }
-function setFinalText(t){ transcript?.classList.remove('ghost'); if(transcript) transcript.textContent=t; }
-function setListening(on){ document.body.classList.toggle('listening', !!on); if(dot) dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000'; }
-
-async function getPositionOrNull(timeoutMs=6000){
-  if(!('geolocation' in navigator)){ showBanner('Przeglądarka nie obsługuje lokalizacji.','warn'); return null; }
-  const once=()=>new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(
-    p=>res(p.coords), rej, {enableHighAccuracy:true,timeout:timeoutMs,maximumAge:25000}));
-  try{ const c=await once(); hideBanner(); return c; }
-  catch(e){ showBanner('Brak lokalizacji — szukam po tekście.','warn'); return null; }
+function hide(){ banner?.classList.add('hidden'); if(banner) banner.textContent=''; }
+function ghost(t){ transcript.classList.add('ghost'); transcript.textContent=t; }
+function final(t){ transcript.classList.remove('ghost'); transcript.textContent=t; }
+function listening(on){
+  document.body.classList.toggle('listening', !!on);
+  if(dot) dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000';
 }
 
-/* ====== Parsowanie intencji (na szybko) ====== */
-function extractQuery(text){
-  const t=(text||'').trim();
-  const re=/(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(?:.*?\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
-  const m=t.match(re); if(!m) return null;
-  const base=(m[1]||'').toLowerCase();
-  const city=m[2] ? ` w ${m[2]}` : '';
-  const normalized =
-    /restaurac/.test(base) ? 'restauracje' :
-    /pizz/.test(base)      ? 'pizzeria'    :
-    /(hotel|nocleg)/.test(base) ? 'hotel'  :
-    /taxi/.test(base)      ? 'taxi'        : base;
-  return (normalized + city).trim();
-}
-
-/* ====== Wywołania backendu ====== */
-async function callPlaces(params){
-  const sp=new URLSearchParams();
-  if(params.query)   sp.set('query', params.query);
-  if(params.lat)     sp.set('lat', params.lat);
-  if(params.lng)     sp.set('lng', params.lng);
-  if(params.radius)  sp.set('radius', params.radius);
-  if(params.rankby)  sp.set('rankby', params.rankby);
-  if(params.keyword) sp.set('keyword', params.keyword);
-  if(params.n)       sp.set('n', params.n);
-  sp.set('language', params.language || 'pl');
-
-  const res = await fetch(`${GMAPS_PROXY}?${sp.toString()}`);
-  if(!res.ok) throw new Error(`Places HTTP ${res.status}`);
-  return res.json();
-}
-
-async function callGPT(prompt){
+// ---------- FETCH (timeout + JSON) ----------
+async function jfetch(url, opts={}, timeoutMs=12000){
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), timeoutMs);
   try{
-    const res = await fetch(GPT_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-    if(!res.ok) throw new Error(`GPT HTTP ${res.status}`);
-    return res.json(); // { reply }
+    const res = await fetch(url, {...opts, signal: ctrl.signal});
+    if(!res.ok) throw new Error(`${res.status}`);
+    const ct = res.headers.get('content-type')||'';
+    return ct.includes('application/json') ? res.json() : res.text();
+  }finally{ clearTimeout(to); }
+}
+
+// ---------- INTEGRACJA BACKENDU ----------
+async function apiPlan(query){
+  return jfetch(ENDPOINTS.plan, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query })
+  });
+}
+async function apiPlaces(params){
+  const sp = new URLSearchParams(params);
+  return jfetch(`${ENDPOINTS.places}?${sp.toString()}`, { method:'GET' });
+}
+async function apiGPT(prompt){
+  try{
+    return await jfetch(ENDPOINTS.gpt, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt })
+    });
   }catch{ return null; }
 }
-
-async function callTTS(text, lang='pl-PL', voice='pl-PL-Wavenet-D'){
+async function apiTTS(text, lang='pl-PL', voice='pl-PL-Wavenet-D'){
   try{
-    const r = await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang,voice})});
-    const j = await r.json();
+    const j = await jfetch(ENDPOINTS.tts, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, lang, voice })
+    });
     if(!j?.audioContent) return false;
-    const audio = new Audio('data:audio/mp3;base64,'+j.audioContent);
-    await audio.play();
-    await new Promise(res=>audio.addEventListener('ended',res,{once:true}));
+    const a = new Audio('data:audio/mp3;base64,' + j.audioContent);
+    await a.play(); await new Promise(r=>a.addEventListener('ended', r, {once:true}));
     return true;
   }catch{ return false; }
 }
 
-/* ====== TTS fallback ====== */
-function speakWithWebSpeech(text){
-  return new Promise((resolve)=>{
-    try{
-      if(!('speechSynthesis' in window)) return resolve(true);
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text); u.lang='pl-PL';
-      const pick=()=>{
-        const vs=speechSynthesis.getVoices()||[];
-        u.voice = vs.find(v=>/pl[-_]PL/i.test(v.lang||'')) || vs.find(v=>/polish/i.test(v.name||'')) || vs[0] || null;
-        speechSynthesis.speak(u);
-      };
-      u.onend=()=>resolve(true); u.onerror=()=>resolve(true);
-      const vs=speechSynthesis.getVoices();
-      if(!vs || !vs.length){ speechSynthesis.onvoiceschanged=()=>{pick(); speechSynthesis.onvoiceschanged=null;}; setTimeout(()=>speechSynthesis.getVoices(),0); }
-      else pick();
-    }catch{ resolve(true); }
-  });
-}
-const sayQueue=[]; let speaking=false;
-async function speak(text){
-  sayQueue.push(text); if(speaking) return;
-  speaking=true;
-  while(sayQueue.length){
-    const msg=sayQueue.shift();
-    const ok=await callTTS(msg);
-    if(!ok) await speakWithWebSpeech(msg);
-  }
-  speaking=false;
+// fallback: Web Speech TTS
+async function say(text){
+  const ok = await apiTTS(text);
+  if(ok) return;
+  try{
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'pl-PL';
+    const voices = window.speechSynthesis.getVoices();
+    u.voice = voices.find(v=>/pl[-_]PL/i.test(v.lang)) || voices[0] || null;
+    window.speechSynthesis.speak(u);
+  }catch{}
 }
 
-/* ====== GŁÓWNY FLOW ====== */
+// ---------- PRZEPŁYW ----------
 async function handleUserQuery(userText){
   try{
-    setFinalText(userText);
-    const q = extractQuery(userText);
-    const coords = !q || !/ w [A-ZĄĆĘŁŃÓŚŹŻ]/.test(q) ? await getPositionOrNull(6000) : null;
+    final(userText);
+    show('Planuję…');
+    const plan = await apiPlan(userText);
 
-    const params={language:'pl',n:2};
-    if(coords){
-      params.lat = coords.latitude.toFixed(6);
-      params.lng = coords.longitude.toFixed(6);
-      params.radius = 5000;
-      if(q) params.keyword = q;
-    }else if(q){
-      params.query = q;
-    }else{
-      showBanner('Powiedz np. „dwie najlepsze pizzerie w Krakowie”.','warn');
-      await speak('Powiedz na przykład: dwie najlepsze pizzerie w Krakowie.');
+    if(plan.status!=='ok'){
+      show('Ups, coś poszło nie tak. Spróbuj ponownie.', 'err'); await say('Coś poszło nie tak.'); return;
+    }
+
+    // krok 1: jeśli intent = food → places
+    if(plan.intent === 'food'){
+      const q = plan?.entities?.cities?.[0] ? `pizzeria w ${plan.entities.cities[0]}` : 'pizzeria';
+      const timeRaw = plan?.entities?.time?.raw || null;
+      const count = plan?.count || 1;
+
+      show('Szukam pizzerii…');
+      const data = await apiPlaces({ query: q, n: 5, language: 'pl' });
+      const list = (data?.results||data||[])
+        .filter(r => r?.rating != null)
+        .map(r => ({
+          name: r.name,
+          rating: Number(r.rating || 0),
+          votes: Number(r.user_ratings_total || r.votes || 0),
+          address: r.formatted_address || r.address || r.vicinity || '—'
+        }))
+        .sort((a,b)=> (b.rating-a.rating) || (b.votes-a.votes))
+        .slice(0, Math.max(2, Math.min(3, count)));
+
+      if(!list.length){ show('Nic nie znalazłem. Zmień frazę lub dodaj miasto.', 'warn'); await say('Nic nie znalazłem.'); return; }
+
+      const line = list.map((x,i)=>`${i+1}) ${x.name} (${x.rating}★, ${x.address})`).join(' • ');
+      show(`Top: ${line}`);
+      await say(`Polecam: ${list[0].name}${list[1] ? ' oraz ' + list[1].name : ''}.`);
+
+      // krótka podpowiedź z GPT (opcjonalnie)
+      const g = await apiGPT(`Krótko (≤25 słów) zarekomenduj: ${line}. Zakończ CTA „Zamów we FreeFlow.”`);
+      if(g?.reply){ show(g.reply); await say(g.reply); }
       return;
     }
 
-    showBanner('Szukam miejsc…');
-    const data = await callPlaces(params);
-
-    const list = (data?.results || data || [])
-      .filter(x => x && (x.rating ?? null) !== null)
-      .map(x => ({
-        name: x.name,
-        rating: Number(x.rating||0),
-        votes: Number(x.user_ratings_total||x.votes||0),
-        address: (x.formatted_address || x.address || x.vicinity || '—')
-      }))
-      .sort((a,b)=>(b.rating-a.rating)||(b.votes-a.votes));
-
-    const results=list.slice(0,2);
-    if(!results.length){
-      showBanner('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.','warn');
-      await speak('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.');
+    // krok 2: taxi → wyświetl, co brakuje
+    if(plan.intent === 'taxi'){
+      const f = plan.from || 'start';
+      const t = plan.to || 'cel';
+      const tt = plan?.entities?.time?.raw ? ` o ${plan.entities.time.raw}` : '';
+      const msg = `Taxi: ${f} → ${t}${tt}.`;
+      show(msg); await say(msg);
       return;
     }
 
-    if(results.length===1){
-      const a=results[0];
-      const line=`Najlepsze w pobliżu: ${a.name} (${a.rating} gwiazdek, ${a.address}).`;
-      showBanner(line); await speak(line);
-    }else{
-      const [a,b]=results;
-      const txt=`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`;
-      showBanner(txt);
-      await speak(`Najlepsze: ${a.name}. Alternatywa: ${b.name}. Wybierz w FreeFlow i zamów.`);
+    // krok 3: hotel
+    if(plan.intent === 'hotel'){
+      const c = plan?.entities?.cities?.[0] || '(miasto?)';
+      const n = plan?.nights || 1;
+      const d = plan?.entities?.date || '(data startu?)';
+      const msg = `Hotel: ${c}, ${n} noce, od ${d}.`;
+      show(msg); await say(msg);
+      return;
     }
 
-    const g = await callGPT(
-      `Krótko po polsku (≤25 słów) poleć 1–2 miejsca z listy: ${
-        results.map(r=>`${r.name} (${r.rating}★, ${r.address})`).join('; ')
-      }. Zakończ CTA: „Zamów we FreeFlow.”`
-    );
-    if(g?.reply){
-      const msg=g.reply.replace(/^echo[:\-\s]*/i,'').trim();
-      showBanner(msg); await speak(msg);
-    }
-  }catch(err){
-    console.error(err);
-    showBanner('Ups, coś poszło nie tak. Spróbuj ponownie.','err');
-    await speak('Coś poszło nie tak. Spróbuj ponownie.');
+    // fallback – komunikat z plan.steps[0].message
+    const next = plan?.steps?.[0]?.message || 'Powiedz: „dwie pizze w Krakowie”, „zamów taxi”, „nocleg w Warszawie”.';
+    show(next, 'warn'); await say(next);
+  }catch(e){
+    console.error(e);
+    show('Ups, coś poszło nie tak. Spróbuj ponownie.', 'err'); await say('Coś poszło nie tak.');
   }
 }
 
-/* ====== ASR tylko po kliknięciu ====== */
-let recognition=null, listening=false;
-
+// ---------- ASR (tylko po kliknięciu) ----------
+let recognition=null, listeningState=false;
 function initASR(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR) return null;
-  const rec=new SR();
-  rec.lang='pl-PL';
-  rec.interimResults=true;
-  rec.maxAlternatives=1;
-
-  rec.onstart = ()=>{ listening=true; setListening(true); setGhostText('Słucham…'); };
-  rec.onerror = ()=>{ showBanner('Błąd rozpoznawania mowy. Spróbuj ponownie lub wpisz ręcznie.','warn'); };
+  const rec = new SR();
+  rec.lang = 'pl-PL'; rec.interimResults = true; rec.maxAlternatives = 1;
+  rec.onstart = ()=>{ listeningState=true; listening(true); ghost('Słucham… powiedz zamówienie.'); };
   rec.onresult = (ev)=>{
-    let interim='', final='';
+    let interim='', finalText='';
     for(let i=ev.resultIndex;i<ev.results.length;i++){
-      const chunk=ev.results[i][0].transcript;
-      if(ev.results[i].isFinal) final+=chunk; else interim+=chunk;
+      const chunk = ev.results[i][0].transcript;
+      if(ev.results[i].isFinal) finalText+=chunk; else interim+=chunk;
     }
-    if(final){
-      setFinalText(final.trim());
-      try{ rec.stop(); }catch{}
-      listening=false; setListening(false);
-      handleUserQuery(final.trim());
-    }else if(interim){ setGhostText(interim.trim()); }
+    if(finalText){ rec.stop(); listeningState=false; listening(false); handleUserQuery(finalText.trim()); }
+    else if(interim) ghost(interim.trim());
   };
   rec.onend = ()=>{
-    listening=false; setListening(false);
-    if(!transcript || transcript.textContent.trim()==='' || transcript.classList.contains('ghost')){
-      setGhostText('Powiedz, co chcesz zamówić…');
+    listeningState=false; listening(false);
+    if(!transcript.textContent.trim() || transcript.classList.contains('ghost')){
+      ghost('Powiedz, co chcesz zamówić…');
     }
   };
+  rec.onerror = ()=>{ show('Błąd rozpoznawania mowy — możesz wpisać ręcznie.', 'warn'); };
   return rec;
 }
-
 function toggleMic(){
   if(!recognition){
-    const typed = prompt('Rozpoznawanie mowy niedostępne. Wpisz, co chcesz zamówić:');
-    if(typed && typed.trim()){ setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
+    const typed = prompt('Rozpoznawanie mowy niedostępne. Wpisz zamówienie:');
+    if(typed && typed.trim()) handleUserQuery(typed.trim());
     return;
   }
-  if(listening){ try{recognition.stop();}catch{} return; }
+  if(listeningState){ try{ recognition.stop(); }catch{} return; }
   try{ recognition.start(); }catch{}
 }
 
-/* ====== UI hooks ====== */
-window.addEventListener('DOMContentLoaded',()=>{
+// UI bindy
+micBtn?.addEventListener('click', toggleMic);
+logoBtn?.addEventListener('click', toggleMic);
+document.addEventListener('DOMContentLoaded', ()=>{
   recognition = initASR();
-  setGhostText('Powiedz, co chcesz zamówić…');
-
-  logoBtn?.addEventListener('click', toggleMic);
-  micBtn?.addEventListener('click', toggleMic);
-
-  sendBtn?.addEventListener('click', ()=>{
-    const val=(inputEl?.value||'').trim();
-    if(!val) return;
-    inputEl.value=''; setFinalText(val); handleUserQuery(val);
-  });
-  inputEl?.addEventListener('keydown',(e)=>{
-    if(e.key==='Enter'){ e.preventDefault(); sendBtn?.click(); }
-  });
+  ghost('Powiedz, czego potrzebujesz…');
 });

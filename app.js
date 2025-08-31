@@ -1,120 +1,142 @@
-// ====== UI refs ======
-const catsEl = document.getElementById('cats');
-const panelEl = document.getElementById('panel');
-const panelText = document.getElementById('panelText');
-const panelIcon = document.getElementById('panelIcon');
-const logoEl = document.getElementById('logo');
+// >>> USTAW SWÓJ BACKEND:
+const BASE_URL = "https://freeflow-backend-vercel.vercel.app";
 
-// ====== helper: panel ======
-function showInfo(text, type='info', keepMs=5500){
-  panelText.textContent = text;
-  panelEl.classList.remove('hidden','err');
-  panelIcon.textContent = (type==='err') ? '✖' : 'ℹ️';
-  if(type==='err') panelEl.classList.add('err');
-  clearTimeout(showInfo._t);
-  if (keepMs) showInfo._t = setTimeout(()=>panelEl.classList.add('hidden'), keepMs);
-}
+const els = {
+  mic: document.getElementById('micBtn'),
+  query: document.getElementById('query'),
+  send: document.getElementById('sendBtn'),
+  status: document.getElementById('status'),
+  result: document.getElementById('result'),
+};
 
-// ====== Kategorie (mock) ======
-let currentType = 'food';
-catsEl?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.cat');
-  if (!btn) return;
-  document.querySelectorAll('.cat').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentType = btn.dataset.type;
-  showInfo(`Wybrano: ${btn.textContent.trim()} — tryb testowy (mock).`, 'info');
+let rec, listening = false;
+try {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    rec = new SR();
+    rec.lang = "pl-PL";
+    rec.interimResults = false;
+    rec.onresult = (e) => {
+      const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
+      if (text) els.query.value = text;
+    };
+    rec.onend = () => { listening = false; els.mic.classList.remove('active'); info("Koniec nasłuchiwania."); };
+  }
+} catch {}
+
+document.querySelectorAll('.tile').forEach(tile=>{
+  tile.addEventListener('click', ()=>{
+    els.query.value = tile.dataset.example || "";
+    els.query.focus();
+  });
 });
 
-// ====== Web Speech + pre-autoryzacja mikrofonu ======
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let listening = false;
-let micPrimed = false;   // czy mamy już zgodę getUserMedia
+els.mic.addEventListener('click', ()=>{
+  if (!rec) return warn("Przeglądarka nie wspiera rozpoznawania mowy.");
+  if (!listening) {
+    try { rec.start(); listening = true; els.mic.classList.add('active'); info("Słucham… powiedz zamówienie."); }
+    catch(e){ warn("Nie mogę uruchomić mikrofonu."); }
+  } else {
+    try { rec.stop(); } catch {}
+  }
+});
 
-async function primeMicOnce(){
-  if (micPrimed || !navigator.mediaDevices?.getUserMedia) return true;
-  try{
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    micPrimed = true;
-    return true;
-  }catch(err){
-    showInfo('Odmowa dostępu do mikrofonu. Włącz mikrofon w przeglądarce i spróbuj ponownie.', 'err', 7000);
-    return false;
+els.send.addEventListener('click', submit);
+els.query.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submit(); });
+
+async function submit() {
+  const q = (els.query.value || "").trim();
+  if (!q) { error("Podaj treść zamówienia."); return; }
+  info("Wysyłam…");
+
+  const plan = await postJson('/api/plan', { query: q });
+  if (plan.error) { return showError(plan.error); }
+
+  renderPlan(plan);
+
+  // jeżeli jedzenie – dociągnij propozycje miejsc
+  if (plan.intent === 'food') {
+    const cityHint = (plan.entities?.cities?.[0]) || '';
+    const placesQ = cityHint ? `pizzeria ${cityHint}` : 'pizzeria';
+    const places = await getJson(`/api/places?query=${encodeURIComponent(placesQ)}&n=3&language=pl`);
+    renderPlaces(places);
   }
 }
 
-function ensureRecognition(){
-  if (!SpeechRecognition) {
-    showInfo('Ta przeglądarka nie wspiera rozpoznawania mowy (Web Speech). Użyj Chrome/Edge.', 'err', 7000);
-    return null;
+function renderPlan(plan) {
+  const pills = [
+    plan.intent && `<span class="pill">intencja: ${plan.intent}</span>`,
+    plan.entities?.time?.raw && `<span class="pill">${plan.entities.time.raw}</span>`,
+    plan.entities?.date && `<span class="pill">${plan.entities.date.slice(0,10)}</span>`,
+    plan.entities?.count && `<span class="pill">${plan.entities.count} szt.</span>`,
+    plan.from && `<span class="pill">z: ${plan.from}</span>`,
+    plan.to && `<span class="pill">do: ${plan.to}</span>`,
+  ].filter(Boolean).join(' ');
+
+  const steps = (plan.steps||[]).map(s=>`
+    <div class="row">
+      <div><strong>${s.service}</strong></div>
+      <div class="hint">${s.message}</div>
+    </div>`).join('') || `<div class="hint">Brak dalszych kroków.</div>`;
+
+  els.result.innerHTML = `
+    <h3>Plan</h3>
+    <div>${pills || '<span class="hint">Brak rozpoznanych szczegółów</span>'}</div>
+    ${steps}
+  `;
+  ok("OK.");
+}
+
+function renderPlaces(places) {
+  if (!places?.results?.length) {
+    els.result.innerHTML += `<div class="row"><div class="hint">Brak propozycji miejsc.</div></div>`;
+    return;
   }
-  if (recognition) return recognition;
-
-  recognition = new SpeechRecognition();
-  recognition.lang = 'pl-PL';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = false;
-
-  recognition.onstart = () => {
-    listening = true;
-    logoEl.classList.add('listening');
-    showInfo('Słucham… powiedz np. „zarezerwuj stolik na dziś” lub „taxi na 20:00”.','info', 0);
-  };
-
-  recognition.onresult = (ev) => {
-    let finalText = '';
-    let interimText = '';
-    for (const res of ev.results) {
-      if (res.isFinal) finalText += res[0].transcript;
-      else interimText = res[0].transcript;
-    }
-    panelEl.classList.remove('hidden','err');
-    panelIcon.textContent = '🎤';
-    panelText.textContent = finalText || interimText || '…';
-
-    if (finalText) handleCommand(finalText);
-  };
-
-  recognition.onerror = (e) => {
-    // typowy: "no-speech", "aborted", "network", "not-allowed"
-    showInfo(`Błąd rozpoznawania: ${e.error}`, 'err', 6000);
-  };
-
-  recognition.onend = () => {
-    listening = false;
-    logoEl.classList.remove('listening');
-    // domknij panel po chwili, jeśli to był tylko nasłuch
-    if (!panelEl.classList.contains('err')) {
-      clearTimeout(showInfo._t);
-      showInfo._t = setTimeout(()=>panelEl.classList.add('hidden'), 1200);
-    }
-  };
-
-  return recognition;
+  els.result.innerHTML += `<h3 style="margin-top:14px">Propozycje</h3>`;
+  places.results.slice(0,3).forEach(p=>{
+    els.result.innerHTML += `
+      <div class="row">
+        <div>
+          <div><strong>${p.name}</strong></div>
+          <div class="hint">${p.address || ''}</div>
+        </div>
+        <div class="hint">⭐ ${p.rating ?? '-'} (${p.votes ?? 0})</div>
+      </div>`;
+  });
 }
 
-async function toggleListen(){
-  const ok = await primeMicOnce();
-  if (!ok) return;
-
-  const rec = ensureRecognition();
-  if (!rec) return;
-
-  try{
-    if (!listening) rec.start();
-    else rec.stop();
-  }catch(_){ /* Chrome potrafi rzucić gdy start() za szybko — ignoruj */ }
+/* ───── helpers ───────────────────────────────────────── */
+async function postJson(path, body) {
+  try {
+    const res = await fetch(BASE_URL + path, {
+      method: 'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(()=> ({}));
+    if (!res.ok) return { error: json.error || res.statusText || 'request_failed' };
+    return json;
+  } catch (e) { return { error: 'network_error' }; }
 }
 
-// obsłuż tapnięcia w logo (różne eventy na mobile)
-['click','touchstart'].forEach(evt =>
-  logoEl.addEventListener(evt, (e)=>{ e.preventDefault(); toggleListen(); }, {passive:false})
-);
-
-// ====== Demo „obsługa komendy” (tu podłączysz backend) ======
-function handleCommand(text){
-  const tag = currentType === 'food' ? 'food' : currentType === 'taxi' ? 'taxi' : 'hotel';
-  showInfo(`✅ ${tag}: ${text.trim()} (mock — backend do podpięcia).`, 'info', 4500);
+async function getJson(path) {
+  try {
+    const res = await fetch(BASE_URL + path);
+    const json = await res.json().catch(()=> ({}));
+    if (!res.ok) return { error: json.error || res.statusText || 'request_failed' };
+    return json;
+  } catch (e) { return { error: 'network_error' }; }
 }
+
+function showError(code){
+  const map = {
+    rate_limited: "Za dużo zapytań – spróbuj za chwilę.",
+    empty_query: "Podaj treść zamówienia.",
+    network_error: "Błąd sieci – sprawdź połączenie.",
+  };
+  error(map[code] || `Błąd: ${code}`);
+}
+function info(m){ els.status.textContent = m; els.status.style.color = "#9aa3ad"; }
+function ok(m){ els.status.textContent = m; els.status.style.color = "#35d49a"; }
+function warn(m){ els.status.textContent = m; els.status.style.color = "#eab308"; }
+function error(m){ els.status.textContent = m; els.status.style.color = "#ff6b6b"; }

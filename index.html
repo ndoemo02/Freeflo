@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>FreeFlow — po prostu zamów</title>
   <meta name="color-scheme" content="dark light" />
-  <!-- KONFIG: zmień tylko jeśli backend jest na innym hoście -->
+
+  <!-- Konfiguracja dla app.js (zmień tylko jeśli backend na innym hoście) -->
+  <meta name="asr-provider" content="browser" />
   <meta name="gmaps-proxy" content="/api/places" />
   <meta name="gpt-proxy"   content="/api/gpt" />
-  <!-- /api/tts na tym samym hoście -->
+  <!-- TTS leci na /api/tts na tym samym hoście -->
+
+  <meta http-equiv="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,42 +20,36 @@
     <header class="topbar">
       <div>
         <div class="brand"><b>Free</b><span>Flow</span></div>
-        <div class="tagline">Voice to order — Złóż zamówienie</div>
+        <div class="tagline">Po prostu zamów — głosem</div>
         <div class="subtag">Restauracja, taxi albo hotel?</div>
       </div>
       <div class="actions">
         <div class="chip" aria-label="Menu" title="Menu">≡</div>
-        <div class="chip" style="position:relative" aria-label="Koszyk" title="Koszyk">🛒
-          <span class="cart-badge" id="cartCount">0</span>
+        <div class="chip" style="position:relative" aria-label="Koszyk" title="Koszyk">
+          🛒 <span class="cart-badge" id="cartCount">0</span>
         </div>
       </div>
     </header>
 
     <section class="stage">
       <div class="logoWrap" id="logoWrap">
-        <img src="assets/Freeflowlogo.png" alt="FreeFlow" width="840" height="1080" />
+        <img src="assets/Freeflowlogo.png?v=1" alt="FreeFlow" width="840" height="1080" />
         <button class="hit" id="logoBtn" aria-label="Naciśnij, aby mówić"></button>
       </div>
 
-      <div class="asr" role="status" aria-live="polite">
+      <div class="asr" id="asrBox" role="status" aria-live="polite">
         <div class="dot" id="dot"></div>
         <div class="text ghost" id="transcript">Powiedz, co chcesz zamówić…</div>
         <button class="micBtn" id="micBtn" title="Start/Stop" aria-label="Start/Stop">🎤</button>
-      </div>
-
-      <div class="inputRow">
-        <input id="textInput" type="text" inputmode="text" autocomplete="off" spellcheck="false"
-               placeholder="Powiedz lub wpisz" />
-        <button id="sendBtn" class="sendBtn">Wyślij</button>
       </div>
 
       <div id="banner" class="banner hidden"></div>
     </section>
 
     <nav class="dock" aria-label="Kategorie">
-      <button class="tile active" id="tileFood"><span class="i">🍽️</span><span>Jedzenie</span></button>
-      <button class="tile" id="tileTaxi"><span class="i">🚕</span><span>Taxi</span></button>
-      <button class="tile" id="tileHotel"><span class="i">🏡</span><span>Hotel</span></button>
+      <button class="tile active" id="tileFood"><span class="i">🍽️</span> <span>Jedzenie</span></button>
+      <button class="tile" id="tileTaxi"><span class="i">🚕</span> <span>Taxi</span></button>
+      <button class="tile" id="tileHotel"><span class="i">🏡</span> <span>Hotel</span></button>
     </nav>
   </div>
 

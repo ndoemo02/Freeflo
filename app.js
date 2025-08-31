@@ -1,60 +1,48 @@
-// FreeFlow front — klikany nasłuch + ręczny input + wyświetlenia
-// -----------------------------------------------------------
-const $ = (sel) => document.querySelector(sel);
+// FreeFlow front — UI + klikany nasłuch + Places/GPT/TTS
 
+const $  = (s)=>document.querySelector(s);
 const transcript = $('#transcript');
 const micBtn     = $('#micBtn');
 const logoBtn    = $('#logoBtn');
-const textInput  = $('#textInput');
-const sendBtn    = $('#sendBtn');
+const dot        = $('#dot');
 const banner     = $('#banner');
-const tileFood   = $('#tileFood');
-const tileTaxi   = $('#tileTaxi');
-const tileHotel  = $('#tileHotel');
+const inputEl    = $('#textInput');
+const sendBtn    = $('#sendBtn');
 
 const GMAPS_PROXY = (document.querySelector('meta[name="gmaps-proxy"]')?.content || '/api/places').trim();
 const GPT_PROXY   = (document.querySelector('meta[name="gpt-proxy"]')?.content   || '/api/gpt').trim();
 
-/* ---------- helpers UI ---------- */
-function showBanner(msg, type='info'){
+function showBanner(msg,type='info'){
   if(!banner) return;
   banner.textContent = msg || '';
   banner.classList.remove('hidden');
   banner.style.background =
     type==='err' ? 'rgba(255,72,72,.15)' :
-    type==='warn'? 'rgba(255,203,72,.15)' :
-                   'rgba(72,179,255,.12)';
+    type==='warn'? 'rgba(255,203,72,.15)' : 'rgba(72,179,255,.12)';
   banner.style.color =
     type==='err' ? '#ffd1d1' :
-    type==='warn'? '#ffe6a3' :
-                   '#dff1ff';
+    type==='warn'? '#ffe6a3' : '#dff1ff';
 }
-function hideBanner(){ banner?.classList.add('hidden'); banner.textContent=''; }
-function setGhostText(t){ transcript.classList.add('ghost'); transcript.textContent=t; }
-function setFinalText(t){ transcript.classList.remove('ghost'); transcript.textContent=t; }
-function setListening(on){ document.body.classList.toggle('listening', !!on); }
+function hideBanner(){ banner?.classList.add('hidden'); banner && (banner.textContent=''); }
+function setGhostText(t){ transcript?.classList.add('ghost'); if(transcript) transcript.textContent=t; }
+function setFinalText(t){ transcript?.classList.remove('ghost'); if(transcript) transcript.textContent=t; }
+function setListening(on){ document.body.classList.toggle('listening', !!on); if(dot) dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000'; }
 
-/* ---------- geolokacja (na żądanie) ---------- */
 async function getPositionOrNull(timeoutMs=6000){
-  if(!('geolocation' in navigator)) return null;
-  const once = () => new Promise((res,rej)=>{
-    navigator.geolocation.getCurrentPosition(
-      (pos)=>res(pos.coords),
-      ()=>rej(),
-      { enableHighAccuracy:true, timeout:timeoutMs, maximumAge:25000 }
-    );
-  });
-  try { return await once(); } catch { return null; }
+  if(!('geolocation' in navigator)){ showBanner('Przeglądarka nie obsługuje lokalizacji.','warn'); return null; }
+  const once=()=>new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(
+    p=>res(p.coords), rej, {enableHighAccuracy:true,timeout:timeoutMs,maximumAge:25000}));
+  try{ const c=await once(); hideBanner(); return c; }
+  catch(e){ showBanner('Brak lokalizacji — szukam po tekście.','warn'); return null; }
 }
 
-/* ---------- prosta ekstrakcja frazy ---------- */
+/* ====== Parsowanie intencji (na szybko) ====== */
 function extractQuery(text){
-  const t = (text||'').trim();
-  const re = /(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(?:.*?\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
-  const m = t.match(re);
-  if(!m) return null;
-  const base = (m[1]||'').toLowerCase();
-  const city = m[2] ? ` w ${m[2]}` : '';
+  const t=(text||'').trim();
+  const re=/(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(?:.*?\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
+  const m=t.match(re); if(!m) return null;
+  const base=(m[1]||'').toLowerCase();
+  const city=m[2] ? ` w ${m[2]}` : '';
   const normalized =
     /restaurac/.test(base) ? 'restauracje' :
     /pizz/.test(base)      ? 'pizzeria'    :
@@ -63,9 +51,9 @@ function extractQuery(text){
   return (normalized + city).trim();
 }
 
-/* ---------- backend calls ---------- */
+/* ====== Wywołania backendu ====== */
 async function callPlaces(params){
-  const sp = new URLSearchParams();
+  const sp=new URLSearchParams();
   if(params.query)   sp.set('query', params.query);
   if(params.lat)     sp.set('lat', params.lat);
   if(params.lng)     sp.set('lng', params.lng);
@@ -82,50 +70,40 @@ async function callPlaces(params){
 
 async function callGPT(prompt){
   try{
-    const res = await fetch(GPT_PROXY, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt })
-    });
-    if(!res.ok) throw new Error();
+    const res = await fetch(GPT_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    if(!res.ok) throw new Error(`GPT HTTP ${res.status}`);
     return res.json(); // { reply }
   }catch{ return null; }
 }
 
 async function callTTS(text, lang='pl-PL', voice='pl-PL-Wavenet-D'){
   try{
-    const r = await fetch('/api/tts', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, lang, voice })
-    });
+    const r = await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang,voice})});
     const j = await r.json();
     if(!j?.audioContent) return false;
-    const audio = new Audio('data:audio/mp3;base64,' + j.audioContent);
+    const audio = new Audio('data:audio/mp3;base64,'+j.audioContent);
     await audio.play();
-    await new Promise(res => audio.addEventListener('ended', res, { once:true }));
+    await new Promise(res=>audio.addEventListener('ended',res,{once:true}));
     return true;
   }catch{ return false; }
 }
 
-/* ---------- Web Speech fallback ---------- */
+/* ====== TTS fallback ====== */
 function speakWithWebSpeech(text){
   return new Promise((resolve)=>{
     try{
       if(!('speechSynthesis' in window)) return resolve(true);
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'pl-PL';
-      u.onend = ()=>resolve(true);
-      u.onerror = ()=>resolve(true);
-      const choose = ()=>{
-        const vs = window.speechSynthesis.getVoices()||[];
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text); u.lang='pl-PL';
+      const pick=()=>{
+        const vs=speechSynthesis.getVoices()||[];
         u.voice = vs.find(v=>/pl[-_]PL/i.test(v.lang||'')) || vs.find(v=>/polish/i.test(v.name||'')) || vs[0] || null;
-        window.speechSynthesis.speak(u);
+        speechSynthesis.speak(u);
       };
-      const vs = window.speechSynthesis.getVoices();
-      if(!vs || vs.length===0){
-        window.speechSynthesis.onvoiceschanged = ()=>{ choose(); window.speechSynthesis.onvoiceschanged=null; };
-        setTimeout(()=>window.speechSynthesis.getVoices(),0);
-      }else choose();
+      u.onend=()=>resolve(true); u.onerror=()=>resolve(true);
+      const vs=speechSynthesis.getVoices();
+      if(!vs || !vs.length){ speechSynthesis.onvoiceschanged=()=>{pick(); speechSynthesis.onvoiceschanged=null;}; setTimeout(()=>speechSynthesis.getVoices(),0); }
+      else pick();
     }catch{ resolve(true); }
   });
 }
@@ -134,24 +112,26 @@ async function speak(text){
   sayQueue.push(text); if(speaking) return;
   speaking=true;
   while(sayQueue.length){
-    const msg = sayQueue.shift();
-    const ok = await callTTS(msg); if(!ok) await speakWithWebSpeech(msg);
+    const msg=sayQueue.shift();
+    const ok=await callTTS(msg);
+    if(!ok) await speakWithWebSpeech(msg);
   }
   speaking=false;
 }
 
-/* ---------- główny flow ---------- */
+/* ====== GŁÓWNY FLOW ====== */
 async function handleUserQuery(userText){
   try{
+    setFinalText(userText);
     const q = extractQuery(userText);
     const coords = !q || !/ w [A-ZĄĆĘŁŃÓŚŹŻ]/.test(q) ? await getPositionOrNull(6000) : null;
 
-    const params = { language:'pl', n:2 };
+    const params={language:'pl',n:2};
     if(coords){
       params.lat = coords.latitude.toFixed(6);
       params.lng = coords.longitude.toFixed(6);
       params.radius = 5000;
-      params.keyword = q || userText;
+      if(q) params.keyword = q;
     }else if(q){
       params.query = q;
     }else{
@@ -164,15 +144,16 @@ async function handleUserQuery(userText){
     const data = await callPlaces(params);
 
     const list = (data?.results || data || [])
+      .filter(x => x && (x.rating ?? null) !== null)
       .map(x => ({
         name: x.name,
-        rating: Number(x.rating || 0),
-        votes: Number(x.user_ratings_total || x.votes || 0),
-        address: x.formatted_address || x.address || x.vicinity || '—'
+        rating: Number(x.rating||0),
+        votes: Number(x.user_ratings_total||x.votes||0),
+        address: (x.formatted_address || x.address || x.vicinity || '—')
       }))
-      .sort((a,b)=> (b.rating-a.rating) || (b.votes-a.votes));
+      .sort((a,b)=>(b.rating-a.rating)||(b.votes-a.votes));
 
-    const results = list.slice(0,2);
+    const results=list.slice(0,2);
     if(!results.length){
       showBanner('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.','warn');
       await speak('Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.');
@@ -180,13 +161,14 @@ async function handleUserQuery(userText){
     }
 
     if(results.length===1){
-      const a = results[0];
-      const line = `Najlepsze w pobliżu: ${a.name} (${a.rating}★, ${a.address}).`;
+      const a=results[0];
+      const line=`Najlepsze w pobliżu: ${a.name} (${a.rating} gwiazdek, ${a.address}).`;
       showBanner(line); await speak(line);
     }else{
-      const [a,b] = results;
-      showBanner(`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`);
-      await speak(`Najlepsze: ${a.name}. Alternatywa: ${b.name}.`);
+      const [a,b]=results;
+      const txt=`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`;
+      showBanner(txt);
+      await speak(`Najlepsze: ${a.name}. Alternatywa: ${b.name}. Wybierz w FreeFlow i zamów.`);
     }
 
     const g = await callGPT(
@@ -195,31 +177,34 @@ async function handleUserQuery(userText){
       }. Zakończ CTA: „Zamów we FreeFlow.”`
     );
     if(g?.reply){
-      const msg = g.reply.replace(/^echo[:\-\s]*/i,'').trim();
+      const msg=g.reply.replace(/^echo[:\-\s]*/i,'').trim();
       showBanner(msg); await speak(msg);
     }
-  }catch(e){
-    console.error(e);
+  }catch(err){
+    console.error(err);
     showBanner('Ups, coś poszło nie tak. Spróbuj ponownie.','err');
     await speak('Coś poszło nie tak. Spróbuj ponownie.');
   }
 }
 
-/* ---------- ASR tylko po kliknięciu ---------- */
+/* ====== ASR tylko po kliknięciu ====== */
 let recognition=null, listening=false;
+
 function initASR(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR) return null;
-  const rec = new SR();
-  rec.lang='pl-PL'; rec.interimResults=true; rec.maxAlternatives=1;
+  const rec=new SR();
+  rec.lang='pl-PL';
+  rec.interimResults=true;
+  rec.maxAlternatives=1;
 
   rec.onstart = ()=>{ listening=true; setListening(true); setGhostText('Słucham…'); };
-  rec.onerror = ()=>{ showBanner('Błąd rozpoznawania mowy. Wpisz ręcznie lub spróbuj ponownie.','warn'); };
+  rec.onerror = ()=>{ showBanner('Błąd rozpoznawania mowy. Spróbuj ponownie lub wpisz ręcznie.','warn'); };
   rec.onresult = (ev)=>{
     let interim='', final='';
     for(let i=ev.resultIndex;i<ev.results.length;i++){
-      const chunk = ev.results[i][0].transcript;
-      if(ev.results[i].isFinal) final += chunk; else interim += chunk;
+      const chunk=ev.results[i][0].transcript;
+      if(ev.results[i].isFinal) final+=chunk; else interim+=chunk;
     }
     if(final){
       setFinalText(final.trim());
@@ -230,7 +215,7 @@ function initASR(){
   };
   rec.onend = ()=>{
     listening=false; setListening(false);
-    if(transcript.textContent.trim()==='' || transcript.classList.contains('ghost')){
+    if(!transcript || transcript.textContent.trim()==='' || transcript.classList.contains('ghost')){
       setGhostText('Powiedz, co chcesz zamówić…');
     }
   };
@@ -238,48 +223,29 @@ function initASR(){
 }
 
 function toggleMic(){
-  if(!recognition) recognition = initASR();
   if(!recognition){
-    // Brak ASR w przeglądarce – fokus do inputu
-    textInput?.focus();
-    showBanner('ASR niedostępny. Skorzystaj z pola „Powiedz lub wpisz”.','warn');
+    const typed = prompt('Rozpoznawanie mowy niedostępne. Wpisz, co chcesz zamówić:');
+    if(typed && typed.trim()){ setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
     return;
   }
-  try{
-    if(listening){ recognition.stop(); }
-    else { recognition.start(); }
-  }catch{}
+  if(listening){ try{recognition.stop();}catch{} return; }
+  try{ recognition.start(); }catch{}
 }
 
-/* ---------- zdarzenia UI ---------- */
-logoBtn?.addEventListener('click', toggleMic);
-micBtn?.addEventListener('click', toggleMic);
+/* ====== UI hooks ====== */
+window.addEventListener('DOMContentLoaded',()=>{
+  recognition = initASR();
+  setGhostText('Powiedz, co chcesz zamówić…');
 
-sendBtn?.addEventListener('click', ()=>{
-  const v = (textInput.value||'').trim();
-  if(!v) return;
-  setFinalText(v);
-  textInput.value='';
-  handleUserQuery(v);
-});
-textInput?.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){ e.preventDefault(); sendBtn.click(); }
-});
+  logoBtn?.addEventListener('click', toggleMic);
+  micBtn?.addEventListener('click', toggleMic);
 
-/* szybkie ustawienie placeholderów po kafelkach */
-tileFood?.addEventListener('click', ()=>{
-  setGhostText('np. „dwie najlepsze pizzerie w Krakowie”');
-  showBanner('Powiedz lub wpisz np. „dwie najlepsze pizzerie w Krakowie”.');
+  sendBtn?.addEventListener('click', ()=>{
+    const val=(inputEl?.value||'').trim();
+    if(!val) return;
+    inputEl.value=''; setFinalText(val); handleUserQuery(val);
+  });
+  inputEl?.addEventListener('keydown',(e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); sendBtn?.click(); }
+  });
 });
-tileTaxi?.addEventListener('click', ()=>{
-  setGhostText('np. „zamów taxi na 18:30 z Dworca do Kazimierza”');
-  showBanner('Taxi: start → cel + godzina.');
-});
-tileHotel?.addEventListener('click', ()=>{
-  setGhostText('np. „nocleg w Warszawie 2 noce od piątku”');
-  showBanner('Hotel: miasto + daty.');
-});
-
-/* startowy tekst */
-setGhostText('Powiedz, co chcesz zamówić…');
-hideBanner();

@@ -1,338 +1,209 @@
-// freeflow-assistant.js — Google TTS (priority) + dystans + ciepłe komunikaty
+/* freeflow-assistant.js  — front bez zmian w HTML
+ * Dock z kaflami (Jedzenie/Taxi/Hotel) + połączenie z backendem (plan + tts)
+ * Wszystko PL, minimalne style wstrzykiwane z JS.
+ */
 
-/* ----------------- skróty do DOM ----------------- */
-const $  = (sel) => document.querySelector(sel);
-const app         = $('#app');
-const transcript  = $('#transcript');
-const micBtn      = $('#micBtn');
-const logoBtn     = $('#logoBtn');
-const dot         = $('#dot');
-const banner      = $('#banner');
-const tileFood    = $('#tileFood');
-const tileTaxi    = $('#tileTaxi');
-const tileHotel   = $('#tileHotel');
+(() => {
+  // >>>>> KONFIG <<<<<
+  const API_BASE = 'https://freeflow-backend-vercel.vercel.app'; // Twój backend na Vercel
+  const TTS_LANG = 'pl-PL';
+  const TTS_FORMAT = 'mp3';
 
-/* ----------------- meta-konfiguracja ----------------- */
-const GMAPS_PROXY = (document.querySelector('meta[name="gmaps-proxy"]')?.content || '/api/places').trim();
-const GPT_PROXY   = (document.querySelector('meta[name="gpt-proxy"]')?.content   || '/api/gpt').trim();
+  // ===== Pomocnicze =====
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
-/* ----------------- UI helpers ----------------- */
-function showBanner(msg, type = 'info') {
-  if (!banner) return;
-  banner.textContent = msg || '';
-  banner.classList.remove('hidden');
-  banner.style.background =
-    type === 'err'  ? 'rgba(255,72,72,.15)'  :
-    type === 'warn' ? 'rgba(255,203,72,.15)' : 'rgba(72,179,255,.12)';
-  banner.style.color =
-    type === 'err'  ? '#ffd1d1' :
-    type === 'warn' ? '#ffe6a3' : '#dff1ff';
-}
-function hideBanner(){ banner?.classList.add('hidden'); banner && (banner.textContent = ''); }
-function setGhostText(t){ transcript?.classList.add('ghost'); if (transcript) transcript.textContent = t; }
-function setFinalText(t){ transcript?.classList.remove('ghost'); if (transcript) transcript.textContent = t; }
-function setListening(on){ document.body.classList.toggle('listening', !!on); if (dot) dot.style.boxShadow = on ? '0 0 18px #86e2ff' : '0 0 0 #0000'; }
-
-/* ----------------- GEO z timeoutem ----------------- */
-async function getPositionOrNull(timeoutMs = 6000){
-  if (!('geolocation' in navigator)) { showBanner('Twoja przeglądarka nie obsługuje lokalizacji.', 'warn'); return null; }
-  const once = () => new Promise((res, rej) => {
-    navigator.geolocation.getCurrentPosition(
-      (pos)=>res(pos.coords),
-      (err)=>rej(err),
-      { enableHighAccuracy:true, timeout:timeoutMs, maximumAge:25_000 }
-    );
-  });
-  try { const c = await once(); hideBanner(); return c; }
-  catch(e){
-    const map = {1:'Brak zgody na lokalizację.',2:'Lokalizacja niedostępna.',3:'Przekroczono czas oczekiwania.'};
-    showBanner(`${map[e.code] ?? 'Błąd lokalizacji.'} — szukam po tekście.`, 'warn');
-    return null;
+  // Wstrzyknięcie prostych styli (bez ruszania index.html)
+  const css = `
+  .ff-dock {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    display: flex; gap: 12px; z-index: 9999; padding: 10px 12px;
+    backdrop-filter: blur(8px); background: rgba(20,20,20,.35);
+    border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.35);
   }
-}
-
-/* ----------------- Intencja/miasto (proste) ----------------- */
-function extractQuery(text){
-  const t = (text||'').trim();
-  const re = /(pizzeria|pizze|pizza|restauracja|restauracje|kebab|sushi|hotel|nocleg|taxi)(.*?)(?:\bw\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+))?/i;
-  const m = t.match(re);
-  if (!m) return null;
-  const base = (m[1]||'').toLowerCase();
-  const city = m[3] ? ` w ${m[3]}` : '';
-  const normalized =
-    /restaurac/.test(base) ? 'restauracje' :
-    /pizz/.test(base)      ? 'pizzeria'    :
-    /(hotel|nocleg)/.test(base) ? 'hotel'  :
-    /taxi/.test(base)      ? 'taxi'        : base;
-  return (normalized + city).trim();
-}
-
-/* ----------------- Backend calls ----------------- */
-async function callPlaces(params){
-  const sp = new URLSearchParams();
-  if (params.query)  sp.set('query', params.query);
-  if (params.lat)    sp.set('lat', params.lat);
-  if (params.lng)    sp.set('lng', params.lng);
-  if (params.radius) sp.set('radius', params.radius);
-  if (params.rankby) sp.set('rankby', params.rankby);
-  if (params.keyword)sp.set('keyword', params.keyword);
-  if (params.n)      sp.set('n', params.n);
-  sp.set('language', params.language || 'pl');
-
-  const res = await fetch(`${GMAPS_PROXY}?${sp.toString()}`, { method:'GET' });
-  if (!res.ok) throw new Error(`Places HTTP ${res.status}`);
-  return res.json();
-}
-
-async function callGPT(prompt){
-  try{
-    const res = await fetch(GPT_PROXY, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ prompt })
-    });
-    if (!res.ok) throw new Error(`GPT HTTP ${res.status}`);
-    return res.json();
-  }catch{ return null; }
-}
-
-/* ----------------- TTS: Google → fallback Web Speech ----------------- */
-const sayQueue = [];
-let speaking = false;
-
-async function speakEnqueue(text){
-  if (!text) return;
-  sayQueue.push(text);
-  if (speaking) return;
-  speaking = true;
-  while (sayQueue.length){
-    const t = sayQueue.shift();
-    const okCloud = await speakWithGoogleTTS(t);
-    if (!okCloud){ await speakWithWebSpeech(t); }
+  .ff-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 110px; height: 44px; padding: 0 14px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+    color: #fff; background: rgba(255,255,255,.08); font-weight: 600;
+    letter-spacing:.2px; cursor: pointer; user-select: none;
+    transition: transform .06s ease, background .2s ease, opacity .2s ease;
   }
-  speaking = false;
-}
+  .ff-btn:hover { background: rgba(255,255,255,.18); }
+  .ff-btn:active { transform: translateY(1px) scale(.99); }
+  .ff-results {
+    position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
+    width: min(720px, 92vw); max-height: 42vh; overflow: auto;
+    padding: 12px 14px; margin: 0 auto; z-index: 9998;
+    border-radius: 16px; background: rgba(15,15,15,.55);
+    backdrop-filter: blur(8px); color: #f4f4f4; font-size: 15px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.35);
+  }
+  .ff-result { padding: 10px 8px; border-bottom: 1px dashed rgba(255,255,255,.12); }
+  .ff-result:last-child { border-bottom: none; }
+  .ff-muted { opacity: .7; font-size: 13px; }
+  .ff-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ff-badge { padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.14); font-size: 12px; }
+  .ff-loading { opacity: .8; }
+  `;
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
 
-async function speakWithGoogleTTS(text){
-  try{
-    const r = await fetch('/api/tts', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, lang:'pl-PL', voice:'pl-PL-Wavenet-D' })
-    });
-    const j = await r.json();
-    if (!j?.audioContent) return false;
-    const audio = new Audio('data:audio/mp3;base64,'+j.audioContent);
-    await audio.play();
-    await new Promise(res => audio.addEventListener('ended', res, { once:true }));
-    return true;
-  }catch{ return false; }
-}
+  // Dock + panel wyników
+  const dock = document.createElement('div');
+  dock.className = 'ff-dock';
+  dock.innerHTML = `
+    <button class="ff-btn" data-intent="food">🍽️ Jedzenie</button>
+    <button class="ff-btn" data-intent="taxi">🚕 Taxi</button>
+    <button class="ff-btn" data-intent="hotel">🏨 Hotel</button>
+  `;
+  document.body.appendChild(dock);
 
-function speakWithWebSpeech(text){
-  return new Promise((resolve)=>{
-    try{
-      if (!('speechSynthesis' in window)) return resolve(true);
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'pl-PL';
-      const choose = ()=>{
-        const vs = window.speechSynthesis.getVoices()||[];
-        u.voice =
-          vs.find(v=>/pl[-_]PL/i.test(v.lang||'')) ||
-          vs.find(v=>/polish/i.test(v.name||''))   ||
-          vs[0] || null;
-        window.speechSynthesis.speak(u);
-      };
-      u.onend = ()=>resolve(true);
-      u.onerror = ()=>resolve(true);
-      const vs = window.speechSynthesis.getVoices();
-      if (!vs || vs.length===0){
-        window.speechSynthesis.onvoiceschanged = ()=>{ choose(); window.speechSynthesis.onvoiceschanged=null; };
-        setTimeout(()=>window.speechSynthesis.getVoices(),0);
-      }else{ choose(); }
-    }catch{ resolve(true); }
-  });
-}
+  const panel = document.createElement('div');
+  panel.className = 'ff-results';
+  panel.style.display = 'none';
+  document.body.appendChild(panel);
 
-/* ----------------- Dystans (Haversine) ----------------- */
-const R_EARTH = 6371e3; // m
-function haversineMeters(lat1, lon1, lat2, lon2){
-  const toRad = (d)=> (d*Math.PI/180);
-  const φ1 = toRad(lat1), φ2 = toRad(lat2);
-  const Δφ = toRad(lat2-lat1), Δλ = toRad(lon2-lon1);
-  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-  const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R_EARTH*c;
-}
-function fmtDist(m){
-  if (m < 50)  return `${Math.round(m)} m`;
-  if (m < 950) return `${Math.round(m/10)*10} m`;
-  return `${(m/1000).toFixed(m<1500?1:1)} km`;
-}
+  function showPanel(html) {
+    panel.innerHTML = html;
+    panel.style.display = 'block';
+  }
+  function hidePanel() {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+  }
 
-/* ----------------- Główna obsługa zapytań ----------------- */
-async function handleUserQuery(userText){
-  try{
-    setFinalText(userText);
-    const coords = await getPositionOrNull(6000);
-
-    const q = extractQuery(userText);
-    const params = { language:'pl', n:4 }; // weźmy do 4, potem i tak wybierzemy 2
-
-    if (coords){
-      params.lat    = coords.latitude.toFixed(6);
-      params.lng    = coords.longitude.toFixed(6);
-      params.radius = 5000;
-      if (q) params.keyword = q;
-    }else if (q){
-      params.query = q;
-    }else{
-      const msg = 'Nie rozumiem. Powiedz np. „najbliższa pizzeria w Katowicach”.';
-      showBanner(msg,'warn'); await speakEnqueue(msg); return;
-    }
-
-    showBanner('Szukam miejsc w okolicy…');
-
-    const data = await callPlaces(params);
-
-    let list = (data?.results || data || [])
-      .filter(x => x && (x.rating ?? null) !== null)
-      .map(x => ({
-        name: x.name,
-        rating: Number(x.rating||0),
-        votes: Number(x.user_ratings_total||0),
-        address: (x.formatted_address || x.vicinity || '—'),
-        lat: x.geometry?.location?.lat ?? null,
-        lng: x.geometry?.location?.lng ?? null
-      }));
-
-    // dystanse jeśli mamy gps i współrzędne lokalu
-    if (coords){
-      list = list.map(x=>{
-        if (x.lat!=null && x.lng!=null){
-          x.meters = haversineMeters(coords.latitude, coords.longitude, x.lat, x.lng);
-        } else {
-          x.meters = Number.POSITIVE_INFINITY;
-        }
-        return x;
-      }).sort((a,b)=>{
-        // preferuj bliższe, a potem lepiej oceniane
-        const d = (a.meters - b.meters);
-        if (isFinite(d) && Math.abs(d) > 1) return d;
-        return (b.rating - a.rating) || (b.votes - a.votes);
+  async function speak(text) {
+    try {
+      const r = await fetch(`${API_BASE}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang: TTS_LANG, format: TTS_FORMAT }),
       });
-    } else {
-      list = list.sort((a,b)=> (b.rating-a.rating) || (b.votes-a.votes));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || 'TTS HTTP error');
+      const b64 = data?.audioContent;
+      if (!b64) return; // backend mógł tylko zwrócić "ok"
+      const blob = b64ToBlob(b64, TTS_FORMAT === 'mp3' ? 'audio/mpeg' : 'audio/wav');
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play().catch(() => {});
+    } catch (e) {
+      console.warn('TTS error:', e);
     }
+  }
 
-    const results = list.slice(0,2);
-
-    if (!results.length){
-      const msg = 'Nic nie znalazłem. Spróbuj inną frazę lub włącz GPS.';
-      showBanner(msg,'warn'); await speakEnqueue(msg); return;
+  function b64ToBlob(b64Data, contentType = '', sliceSize = 1024) {
+    const byteCharacters = atob(b64Data);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) byteNumbers[i] = slice.charCodeAt(i);
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
     }
+    return new Blob(byteArrays, { type: contentType });
+  }
 
-    // Przyjazny komunikat z dystansem
-    let spoken;
-    if (results.length===1){
-      const a = results[0];
-      const near = (a.meters!=null && isFinite(a.meters)) ? ` — ${fmtDist(a.meters)} od Ciebie` : '';
-      spoken = `Najbliżej masz ${a.name}${near}. Chcesz tam zamówić, czy szukać dalej?`;
-      showBanner(`Najbliżej: ${a.name} (${a.rating}★, ${a.address})`);
-    }else{
-      const [a,b] = results;
-      const nearA = (a.meters!=null && isFinite(a.meters)) ? ` — ${fmtDist(a.meters)} od Ciebie` : '';
-      const nearB = (b.meters!=null && isFinite(b.meters)) ? ` — ${fmtDist(b.meters)} dalej` : '';
-      spoken = `Najbliżej masz ${a.name}${nearA}. Alternatywa: ${b.name}${nearB}. Którą wybierasz?`;
-      showBanner(`Top 2: 1) ${a.name} (${a.rating}★, ${a.address}) • 2) ${b.name} (${b.rating}★, ${b.address})`);
+  function getGeo() {
+    return new Promise(resolve => {
+      const fallback = () => resolve(null);
+      if (!('geolocation' in navigator)) return fallback();
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        }),
+        () => fallback(),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      );
+    });
+  }
+
+  async function plan(query) {
+    const where = await getGeo(); // może być null – backend sobie poradzi
+    const body = { query };
+    if (where) body.where = where;
+
+    const started = Date.now();
+    showPanel(`<div class="ff-result ff-loading">🔎 Szukam: <b>${escapeHtml(query)}</b>…</div>`);
+    try {
+      const res = await fetch(`${API_BASE}/api/plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Błąd zapytania');
+
+      // Oczekuję: data.results[] (name, rating, votes, address, distanceText…)
+      const list = Array.isArray(data?.results) ? data.results : [];
+      if (!list.length) {
+        showPanel(`<div class="ff-result">Brak wyników.</div>`);
+        await speak('Nie znalazłem nic w pobliżu.');
+        return;
+      }
+
+      const rows = list.slice(0, 5).map((p, i) => {
+        const rating = p.rating ? `⭐ ${p.rating}` : '';
+        const votes = p.votes ? `(${p.votes})` : '';
+        const dist = p.distanceText ? `<span class="ff-badge">${p.distanceText}</span>` : '';
+        const addr = p.address ? `<div class="ff-muted">${escapeHtml(p.address)}</div>` : '';
+        return `
+          <div class="ff-result">
+            <div class="ff-row">
+              <div><b>${i + 1}. ${escapeHtml(p.name || 'Miejsce')}</b></div>
+              <div class="ff-muted">${rating} ${votes}</div>
+              ${dist}
+            </div>
+            ${addr}
+          </div>
+        `;
+      }).join('');
+
+      const took = ((Date.now() - started) / 1000).toFixed(1);
+      showPanel(`
+        <div class="ff-muted" style="padding:4px 8px 10px;">Gotowe w ${took}s • Top ${Math.min(5, list.length)}</div>
+        ${rows}
+      `);
+
+      // Zgrabne jednozdaniowe podsumowanie do TTS:
+      const top = list[0];
+      if (top?.name) {
+        const line = `Top propozycja: ${top.name}. ${top.address ? 'Adres: ' + top.address + '. ' : ''}${top.distanceText ? 'Dystans: ' + top.distanceText + '. ' : ''}`;
+        await speak(line);
+      }
+    } catch (e) {
+      console.error(e);
+      showPanel(`<div class="ff-result">Ups, coś poszło nie tak. Spróbuj ponownie.</div>`);
+      await speak('Coś poszło nie tak. Spróbuj ponownie.');
     }
-    await speakEnqueue(spoken);
+  }
 
-    // Krótka wersja marketingowa z GPT (opcjonalnie)
-    const g = await callGPT(
-      `Krótko po polsku (max 22 słowa) poleć 1–2 miejsca z listy: ` +
-      results.map(r=>`${r.name} (${r.rating}★, ${r.address})`).join('; ') +
-      `. Zakończ jednym zdaniem: „Skorzystaj z FreeFlow, aby zamówić szybko i wygodnie!”.`
+  function escapeHtml(s='') {
+    return s.replace(/[&<>"']/g, m =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
     );
-    if (g?.reply){
-      const trimmed = String(g.reply).replace(/^echo[:\-\s]*/i,'').trim();
-      if (trimmed) { showBanner(trimmed); await speakEnqueue(trimmed); }
-    }
-
-  }catch(err){
-    console.error(err);
-    const msg = 'Ups, coś poszło nie tak. Sprawdź połączenie i spróbuj ponownie.';
-    showBanner(msg,'err'); await speakEnqueue(msg);
   }
-}
 
-/* ----------------- ASR (Web Speech) ----------------- */
-let recognition = null;
-let listening = false;
+  // Zdarzenia kafli
+  dock.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ff-btn');
+    if (!btn) return;
+    const intent = btn.dataset.intent;
 
-function initASR(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return null;
-  const rec = new SR();
-  rec.lang = 'pl-PL';
-  rec.interimResults = true;
-  rec.maxAlternatives = 1;
+    // Proste predefiniowane zapytania – możesz zmienić pod siebie
+    if (intent === 'food') plan('dwie najlepsze pizzerie w okolicy');
+    if (intent === 'taxi') plan('taxi z mojej lokalizacji do centrum');
+    if (intent === 'hotel') plan('dwa najlepsze hotele w okolicy');
+  });
 
-  rec.onstart = ()=>{ listening=true; setListening(true); setGhostText('Słucham…'); };
-  rec.onerror = ()=>{ showBanner('Błąd rozpoznawania mowy. Spróbuj ponownie lub wpisz ręcznie.','warn'); };
-  rec.onresult = (ev)=>{
-    let interim='', final='';
-    for (let i=ev.resultIndex; i<ev.results.length; i++){
-      const chunk = ev.results[i][0].transcript;
-      if (ev.results[i].isFinal) final += chunk; else interim += chunk;
-    }
-    if (final){
-      setFinalText(final.trim());
-      try{ rec.stop(); }catch{}
-      listening=false; setListening(false);
-      handleUserQuery(final.trim());
-    }else if (interim){ setGhostText(interim.trim()); }
-  };
-  rec.onend = ()=>{
-    listening=false; setListening(false);
-    if (!transcript || transcript.textContent.trim()==='' || transcript.classList.contains('ghost')){
-      setGhostText('Powiedz, co chcesz zamówić…');
-    }
-  };
-  return rec;
-}
-
-function toggleMic(){
-  if (!recognition){
-    const typed = prompt('Rozpoznawanie mowy niedostępne. Wpisz, co chcesz zamówić:');
-    if (typed && typed.trim()) { setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
-    return;
-  }
-  if (listening){ try{ recognition.stop(); }catch{} }
-  else{
-    try{ recognition.start(); }
-    catch{
-      const typed = prompt('Nie udało się włączyć mikrofonu. Wpisz, co chcesz zamówić:');
-      if (typed && typed.trim()) { setFinalText(typed.trim()); handleUserQuery(typed.trim()); }
-    }
-  }
-}
-
-/* ----------------- UI binding ----------------- */
-function bindUI(){
-  micBtn?.addEventListener('click', toggleMic);
-  logoBtn?.addEventListener('click', toggleMic);
-  const activate = (el)=>[tileFood,tileTaxi,tileHotel].forEach(b=>b?.classList.toggle('active', b===el));
-  tileFood?.addEventListener('click', ()=>activate(tileFood));
-  tileTaxi?.addEventListener('click', ()=>activate(tileTaxi));
-  tileHotel?.addEventListener('click', ()=>activate(tileHotel));
-  setGhostText('Powiedz, co chcesz zamówić…');
-}
-
-/* ----------------- start ----------------- */
-(function bootstrap(){
-  recognition = initASR();
-  bindUI();
-  getPositionOrNull(3000).catch(()=>{});
+  // Schowanie panelu po kliknięciu poza nim (opcjonalne)
+  document.addEventListener('click', (e) => {
+    const insideDock = e.target.closest('.ff-dock');
+    const insidePanel = e.target.closest('.ff-results');
+    if (!insideDock && !insidePanel) hidePanel();
+  });
 })();

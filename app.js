@@ -1,285 +1,220 @@
-// app.js — FreeFlow (front)
-// ------------------------------------------------------------
-// Założenia:
-// - index.html ma elementy: #tileFood, #tileTaxi, #tileHotel, #transcript, #banner, #micBtn
-// - meta[name="gmaps-proxy"] -> URL backendu /api/places (Vercel)
-// - meta[name="gpt-proxy"]   -> URL backendu /api/gpt
-// - TTS: backend /api/tts (ten sam host co /api/places -> bierzemy z URL-a meta i zamieniamy końcówkę)
-// - Fallback TTS: Web Speech API (speechSynthesis)
-//
-// Kliknięcie kafelka = natychmiastowe zapytanie:
-//  * Jedzenie -> "restauracja w okolicy"
-//  * Taxi     -> "taxi w okolicy"
-//  * Hotel    -> "hotel w okolicy"
-// ------------------------------------------------------------
+// app.js — minimal, pewny przepływ: tile -> geolokacja -> /api/places (POST)
+// Nie wymaga zmian w index.html
 
-(function () {
-  // --------- helpers ---------
-  const $ = (sel) => document.querySelector(sel);
-  const getMeta = (name) => {
-    const m = document.querySelector(`meta[name="${name}"]`);
-    return m ? m.content : "";
-  };
+// --- Helpers ---------------------------------------------------------------
 
-  // Endpoints z meta-tagów
-  const PLACES_URL = getMeta("gmaps-proxy"); // np. https://.../api/places
-  const GPT_URL = getMeta("gpt-proxy");      // np. https://.../api/gpt
-  if (!PLACES_URL || !GPT_URL) {
-    console.warn("Brak meta gmaps-proxy lub gpt-proxy w index.html");
-  }
-  // Wylicz TTS URL (ten sam host co PLACES_URL, tylko /api/tts)
-  let TTS_URL = "";
+function meta(name, fallback = '') {
+  const el = document.querySelector(`meta[name="${name}"]`);
+  return el?.content?.trim() || fallback;
+}
+
+const PLACES_URL = meta('gmaps-proxy', 'https://freeflow-backend-vercel.vercel.app/api/places');
+const GPT_URL    = meta('gpt-proxy',   'https://freeflow-backend-vercel.vercel.app/api/gpt');
+const TTS_URL    = 'https://freeflow-backend-vercel.vercel.app/api/tts';
+
+async function postJson(url, payload, opts = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+
+function $(sel){ return document.querySelector(sel); }
+function show(el){ el?.classList?.remove('hidden'); }
+function hide(el){ el?.classList?.add('hidden'); }
+function setText(el, txt){ if(el) el.textContent = txt; }
+
+// --- UI refs ---------------------------------------------------------------
+
+const transcriptEl = $('#transcript');
+const bannerEl     = $('#banner');
+const tileFood     = $('#tileFood');
+const tileTaxi     = $('#tileTaxi');
+const tileHotel    = $('#tileHotel');
+const micBtn       = $('#micBtn');
+const logoBtn      = $('#logoBtn');
+
+// --- Geolokacja (pewna i szybka) ------------------------------------------
+
+async function getLocation() {
+  // 1) Spróbuj pamięci (ostatnia udana)
   try {
-    const u = new URL(PLACES_URL);
-    u.pathname = "/api/tts";
-    u.search = "";
-    TTS_URL = u.toString();
-  } catch (e) {
-    console.warn("Nie udało się zbudować URL TTS na podstawie gmaps-proxy:", e);
-  }
-
-  // --------- UI refs ---------
-  const tileFood  = $("#tileFood");
-  const tileTaxi  = $("#tileTaxi");
-  const tileHotel = $("#tileHotel");
-  const transcriptEl = $("#transcript");
-  const bannerEl = $("#banner");
-  const micBtn = $("#micBtn");
-
-  // --------- state ---------
-  let mode = "food"; // "food" | "taxi" | "hotel"
-  let lastGeo = null; // { lat, lng } po pobraniu geolokacji
-  let speaking = false;
-
-  // --------- init ---------
-  setMode("food");
-  setupMic(); // mic dalej działa do doprecyzowania
-
-  // Zdarzenia kafelków — NATYCHMIASTOWE SZUKANIE
-  tileFood?.addEventListener("click", () => {
-    setMode("food");
-    onUserQuery("restauracja w okolicy");
-  });
-  tileTaxi?.addEventListener("click", () => {
-    setMode("taxi");
-    onUserQuery("taxi w okolicy");
-  });
-  tileHotel?.addEventListener("click", () => {
-    setMode("hotel");
-    onUserQuery("hotel w okolicy");
-  });
-
-  // --------- funkcje UI ---------
-  function setMode(m) {
-    mode = m;
-    [tileFood, tileTaxi, tileHotel].forEach((btn) => btn?.classList.remove("active"));
-    if (mode === "food") tileFood?.classList.add("active");
-    if (mode === "taxi") tileTaxi?.classList.add("active");
-    if (mode === "hotel") tileHotel?.classList.add("active");
-  }
-
-  function setTranscript(text, ghost = false) {
-    if (!transcriptEl) return;
-    transcriptEl.textContent = text || "";
-    transcriptEl.classList.toggle("ghost", !!ghost);
-  }
-
-  function showBanner(html) {
-    if (!bannerEl) return;
-    if (!html) {
-      bannerEl.classList.add("hidden");
-      bannerEl.innerHTML = "";
-      return;
+    const cached = JSON.parse(localStorage.getItem('ff:loc') || 'null');
+    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) { // 30 min
+      return cached;
     }
-    bannerEl.innerHTML = html;
-    bannerEl.classList.remove("hidden");
+  } catch {}
+
+  // 2) Spróbuj navigator.geolocation
+  const pos = await new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      ()  => resolve(null),
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 120000 }
+    );
+  });
+
+  // 3) Zapisz, jeśli się udało
+  if (pos) {
+    localStorage.setItem('ff:loc', JSON.stringify({ ...pos, ts: Date.now() }));
+    return pos;
   }
 
-  // --------- geolokacja ---------
-  async function getGeo() {
-    if (lastGeo) return lastGeo;
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        if (!navigator.geolocation) return reject(new Error("Brak geolokacji w przeglądarce"));
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 5000 });
-      });
-      lastGeo = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-      };
-    } catch (e) {
-      // fallback – bez geolokacji też damy radę (backend może sam dodać default lub użyć IP)
-      lastGeo = null;
-    }
-    return lastGeo;
-  }
+  // 4) Fallback — centrum PL (da wyniki „w pobliżu” szeroko)
+  return { lat: 52.237049, lng: 21.017532 }; // Warszawa
+}
 
-  // --------- integracje ---------
-  async function searchPlaces(query) {
-    // proste API: POST { query, lat?, lng?, mode? }
-    const geo = await getGeo();
-    const body = {
-      query,
-      mode, // informacja dla backendu (opcjonalna)
+// --- Wyniki & komunikaty ---------------------------------------------------
+
+function say(msg){ setText(transcriptEl, msg); transcriptEl.classList.remove('ghost'); }
+function ghost(msg){ setText(transcriptEl, msg); transcriptEl.classList.add('ghost'); }
+
+function toast(msg, type='error') {
+  bannerEl.className = `banner ${type}`;
+  bannerEl.textContent = msg;
+  show(bannerEl);
+  setTimeout(() => hide(bannerEl), 4000);
+}
+
+// prosty renderer: pod polem asr pokażemy 2 najlepsze pozycje
+function renderPlaces(list){
+  // usuń poprzedni box wyników jeśli był
+  let box = document.querySelector('#ff-results');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ff-results';
+    box.style.marginTop = '12px';
+    box.style.background = 'rgba(0,0,0,.35)';
+    box.style.backdropFilter = 'blur(6px)';
+    box.style.borderRadius = '18px';
+    box.style.padding = '14px 16px';
+    box.style.lineHeight = '1.45';
+    box.style.fontSize = '15px';
+    document.querySelector('.stage')?.appendChild(box);
+  }
+  if (!list?.length){
+    box.textContent = 'Brak wyników w pobliżu.';
+    return;
+  }
+  const top = list.slice(0,2).map((p,i)=>{
+    const star = p.rating ? ` (${p.rating}★)` : '';
+    const addr = p.address ? ` — ${p.address}` : '';
+    return `${i+1}) ${p.name}${star}${addr}`;
+  }).join(' • ');
+  box.textContent = `Top 2: ${top}`;
+}
+
+// --- Szukanie kategorii (klik kafelka) ------------------------------------
+
+async function searchCategory(cat) {
+  try {
+    showLoading(true);
+
+    const loc = await getLocation();
+    const qMap = {
+      food:  'restauracja w okolicy',
+      taxi:  'taksówka w okolicy',
+      hotel: 'hotel w okolicy',
     };
-    if (geo) {
-      body.lat = geo.lat;
-      body.lng = geo.lng;
-    }
-    const r = await fetch(PLACES_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) throw new Error(`/api/places HTTP ${r.status}`);
-    return r.json(); // oczekujemy tablicy miejsc
-  }
+    const query = qMap[cat] || 'restauracja w okolicy';
+    say(query);
 
-  async function askGpt(prompt) {
-    // API: POST { prompt } -> { reply }
-    const r = await fetch(GPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    if (!r.ok) throw new Error(`/api/gpt HTTP ${r.status}`);
-    const j = await r.json();
-    return j.reply || "";
-  }
+    const data = await postJson(PLACES_URL, { query, lat: loc.lat, lng: loc.lng });
 
-  async function speakTTS(text, lang = "pl-PL") {
-    // 1) spróbuj backend TTS (wav/mp3 w base64)
-    if (TTS_URL) {
-      try {
-        const r = await fetch(TTS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, lang, format: "mp3" }),
-        });
-        if (r.ok) {
-          const j = await r.json();
-          if (j && j.audioContent) {
-            const b = atob(j.audioContent);
-            const len = b.length;
-            const buf = new Uint8Array(len);
-            for (let i = 0; i < len; i++) buf[i] = b.charCodeAt(i);
-            const blob = new Blob([buf], { type: "audio/mpeg" });
-            const url = URL.createObjectURL(blob);
-            const audio = new Audio(url);
-            speaking = true;
-            audio.addEventListener("ended", () => {
-              speaking = false;
-              URL.revokeObjectURL(url);
-            });
-            await audio.play();
-            return;
-          }
-        }
-      } catch (e) {
-        // spadamy do Web Speech
-      }
-    }
-    // 2) fallback: Web Speech API
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "pl-PL";
-      speaking = true;
-      u.onend = () => (speaking = false);
-      speechSynthesis.speak(u);
-    }
-  }
-
-  // --------- render wyników ---------
-  function renderPlacesShort(list) {
-    if (!Array.isArray(list) || list.length === 0) {
-      showBanner(`<div>Nie znalazłem wyników w okolicy.</div>`);
-      return;
-    }
-    // bierzemy top 2
-    const top = list.slice(0, 2);
-    const html = top
-      .map((p, i) => {
-        const name = p.name || p.title || "Miejsce";
-        const rating = p.rating ? ` (${p.rating}★${p.votes ? ", " + p.votes : ""})` : "";
-        const addr = p.address ? `, ${p.address}` : "";
-        return `${i + 1}) ${name}${rating}${addr}`;
-      })
-      .join(" • ");
-    showBanner(`<div>Top 2: ${html}</div>`);
-  }
-
-  // --------- główna ścieżka zapytania ---------
-  async function onUserQuery(text) {
+    renderPlaces(data.results || []);
+    // powiedz 1 zdanie o wynikach
+    const prompt = (data.results?.[0]?.name)
+      ? `Powiedz jedno krótkie zdanie po polsku o miejscu ${data.results[0].name}.`
+      : `Powiedz jedno krótkie zdanie po polsku: nie znalazłem nic w pobliżu.`;
     try {
-      setTranscript(text, false);
-
-      // 1) miejsca
-      const results = await searchPlaces(text);
-      renderPlacesShort(results);
-
-      // 2) 1 zdanie komentarza
-      const oneLinerPrompt =
-        mode === "food"
-          ? "Powiedz jedno krótkie zdanie po polsku polecające dobrą restaurację w okolicy, naturalne i zwięzłe."
-          : mode === "taxi"
-          ? "Powiedz jedno krótkie zdanie po polsku o możliwości zamówienia taxi w okolicy, naturalne i zwięzłe."
-          : "Powiedz jedno krótkie zdanie po polsku o hotelu w okolicy, naturalne i zwięzłe.";
-
-      const reply = await askGpt(oneLinerPrompt);
-      if (reply) {
-        showBanner(bannerEl.innerHTML + `<div style="margin-top:.5rem">${reply}</div>`);
-        // TTS
-        speakTTS(reply, "pl-PL");
+      const gpt = await postJson(GPT_URL, { prompt });
+      if (gpt?.reply) {
+        setHint(gpt.reply);
+        speak(gpt.reply);
       }
-    } catch (e) {
-      console.error(e);
-      showBanner(`<div>Błąd podczas wyszukiwania. Spróbuj ponownie.</div>`);
-    }
+    } catch { /* gpt opcjonalnie */ }
+
+  } catch (e) {
+    console.error(e);
+    toast('Błąd podczas wyszukiwania. Spróbuj ponownie.');
+  } finally {
+    showLoading(false);
   }
+}
 
-  // --------- mikrofon (opcjonalne doprecyzowanie) ---------
-  function setupMic() {
-    if (!micBtn) return;
-    let rec = null;
-    let listening = false;
+// --- Voice (logo/mikrofon) -> użyjemy tych samych ścieżek ------------------
 
-    micBtn.addEventListener("click", async () => {
-      if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-        // brak rozpoznawania — poproś o tekst promptem
-        const t = prompt("Powiedz/napisz, czego szukasz:");
-        if (t) onUserQuery(t);
-        return;
-      }
-      if (listening) {
-        rec && rec.stop();
-        return;
-      }
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      rec = new SR();
-      rec.lang = "pl-PL";
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
+async function onLogoOrMic() {
+  // Jeśli chcesz pełne ASR – włączysz później.
+  // Na teraz: zachowuj się jak klik na aktywny kafelek.
+  if (tileFood.classList.contains('active')) return searchCategory('food');
+  if (tileTaxi.classList.contains('active')) return searchCategory('taxi');
+  if (tileHotel.classList.contains('active')) return searchCategory('hotel');
+  return searchCategory('food');
+}
 
-      rec.onstart = () => {
-        listening = true;
-        setTranscript("Słucham...", true);
-      };
-      rec.onerror = () => {
-        listening = false;
-        setTranscript("Powiedz, co chcesz zamówić…", true);
-      };
-      rec.onend = () => {
-        listening = false;
-        if (!speaking) setTranscript("Powiedz, co chcesz zamówić…", true);
-      };
-      rec.onresult = (ev) => {
-        const t = ev.results[0][0].transcript;
-        onUserQuery(t);
-      };
-      rec.start();
-    });
+// --- TTS -------------------------------------------------------------------
+
+async function speak(text, lang='pl-PL', format='mp3') {
+  try {
+    const r = await postJson(TTS_URL, { text, lang, format });
+    if (!r?.audioContent) return;
+    const bytes = atob(r.audioContent);
+    const buf = new Uint8Array(bytes.length);
+    for (let i=0;i<bytes.length;i++) buf[i] = bytes.charCodeAt(i);
+    const mime = format === 'wav' ? 'audio/wav' : 'audio/mpeg';
+    const blob = new Blob([buf], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play().catch(()=>{});
+  } catch (e) {
+    console.warn('TTS error', e);
   }
+}
 
-  // Na start pokaż „placeholder”
-  setTranscript("Powiedz, co chcesz zamówić…", true);
-})();
+// --- Drobny UX -------------------------------------------------------------
+
+function showLoading(on){
+  const dot = $('#dot');
+  if (!dot) return;
+  dot.classList.toggle('pulse', !!on);
+}
+function setHint(msg){
+  let hint = document.querySelector('#ff-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'ff-hint';
+    hint.style.marginTop = '10px';
+    hint.style.opacity = '.95';
+    hint.style.fontSize = '15px';
+    hint.style.lineHeight = '1.45';
+    hint.style.background = 'rgba(0,0,0,.28)';
+    hint.style.backdropFilter = 'blur(6px)';
+    hint.style.padding = '12px 14px';
+    hint.style.borderRadius = '16px';
+    document.querySelector('.stage')?.appendChild(hint);
+  }
+  hint.textContent = msg;
+}
+
+// --- Init: podpinamy kafelki i klawisze -----------------------------------
+
+function activate(tile){
+  [tileFood, tileTaxi, tileHotel].forEach(b => b.classList.remove('active'));
+  tile.classList.add('active');
+}
+
+tileFood?.addEventListener('click',  () => { activate(tileFood);  searchCategory('food');  });
+tileTaxi?.addEventListener('click',  () => { activate(tileTaxi);  searchCategory('taxi');  });
+tileHotel?.addEventListener('click', () => { activate(tileHotel); searchCategory('hotel'); });
+
+logoBtn?.addEventListener('click', onLogoOrMic);
+micBtn?.addEventListener('click',  onLogoOrMic);
+
+// stan początkowy
+ghost('Powiedz, co chcesz zamówić…');
+activate(tileFood);

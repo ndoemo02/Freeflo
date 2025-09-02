@@ -1,120 +1,125 @@
-/* ==== Reset ==== */
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
+/* ============ RESET ============ */
+* {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: "Segoe UI", Roboto, sans-serif;
   color: #e6edf3;
-  background: #0b0f14;
-  display: flex;
-  flex-direction: column;
-  --accent: #1f6feb;
-  --accent-2: #ff7a18;
-  --glass: rgba(255,255,255,.08);
-  --glass-border: rgba(255,255,255,.10);
+  background: #0d0f14;
+  overflow-x: hidden;
 }
 
-/* ==== Background image ==== */
-:root {
-  --bg-url: url("/Freeflo/assets/Background.png");
-}
-body::before {
-  content: "";
-  position: fixed; inset: 0;
-  background: #0b0f14;
-  z-index: 0; pointer-events: none;
-}
-body::after {
-  content: "";
-  position: fixed; inset: 0;
-  background-image: var(--bg-url);
+/* ============ TŁO ============ */
+body {
+  background: url("/Freeflo/assets/Background.png") no-repeat center center fixed;
   background-size: cover;
-  background-position: center;
-  filter: brightness(.75);
-  z-index: 1; pointer-events: none;
 }
-header, main { position: relative; z-index: 2; }
 
-/* ==== Header/logo ==== */
-header {
-  padding: 18px 16px 6px;
+/* ============ HEADER (LOGO) ============ */
+#logoBtn {
+  width: 220px;
+  height: 220px;
+  margin: 40px auto 20px;
+  border-radius: 50%;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(13, 15, 20, 0.4);
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
 }
-#logoBtn {
-  width: 112px; height: 112px;
-  border-radius: 9999px;
-  background: linear-gradient(145deg, var(--accent), #2e8cff);
-  color: #fff;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; user-select: none;
-  box-shadow: 0 10px 28px rgba(31,111,235,.35);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-#logoBtn:hover { transform: translateY(-1px); }
-#logoBtn:active { transform: translateY(0); box-shadow: 0 6px 18px rgba(31,111,235,.28); }
 
-/* ==== Transcript ==== */
+#logoBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(255, 140, 0, 0.6);
+}
+
+#logoBtn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  display: block;
+}
+
+/* ============ TRANSKRYPCJA ============ */
 #transcript {
-  min-height: 56px;
-  max-width: min(920px, 92vw);
-  width: 100%;
-  padding: 14px 18px;
+  text-align: center;
+  font-size: 1.1rem;
+  margin: 15px auto;
+  max-width: 90%;
+  padding: 12px 20px;
   border-radius: 16px;
-  text-align: center;
-  background: rgba(13,15,20,.45);
-  border: 1px solid var(--glass-border);
+  background: rgba(13, 15, 20, 0.55);
   backdrop-filter: blur(10px);
-  line-height: 1.45;
-  box-shadow: 0 8px 26px rgba(0,0,0,.25);
-}
-#transcript.ghost { opacity: .75; }
-body.listening #transcript {
-  outline: 2px solid rgba(134,226,255,.55);
-  box-shadow: 0 0 18px rgba(134,226,255,.25) inset;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e6edf3;
 }
 
-/* ==== Tiles ==== */
+#transcript.ghost {
+  color: #9baecf;
+  font-style: italic;
+}
+
+/* ============ KAFELKI ============ */
 #tiles {
-  width: 100%;
-  max-width: min(920px, 92vw);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 10px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 25px auto;
+  flex-wrap: wrap;
 }
+
 #tiles button {
-  padding: 18px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--glass-border);
-  background: #151b22;
-  color: #fff;
-  font-size: 17px;
+  font-size: 1rem;
+  padding: 14px 28px;
+  border-radius: 16px;
+  background: rgba(13, 15, 20, 0.65);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e6edf3;
   cursor: pointer;
-  transition: background .15s ease, transform .15s ease;
-}
-#tiles button:hover { background: #1a212a; }
-#tiles button:active { transform: scale(.98); }
-#tiles .active { border-color: var(--accent); }
-
-/* Mobile scroll */
-@media (max-width: 520px) {
-  #tiles { display: flex; overflow-x: auto; gap: 10px; }
-  #tiles button { min-width: 200px; flex: 0 0 auto; }
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-/* ==== Banner ==== */
+#tiles button:hover {
+  background: rgba(72, 179, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+#tiles button.active {
+  background: rgba(72, 179, 255, 0.4);
+  border-color: rgba(72, 179, 255, 0.6);
+}
+
+/* ============ BANNER ============ */
 #banner {
-  max-width: min(920px, 92vw);
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
   text-align: center;
-  background: rgba(72,179,255,.12);
+  font-size: 0.95rem;
+  margin: 20px auto;
+  padding: 12px 20px;
+  max-width: 95%;
+  border-radius: 14px;
+  background: rgba(13, 15, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
   color: #dff1ff;
-  border: 1px solid rgba(72,179,255,.22);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);
 }
-.hidden { display: none !important; }
+
+#banner.hidden {
+  display: none;
+}
+
+/* ============ TRYB NASŁUCHIWANIA ============ */
+body.listening #logoBtn {
+  box-shadow: 0 0 25px rgba(134, 226, 255, 0.8);
+  transform: scale(1.07);
+}

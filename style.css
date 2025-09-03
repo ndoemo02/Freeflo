@@ -1,125 +1,79 @@
-/* ============ RESET ============ */
+/* Reset */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  color: #e6edf3;
-  background: #0d0f14;
-  overflow-x: hidden;
-}
-
-/* ============ TŁO ============ */
 body {
-  background: url("/Freeflo/assets/Background.png") no-repeat center center fixed;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: url("assets/Background.png") no-repeat center center fixed;
   background-size: cover;
-}
-
-/* ============ HEADER (LOGO) ============ */
-#logoBtn {
-  width: 220px;
-  height: 220px;
-  margin: 40px auto 20px;
-  border-radius: 50%;
-  cursor: pointer;
+  color: #fff;
+  text-align: center;
+  height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: rgba(13, 15, 20, 0.4);
-  backdrop-filter: blur(12px);
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  overflow: hidden;
+  align-items: center;
 }
 
-#logoBtn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px rgba(255, 140, 0, 0.6);
-}
-
-#logoBtn img {
+/* Layout główny */
+#app {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: inherit;
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+  position: relative;
+}
+
+/* Logo */
+.logo img {
   display: block;
+  margin: 0 auto 20px auto;
+  max-width: 280px;
+  height: auto;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-/* ============ TRANSKRYPCJA ============ */
-#transcript {
-  text-align: center;
-  font-size: 1.1rem;
-  margin: 15px auto;
-  max-width: 90%;
-  padding: 12px 20px;
-  border-radius: 16px;
-  background: rgba(13, 15, 20, 0.55);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e6edf3;
-}
-
-#transcript.ghost {
-  color: #9baecf;
-  font-style: italic;
-}
-
-/* ============ KAFELKI ============ */
-#tiles {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin: 25px auto;
-  flex-wrap: wrap;
-}
-
-#tiles button {
-  font-size: 1rem;
-  padding: 14px 28px;
-  border-radius: 16px;
-  background: rgba(13, 15, 20, 0.65);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e6edf3;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-#tiles button:hover {
-  background: rgba(72, 179, 255, 0.25);
-  transform: translateY(-2px);
-}
-
-#tiles button.active {
-  background: rgba(72, 179, 255, 0.4);
-  border-color: rgba(72, 179, 255, 0.6);
-}
-
-/* ============ BANNER ============ */
-#banner {
-  text-align: center;
-  font-size: 0.95rem;
+/* Transkrypcja */
+.transcript {
   margin: 20px auto;
   padding: 12px 20px;
-  max-width: 95%;
-  border-radius: 14px;
-  background: rgba(13, 15, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  color: #dff1ff;
+  max-width: 90%;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 18px;
+  line-height: 1.4;
 }
 
-#banner.hidden {
-  display: none;
+/* Dolne kafelki */
+.tiles.bottom {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
 }
 
-/* ============ TRYB NASŁUCHIWANIA ============ */
-body.listening #logoBtn {
-  box-shadow: 0 0 25px rgba(134, 226, 255, 0.8);
-  transform: scale(1.07);
+.tiles.bottom button {
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.tiles.bottom button:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: translateY(-2px);
 }

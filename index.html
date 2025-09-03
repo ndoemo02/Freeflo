@@ -5,37 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FreeFlow</title>
 
-  <!-- TYLKO JEDEN CSS -->
+  <!-- Tylko jeden CSS -->
   <link rel="stylesheet" href="style.css" />
-
   <!-- Preload tła -->
   <link rel="preload" href="/Freeflo/assets/Background.png" as="image" />
 </head>
 <body>
-  <!-- Menu/koszyk w prawym górnym rogu (lekki, nie koliduje z layoutem) -->
+  <!-- Górne, lekkie akcje -->
   <div class="top-actions">
     <button class="glass-btn" aria-label="Menu">≡</button>
     <button class="glass-btn" aria-label="Koszyk">🛒 <span>0</span></button>
   </div>
 
-  <main id="app">
-    <!-- LOGO (obraz PNG z repo, bez obwódki) -->
+  <main id="app" aria-live="polite">
+    <!-- Nagłówek jak na 2. screenie (subtle) -->
+    <header class="hero">
+      <h1><span class="accent">Free</span> Flow</h1>
+      <p class="sub">Voice to order — Złóż zamówienie</p>
+      <p class="hint">Restauracja, taxi albo hotel?</p>
+    </header>
+
+    <!-- Logo (mniejsze, bez obwódki) -->
     <div class="logo">
       <img src="/Freeflo/assets/Freeflowlogo.png" alt="FreeFlow" />
     </div>
 
-    <!-- TRANSKRYPCJA (szkło) -->
+    <!-- Transkrypcja (szkło) -->
     <div id="transcript" class="transcript">Powiedz, co chcesz zamówić…</div>
+
+    <!-- Banner komunikatów (nie zajmuje dołu) -->
+    <div id="banner" class="banner hidden"></div>
   </main>
 
-  <!-- DOLNE KAFELKI — JEDYNY ZESTAW -->
+  <!-- DOLNA BELKA z kafelkami (jeden ciąg) -->
   <nav class="bottom-bar" aria-label="Szybkie akcje">
     <button id="tileFood">🍽️ Jedzenie</button>
     <button id="tileTaxi">🚖 Taxi</button>
     <button id="tileHotel">🏨 Hotel</button>
   </nav>
 
-  <!-- (Opcjonalnie) skrypt logiki; gdy testujesz: zmień na app.js -->
+  <!-- Logika (zmień na app.js gdy testujesz dev) -->
   <script src="freeflow-assistant.js"></script>
 </body>
 </html>

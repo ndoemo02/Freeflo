@@ -3,48 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- BACKEND ENDPOINTS (niewpływające na UI) -->
-  <meta name="gmaps-proxy" content="https://freeflow-backend-vercel.vercel.app/api/places" />
-  <meta name="gpt-proxy"   content="https://freeflow-backend-vercel.vercel.app/api/gpt" />
   <title>FreeFlow</title>
-
-  <!-- TYLKO JEDEN CSS -->
   <link rel="stylesheet" href="style.css" />
-  <!-- Preload tła -->
-  <link rel="preload" href="/Freeflo/assets/Background.png" as="image" />
 </head>
 <body>
-  <!-- Menu / koszyk w prawym górnym rogu -->
-  <div style="position:fixed; top:10px; right:12px; z-index:3; display:flex; gap:8px;">
-    <button aria-label="Menu"
-      style="backdrop-filter:blur(8px); background:rgba(13,15,20,.45); border:1px solid rgba(255,255,255,.10); color:#e6edf3; padding:10px 12px; border-radius:12px; cursor:pointer;">≡</button>
-    <button aria-label="Koszyk"
-      style="backdrop-filter:blur(8px); background:rgba(13,15,20,.45); border:1px solid rgba(255,255,255,.10); color:#e6edf3; padding:10px 12px; border-radius:12px; cursor:pointer;">🛒 <span>0</span></button>
-  </div>
-
-  <header>
-    <!-- Klikalne logo: obraz z Twojego repo -->
-    <div id="logoBtn" title="Naciśnij i mów">
-      <img src="/Freeflo/assets/Freeflowlogo.png" alt="FreeFlow" />
+  <div id="app">
+    <!-- Logo -->
+    <div class="logo">
+      <img src="assets/Freeflowlogo.png" alt="FreeFlow Logo" />
     </div>
-  </header>
 
-  <main>
     <!-- Transkrypcja -->
-    <div id="transcript">Powiedz, co chcesz zamówić…</div>
+    <div id="transcript" class="transcript">
+      Powiedz, co chcesz zamówić…
+    </div>
 
-    <!-- JEDEN zestaw kafelków -->
-    <div id="tiles">
-      <button id="tileFood">🍔 Jedzenie</button>
-      <button id="tileTaxi">🚕 Taxi</button>
+    <!-- Dolne kafelki -->
+    <div class="tiles bottom">
+      <button id="tileFood">🍽️ Jedzenie</button>
+      <button id="tileTaxi">🚖 Taxi</button>
       <button id="tileHotel">🏨 Hotel</button>
     </div>
+  </div>
 
-    <!-- Banner z wynikami/komunikatami -->
-    <div id="banner" class="hidden"></div>
-  </main>
-
-  <!-- Stabilna logika; dev: zamień na app.js gdy testujesz -->
-  <script src="freeflow-assistant.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -2,30 +2,40 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FreeFlow</title>
+
+  <!-- TYLKO JEDEN CSS -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Preload tła -->
+  <link rel="preload" href="/Freeflo/assets/Background.png" as="image" />
 </head>
 <body>
-  <div id="app">
-    <!-- Logo -->
-    <div class="logo">
-      <img src="assets/Freeflowlogo.png" alt="FreeFlow Logo" />
-    </div>
-
-    <!-- Transkrypcja -->
-    <div id="transcript" class="transcript">
-      Powiedz, co chcesz zamówić…
-    </div>
-
-    <!-- Dolne kafelki -->
-    <div class="tiles bottom">
-      <button id="tileFood">🍽️ Jedzenie</button>
-      <button id="tileTaxi">🚖 Taxi</button>
-      <button id="tileHotel">🏨 Hotel</button>
-    </div>
+  <!-- Menu/koszyk w prawym górnym rogu (lekki, nie koliduje z layoutem) -->
+  <div class="top-actions">
+    <button class="glass-btn" aria-label="Menu">≡</button>
+    <button class="glass-btn" aria-label="Koszyk">🛒 <span>0</span></button>
   </div>
 
-  <script src="app.js"></script>
+  <main id="app">
+    <!-- LOGO (obraz PNG z repo, bez obwódki) -->
+    <div class="logo">
+      <img src="/Freeflo/assets/Freeflowlogo.png" alt="FreeFlow" />
+    </div>
+
+    <!-- TRANSKRYPCJA (szkło) -->
+    <div id="transcript" class="transcript">Powiedz, co chcesz zamówić…</div>
+  </main>
+
+  <!-- DOLNE KAFELKI — JEDYNY ZESTAW -->
+  <nav class="bottom-bar" aria-label="Szybkie akcje">
+    <button id="tileFood">🍽️ Jedzenie</button>
+    <button id="tileTaxi">🚖 Taxi</button>
+    <button id="tileHotel">🏨 Hotel</button>
+  </nav>
+
+  <!-- (Opcjonalnie) skrypt logiki; gdy testujesz: zmień na app.js -->
+  <script src="freeflow-assistant.js"></script>
 </body>
 </html>

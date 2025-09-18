@@ -1,50 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FreeFlow</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FreeFlow – guzik z pierścieniami</title>
+  <style>
+    :root {
+      --bg: #0b0b0f;
+      --fg: #ffffff;
+      --ring: rgba(255,140,0,0.65);     /* light mode rings */
+      --drop: radial-gradient(35% 35% at 30% 30%, #ff7a18, #ff3d00 40%, #7a2cff 100%);
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f8f8fb; --fg:#0b0b0f; }
+      body { background: var(--bg); color: var(--fg); }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ring: rgba(255,255,255,0.85); }
+    }
 
-  <!-- Tylko jeden CSS -->
-  <link rel="stylesheet" href="style.css" />
-  <!-- Preload tła -->
-  <link rel="preload" href="/Freeflo/assets/Background.png" as="image" />
+    * { box-sizing: border-box; }
+    html,body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    body { display: grid; place-items: center; background: var(--bg); color: var(--fg); }
+
+    .wrap {
+      width: 100%; max-width: 420px; padding: 24px 20px 40px;
+      display: grid; gap: 24px; justify-items: center;
+    }
+    .title { font-weight: 700; letter-spacing: 0.4px; }
+    .hint  { opacity: .7; font-size: 14px; text-align: center; }
+
+    /* Guzik – „kropla” */
+    .btn {
+      position: relative;
+      width: 140px; height: 140px; border: 0; cursor: pointer; outline: none;
+      border-radius: 60% 40% 60% 40% / 50% 60% 40% 50%;
+      background: var(--drop);
+      color: #fff; font-size: 42px; display: grid; place-items: center;
+      box-shadow: var(--shadow);
+      transform: translateZ(0); /* lepsza animacja */
+    }
+    .btn:active { transform: scale(.98); }
+
+    /* Pierścienie */
+    .ring {
+      position: absolute; inset: 0; pointer-events: none; filter: blur(.2px);
+    }
+    .ring span {
+      position: absolute; top: 50%; left: 50%;
+      width: 120%; height: 120%;
+      border: 2px solid var(--ring); border-radius: 50%;
+      transform: translate(-50%, -50%) scale(.6);
+      opacity: 0;
+    }
+    /* Aktywne pulsowanie */
+    .recording .ring span { animation: wave 2.6s ease-out infinite; opacity: 1; }
+    .recording .ring span:nth-child(2) { animation-delay: .6s; }
+    .recording .ring span:nth-child(3) { animation-delay: 1.2s; }
+
+    @keyframes wave {
+      0%   { transform: translate(-50%, -50%) scale(.6); opacity: .95; }
+      70%  { opacity: .25; }
+      100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+    }
+
+    /* Podkład pod opis */
+    .card {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.06));
+      border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(6px);
+    }
+  </style>
 </head>
 <body>
-  <!-- Górne, lekkie akcje -->
-  <div class="top-actions">
-    <button class="glass-btn" aria-label="Menu">≡</button>
-    <button class="glass-btn" aria-label="Koszyk">🛒 <span>0</span></button>
-  </div>
+  <main class="wrap">
+    <h1 class="title">FreeFlow – Voice Button</h1>
 
-  <main id="app" aria-live="polite">
-    <!-- Nagłówek jak na 2. screenie (subtle) -->
-    <header class="hero">
-      <h1><span class="accent">Free</span> Flow</h1>
-      <p class="sub">Voice to order — Złóż zamówienie</p>
-      <p class="hint">Restauracja, taxi albo hotel?</p>
-    </header>
+    <button id="recBtn" class="btn" aria-pressed="false" aria-label="Nagraj">
+      <div class="ring">
+        <span></span><span></span><span></span>
+      </div>
+      🎤
+    </button>
 
-    <!-- Logo (mniejsze, bez obwódki) -->
-    <div class="logo">
-      <img src="/Freeflo/assets/Freeflowlogo.png" alt="FreeFlow" />
+    <div class="card">
+      <div class="hint">
+        Kliknij guzik, aby włączyć/wyłączyć pulsujące pierścienie.<br/>
+        W trybie <b>dark</b> fale są <b>białe</b>; w <b>light</b> – neonowo pomarańczowe.
+      </div>
     </div>
-
-    <!-- Transkrypcja (szkło) -->
-    <div id="transcript" class="transcript">Powiedz, co chcesz zamówić…</div>
-
-    <!-- Banner komunikatów (nie zajmuje dołu) -->
-    <div id="banner" class="banner hidden"></div>
   </main>
 
-  <!-- DOLNA BELKA z kafelkami (jeden ciąg) -->
-  <nav class="bottom-bar" aria-label="Szybkie akcje">
-    <button id="tileFood">🍽️ Jedzenie</button>
-    <button id="tileTaxi">🚖 Taxi</button>
-    <button id="tileHotel">🏨 Hotel</button>
-  </nav>
-
-  <!-- Logika (zmień na app.js gdy testujesz dev) -->
-  <script src="freeflow-assistant.js"></script>
+  <script>
+    const btn = document.getElementById('recBtn');
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('recording');
+      const isOn = btn.classList.contains('recording');
+      btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    });
+  </script>
 </body>
 </html>
